@@ -1,0 +1,16 @@
+import api from './api'
+
+export async function createField(payload) {
+    const { data } = await api.post('/fields', payload)
+    return data
+}
+
+export async function listMyFields() {
+    const { data } = await api.get('/fields')
+    return data
+}
+
+export async function getFieldById(id) {
+    const { data } = await api.get(`/fields/${id}`)
+    return data
+}

@@ -15,6 +15,7 @@ function handleLogout() {
   <nav>
     <template v-if="isAuthenticated">
       <RouterLink to="/">Home</RouterLink>
+      <RouterLink to="/fields">Mis Campos</RouterLink>
       <button class="link-btn" @click="handleLogout">Cerrar sesión</button>
     </template>
     <template v-else>

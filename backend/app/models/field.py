@@ -1,5 +1,6 @@
-import enum 
+import enum
 from datetime import date, datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, String, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -35,10 +36,10 @@ class Field(Base):
     irrigation_type: Mapped[IrrigationType] = mapped_column(Enum(IrrigationType), nullable=False)
     soil_type: Mapped[SoilType] = mapped_column(Enum(SoilType), nullable=False)
     status: Mapped[FieldStatus] = mapped_column(Enum(FieldStatus), nullable=False, default=FieldStatus.pending)
-    polygon_geojson: Mapped[dict] = mapped_column(JSON, nullable=False)
-    elevation_m: Mapped[float] = mapped_column(Float, nullable=False)
-    latitude: Mapped[float] = mapped_column(Float, nullable=False)
-    longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    polygon_geojson: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    elevation_m: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     has_hail_net: Mapped[bool] = mapped_column(Boolean, default=False)
     planting_date: Mapped[date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

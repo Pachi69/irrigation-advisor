@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
+import FieldList from '../views/FieldList.vue'
+import FieldRegister from '../views/FieldRegister.vue'
 import { useAuth } from '../stores/auth'
 
 const routes = [
@@ -9,6 +11,18 @@ const routes = [
     path: '/',
     name: 'home',
     component: Home,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/fields',
+    name: 'fields',
+    component: FieldList,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/fields/new',
+    name: 'field-register',
+    component: FieldRegister,
     meta: { requiresAuth: true },
   },
   {

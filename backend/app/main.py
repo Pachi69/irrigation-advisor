@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.auth.routes import router as auth_router
+from app.api.fields import router as field_router
 
 app = FastAPI(
     title="Irrigation Advisor API",
@@ -19,6 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(field_router)
 
 @app.get("/health")
 def health_check():
