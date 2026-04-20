@@ -1,9 +1,20 @@
 <script setup>
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useAuth } from './stores/auth'
+import { onMounted } from 'vue'
 
 const router = useRouter()
-const { isAuthenticated, logout } = useAuth()
+const { isAuthenticated, isAdmin, logout, fetchMe, user } = useAuth()
+
+onMounted(async () => {
+  if (isAuthenticated.value && !user.value) {
+    try {
+      await fetchMe()
+    } catch {
+      logout()
+    }
+  }
+})
 
 function handleLogout() {
   logout()
@@ -16,6 +27,9 @@ function handleLogout() {
     <template v-if="isAuthenticated">
       <RouterLink to="/">Home</RouterLink>
       <RouterLink to="/fields">Mis Campos</RouterLink>
+      <RouterLink v-if="isAdmin" to="/admin/fields" class="admin-link">
+        Panel admin
+      </RouterLink>
       <button class="link-btn" @click="handleLogout">Cerrar sesión</button>
     </template>
     <template v-else>
@@ -51,5 +65,9 @@ nav {
 }
 main {
   padding: 1rem;
+}
+.admin-link {
+    color: #d84315;
+    font-weight: 500;
 }
 </style>

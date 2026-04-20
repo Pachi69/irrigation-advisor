@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.user import User, UserRole
 from app.schemas.auth import UserRegister, UserLogin, Token, UserPublic
 from app.auth.security import hash_password, verify_password, create_access_token
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -24,8 +25,7 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return UserPublic(id=user.id, name=user.name, email=user.email, role=user.role.value)
-
+    return user
 @router.post("/login", response_model=Token)
 def login(data: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == data.email).first()
@@ -36,3 +36,7 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
     token = create_access_token(user.id)
     return Token(access_token=token)
     
+@router.get("/me", response_model=UserPublic)
+def get_me(current_user: User = Depends(get_current_user)):
+    """Devuelve el usuario autenticado a partir del token"""
+    return current_user

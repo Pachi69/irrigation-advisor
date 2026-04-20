@@ -5,6 +5,7 @@ import Register from '../views/Register.vue'
 import FieldList from '../views/FieldList.vue'
 import FieldRegister from '../views/FieldRegister.vue'
 import { useAuth } from '../stores/auth'
+import AdminFields from '../views/AdminFields.vue'
 
 const routes = [
   {
@@ -26,6 +27,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/admin/fields',
+    name: 'admin-fields',
+    component: AdminFields,
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: '/login',
     name: 'login',
     component: Login,
@@ -45,13 +52,17 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-    const { isAuthenticated } = useAuth()
+    const { isAuthenticated, isAdmin } = useAuth()
 
     if (to.meta.requiresAuth && !isAuthenticated.value) {
         return { name: 'login' }
     }
 
     if (to.meta.guestOnly && isAuthenticated.value) {
+        return { name: 'home' }
+    }
+
+    if (to.meta.requiresAdmin && !isAdmin.value) {
         return { name: 'home' }
     }
 })

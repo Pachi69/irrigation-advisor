@@ -8,6 +8,15 @@ const token = ref(localStorage.getItem(TOKEN_KEY))
 const user = ref(JSON.parse(localStorage.getItem(USER_KEY) || 'null'))
 
 const isAuthenticated = computed(() => !!token.value)
+const isAdmin = computed(() => user.value?.role === 'admin') 
+
+async function fetchMe() {
+    // Trae al usuario atenticado desde el backend usando el token actual
+    const { data } = await api.get('/auth/me')
+    user.value = data
+    localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+    return data
+}
 
 async function register({ name, email, password }) {
     const { data } = await api.post('/auth/register', { name, email, password })
@@ -18,8 +27,8 @@ async function login({ email, password }) {
     const { data } = await api.post('/auth/login', { email, password })
     token.value = data.access_token
     localStorage.setItem(TOKEN_KEY, token.value)
-    user.value = { email }
-    localStorage.setItem(USER_KEY, JSON.stringify(user.value))
+    // Cargamos el perfil completo (incluye role) para poder renderizar UI condicional
+    await fetchMe()
     return data
 }
 
@@ -35,8 +44,10 @@ export function useAuth() {
         token,
         user,
         isAuthenticated,
+        isAdmin,
         register,
         login,
         logout,
+        fetchMe,
     }
 }
