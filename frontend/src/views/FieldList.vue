@@ -41,7 +41,7 @@ onMounted(loadFields)
             <RouterLink to="/fields/new" >+ Registrá el primero</RouterLink>
         </p>
 
-        <ul v-else-class="field-list">
+        <ul v-else class="field-list">
             <li v-for="field in fields" :key="field.id" class="field-card">
                 <div class="field-head">
                     <h2>{{ field.name }}</h2>
