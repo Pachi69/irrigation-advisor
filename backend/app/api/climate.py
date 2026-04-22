@@ -10,6 +10,7 @@ from app.models.field import Field as FieldModel, FieldStatus
 from app.schemas.climate import ClimateData, ForecastDay
 from app.auth.dependencies import get_current_user
 from app.ingestion.climate import get_climate_data, get_forecast
+from app.calculation.eto import calculate_eto
 
 router = APIRouter(prefix="/fields", tags=["climate"])
 
@@ -50,7 +51,11 @@ def get_field_climate(
     resolved_date = target_date if target_date is not None else DateType.today() - timedelta(days=1)
 
     try:
-        return get_climate_data(field.latitude, field.longitude, resolved_date)
+        climate = get_climate_data(field.latitude, field.longitude, resolved_date)
+        if climate.eto_reference_mm is None:
+            eto_result = calculate_eto(climate, field.latitude, resolved_date, field.elevation_m)
+            climate = climate.model_copy(update={"eto_reference_mm": eto_result.eto_mm})
+        return climate
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except RuntimeError as e:

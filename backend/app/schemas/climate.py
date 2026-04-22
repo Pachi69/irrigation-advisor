@@ -11,7 +11,7 @@ class ClimateData(BaseModel):
     solar_radiation_mj: float
     precipitation_mm: float
     pressure_kpa: float
-    eto_reference_mm: float
+    eto_reference_mm: float | None = None
 
 class ForecastDay(BaseModel):
     date: date
