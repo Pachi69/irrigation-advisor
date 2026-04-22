@@ -10,6 +10,7 @@ from datetime import date
 import httpx
 
 from app.schemas.climate import ClimateData, ForecastDay
+from app.ingestion.validation import validate_climate_row, validate_forecast_row
 
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIMEZONE = "America/Argentina/Mendoza"
@@ -98,18 +99,19 @@ def get_climate_data(latitude: float, longitude: float, target_date: date) -> Cl
     pressure_hpa = daily["surface_pressure_mean"][idx]
     pressure_kpa = pressure_hpa / 10.0 if pressure_hpa is not None else None
 
-    return ClimateData(
-        date=target_date,
-        temp_max_c=daily["temperature_2m_max"][idx],
-        temp_min_c=daily["temperature_2m_min"][idx],
-        temp_mean_c=daily["temperature_2m_mean"][idx],
-        humidity_pct=daily["relative_humidity_2m_mean"][idx],
-        wind_speed_10m=daily["wind_speed_10m_mean"][idx],
-        solar_radiation_mj=daily["shortwave_radiation_sum"][idx],
-        precipitation_mm=daily["precipitation_sum"][idx],
-        pressure_kpa=pressure_kpa,
-        eto_reference_mm=daily["et0_fao_evapotranspiration"][idx],
-    )
+    row = validate_climate_row({
+        "temp_max_c":        daily["temperature_2m_max"][idx],
+        "temp_min_c":        daily["temperature_2m_min"][idx],
+        "temp_mean_c":       daily["temperature_2m_mean"][idx],
+        "humidity_pct":      daily["relative_humidity_2m_mean"][idx],
+        "wind_speed_10m":    daily["wind_speed_10m_mean"][idx],
+        "solar_radiation_mj": daily["shortwave_radiation_sum"][idx],
+        "precipitation_mm":  daily["precipitation_sum"][idx],
+        "pressure_kpa":      pressure_kpa,
+        "eto_reference_mm":  daily["et0_fao_evapotranspiration"][idx],
+    })
+
+    return ClimateData(date=target_date, **row)
 
 def get_forecast(latitude: float, longitude: float, days: int = 5) -> list[ForecastDay]:
     """Obtiene el pronóstico de los próximos N días (incluyendo hoy).
@@ -138,13 +140,13 @@ def get_forecast(latitude: float, longitude: float, days: int = 5) -> list[Forec
 
     result = []
     for i, iso_date in enumerate(daily["time"]):
-        result.append(ForecastDay(
-            date=date.fromisoformat(iso_date),
-            temp_max_c=daily["temperature_2m_max"][i],
-            temp_min_c=daily["temperature_2m_min"][i],
-            precipitation_mm=daily["precipitation_sum"][i],
-            precipitation_probability_pct=daily["precipitation_probability_mean"][i],
-            eto_reference_mm=daily["et0_fao_evapotranspiration"][i],
-        ))
-    
+        row = validate_forecast_row({
+            "temp_max_c":                    daily["temperature_2m_max"][i],
+            "temp_min_c":                    daily["temperature_2m_min"][i],
+            "precipitation_mm":              daily["precipitation_sum"][i],
+            "precipitation_probability_pct": daily["precipitation_probability_mean"][i],
+            "eto_reference_mm":              daily["et0_fao_evapotranspiration"][i],
+        })
+        result.append(ForecastDay(date=date.fromisoformat(iso_date), **row))
+
     return result
