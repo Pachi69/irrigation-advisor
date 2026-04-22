@@ -5,12 +5,16 @@ Usa la Forecast API con parámetro `past_days` para cubrir hoy y días pasados
 se alineen con el calendario local.
 """
 
+import logging
 from datetime import date
 
 import httpx
 
+logger = logging.getLogger(__name__)
+
 from app.schemas.climate import ClimateData, ForecastDay
 from app.ingestion.validation import validate_climate_row, validate_forecast_row
+from app.ingestion import nasa_power
 
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 TIMEZONE = "America/Argentina/Mendoza"
@@ -85,33 +89,44 @@ def get_climate_data(latitude: float, longitude: float, target_date: date) -> Cl
         "forecast_days": 1,
     }
 
-    daily = _fetch_daily(params)
-
-    # Ubicamos el índice exacto de target_date en la lista devuelta
-    dates = daily["time"]
     try:
-        idx = dates.index(target_date.isoformat())
-    except ValueError as e:
-        raise RuntimeError(
-            f"Open-Meteo no devolvio datos para la fecha {target_date} (fechas recibidas: {dates})"
-        ) from e
+        daily = _fetch_daily(params)
 
-    pressure_hpa = daily["surface_pressure_mean"][idx]
-    pressure_kpa = pressure_hpa / 10.0 if pressure_hpa is not None else None
+        # Ubicamos el índice exacto de target_date en la lista devuelta
+        dates = daily["time"]
+        try:
+            idx = dates.index(target_date.isoformat())
+        except ValueError as e:
+            raise RuntimeError(
+                f"Open-Meteo no devolvio datos para la fecha {target_date} (fechas recibidas: {dates})"
+            ) from e
 
-    row = validate_climate_row({
-        "temp_max_c":        daily["temperature_2m_max"][idx],
-        "temp_min_c":        daily["temperature_2m_min"][idx],
-        "temp_mean_c":       daily["temperature_2m_mean"][idx],
-        "humidity_pct":      daily["relative_humidity_2m_mean"][idx],
-        "wind_speed_10m":    daily["wind_speed_10m_mean"][idx],
-        "solar_radiation_mj": daily["shortwave_radiation_sum"][idx],
-        "precipitation_mm":  daily["precipitation_sum"][idx],
-        "pressure_kpa":      pressure_kpa,
-        "eto_reference_mm":  daily["et0_fao_evapotranspiration"][idx],
-    })
+        pressure_hpa = daily["surface_pressure_mean"][idx]
+        pressure_kpa = pressure_hpa / 10.0 if pressure_hpa is not None else None
 
-    return ClimateData(date=target_date, **row)
+        row = validate_climate_row({
+            "temp_max_c":         daily["temperature_2m_max"][idx],
+            "temp_min_c":         daily["temperature_2m_min"][idx],
+            "temp_mean_c":        daily["temperature_2m_mean"][idx],
+            "humidity_pct":       daily["relative_humidity_2m_mean"][idx],
+            "wind_speed_10m":     daily["wind_speed_10m_mean"][idx],
+            "solar_radiation_mj": daily["shortwave_radiation_sum"][idx],
+            "precipitation_mm":   daily["precipitation_sum"][idx],
+            "pressure_kpa":       pressure_kpa,
+            "eto_reference_mm":   daily["et0_fao_evapotranspiration"][idx],
+        })
+        return ClimateData(date=target_date, **row)
+
+    except RuntimeError as open_meteo_error:
+        logger.warning(
+            "Open-Meteo falló (%s); intentando NASA POWER como respaldo.", open_meteo_error
+        )
+        try:
+            return nasa_power.get_climate_data(latitude, longitude, target_date)
+        except RuntimeError as nasa_error:
+            raise RuntimeError(
+                f"Ambas fuentes fallaron. Open-Meteo: {open_meteo_error}. NASA POWER: {nasa_error}"
+            ) from nasa_error
 
 def get_forecast(latitude: float, longitude: float, days: int = 5) -> list[ForecastDay]:
     """Obtiene el pronóstico de los próximos N días (incluyendo hoy).
