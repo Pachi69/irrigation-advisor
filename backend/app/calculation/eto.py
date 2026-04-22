@@ -1,6 +1,13 @@
-
 """
 Cálculo de evapotranspiración de referencia (ETo) por FAO-56 Penman-Monteith.
+
+Referencia principal:
+  Allen, R.G., Pereira, L.S., Raes, D., Smith, M. (1998).
+  Crop evapotranspiration – Guidelines for computing crop water requirements.
+  FAO Irrigation and Drainage Paper 56. FAO, Rome.
+  https://www.fao.org/3/x0490e/x0490e.pdf
+
+Los números de ecuación [Ec. N] en los comentarios corresponden a dicho documento.
 """
 
 from __future__ import annotations

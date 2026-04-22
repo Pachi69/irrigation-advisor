@@ -10,6 +10,7 @@ from app.database import Base
 class CropType(enum.Enum):
     vine = "vine"
     peach = "peach"
+    alfalfa = "alfalfa"
 
 class IrrigationType(enum.Enum):
     drip = "drip"
