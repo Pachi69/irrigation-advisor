@@ -76,7 +76,8 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
     try:
         _initialize_ee()
 
-        geometry = ee.Geometry(polygon_geojson).buffer(BUFFER_METERS)
+        geojson = polygon_geojson.get("geometry", polygon_geojson) if polygon_geojson.get("type") == "Feature" else polygon_geojson
+        geometry = ee.Geometry(geojson).buffer(BUFFER_METERS)
         end_date = target_date.strftime("%Y-%m-%d")
         start_date = (target_date - timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%d")
 
