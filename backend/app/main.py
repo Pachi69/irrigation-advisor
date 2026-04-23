@@ -6,6 +6,7 @@ from app.auth.routes import router as auth_router
 from app.api.fields import router as field_router
 from app.api.admin import router as admin_router
 from app.api.climate import router as climate_router
+from app.api.recommendation import router as recommendation_router
 
 app = FastAPI(
     title="Irrigation Advisor API",
@@ -25,6 +26,7 @@ app.include_router(auth_router)
 app.include_router(field_router)
 app.include_router(admin_router)
 app.include_router(climate_router)
+app.include_router(recommendation_router)
 
 @app.get("/health")
 def health_check():
