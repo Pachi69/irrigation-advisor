@@ -6,17 +6,21 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel, FieldStatus
-from app.models.satellite_record import SatelliteRecord
+from app.models.satellite_record import SatelliteRecord, SatelliteSource
 from app.schemas.calculation import EToResult
 from app.schemas.recommendation import RecommendationResponse
 from app.schemas.satellite import SatelliteData
 from app.auth.dependencies import get_current_user
 from app.ingestion.climate import get_climate_data, get_forecast
+from app.ingestion.satellite import get_satellite_indices
 from app.calculation.eto import calculate_eto
 from app.calculation.kc import calculate_kc
 from app.calculation.water_balance import calculate_water_balance
 from app.calculation.crop_params import get_root_depth, get_depletion_factor
 from app.calculation.urgency import calculate_urgency
+
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/fields", tags=["recommendation"])
 
@@ -77,6 +81,25 @@ def get_recommendation(
         .order_by(SatelliteRecord.date.desc())
         .first()
     )
+
+    if sat_record is None and field.polygon_geojson:
+        try:
+            indices = get_satellite_indices(field.polygon_geojson, yesterday)
+            if indices is not None:
+                sat_record = SatelliteRecord(
+                    field_id=field_id,
+                    date=yesterday,
+                    source=SatelliteSource.sentinel2,
+                    ndvi=indices.ndvi,
+                    ndwi=indices.ndwi,
+                    evi=indices.evi,
+                    cloud_cover_pct=indices.cloud_cover_pct,
+                    moisture_event_detected=False,
+                )
+                db.add(sat_record)
+                logger.info("NDVI obtenido de GEE y guardado: %.4f", indices.ndvi)
+        except RuntimeError as e:
+            logger.warning("No se pudo obtener NDVI de GEE: %s. Se usara Kc tabular.", e)
 
     satellite_data = None
     ndvi_date = None
