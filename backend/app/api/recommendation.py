@@ -2,13 +2,15 @@ from datetime import date as DateType, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
 
 from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel, FieldStatus
 from app.models.satellite_record import SatelliteRecord, SatelliteSource
+from app.models.recommendation import Recommendation
+from app.schemas.recommendation import RecommendationResponse, RecommendationHistoryItem
 from app.schemas.calculation import EToResult
-from app.schemas.recommendation import RecommendationResponse
 from app.schemas.satellite import SatelliteData
 from app.auth.dependencies import get_current_user
 from app.ingestion.climate import get_climate_data, get_forecast
@@ -136,7 +138,6 @@ def get_recommendation(
     # Persistir nuevo deficit
     field.last_deficit_mm = balance.water_deficit_mm
     field.last_deficit_date = yesterday
-    db.commit()
 
     # Pronostico (3 dias)
     try:
@@ -149,6 +150,32 @@ def get_recommendation(
     
     # Urgencia
     urgency = calculate_urgency(balance, forecast, kc_result)
+
+    # Persistir recomendacion (upsert por field_id + date)
+    rec = (
+        db.query(Recommendation)
+        .filter(Recommendation.field_id == field_id, Recommendation.date == yesterday)
+        .first()
+    )
+    if rec is None:
+        rec = Recommendation(field_id=field_id, date=yesterday)
+        db.add(rec)
+
+    rec.eto_mm = eto.eto_mm
+    rec.kc = kc_result.kc
+    rec.kc_source = kc_result.source
+    rec.etc_mm = eto.eto_mm * kc_result.kc
+    rec.water_deficit_mm = balance.water_deficit_mm
+    rec.ks = balance.ks
+    rec.phenological_stage = kc_result.phenological_stage
+    rec.recommended_irrigation_mm = urgency.recommended_irrigation_mm
+    rec.urgency = urgency.urgency_level
+    rec.reason = urgency.reason
+    rec.precipitation_mm = climate.precipitation_mm
+    rec.confidence = urgency.confidence
+
+    db.commit()
+    logger.info("Recomendacion persistida - campo %d fecha %s urgencia %s", field_id, yesterday, urgency.urgency_level)
 
     return RecommendationResponse(
         field_id=field_id,
@@ -168,3 +195,24 @@ def get_recommendation(
         ndvi=satellite_data.ndvi if satellite_data else None,
         ndvi_date=ndvi_date,
     )
+
+
+@router.get("/{field_id}/recommendations", response_model=List[RecommendationHistoryItem])
+def get_recommendation_history(
+    field_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Devuelve el historial de recomendaciones del campo, ordenado del mas reciente al mas antiguo"""
+    field = db.query(FieldModel).filter(FieldModel.id == field_id).first()
+    if not field or field.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
+    
+    records = (
+        db.query(Recommendation)
+        .filter(Recommendation.field_id == field_id)
+        .order_by(Recommendation.date.desc())
+        .limit(90)
+        .all()
+    )
+    return records
