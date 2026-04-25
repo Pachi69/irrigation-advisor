@@ -37,7 +37,7 @@ class RecommendationHistoryItem(BaseModel):
     """Item del historial de recomendaciones de un campo."""
     id: int
     date: date
-    urgency_level: UrgencyLevel
+    urgency: UrgencyLevel
     recommended_irrigation_mm: float
     reason: str
     confidence: ConfidenceLevel

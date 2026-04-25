@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,16 +8,29 @@ from app.api.fields import router as field_router
 from app.api.admin import router as admin_router
 from app.api.climate import router as climate_router
 from app.api.recommendation import router as recommendation_router
+from app.jobs.scheduler import scheduler
+
+import logging
+logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler.start()
+    logger.info("APScheduler iniciado")
+    yield
+    scheduler.shutdown()
+    logger.info("APScheduler detenido")
 
 app = FastAPI(
     title="Irrigation Advisor API",
     version="0.1.0",
     docs_url="/docs" if settings.environment == "development" else None,
+    lifespan=lifespan
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=[o.strip() for o in settings.frontend_url.split(",")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
