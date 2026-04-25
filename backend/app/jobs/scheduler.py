@@ -2,6 +2,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.jobs.recommendation_job import generate_daily_recommendations
+from app.jobs.alerts_job import generate_climate_alerts
 
 scheduler = BackgroundScheduler(timezone="America/Argentina/Mendoza")
 
@@ -10,5 +11,13 @@ scheduler.add_job(
     trigger=CronTrigger(hour=22, minute=0),
     id="daily_recommendations",
     name="Recomendaciones diarias - 22hs Mendoza",
+    replace_existing=True,
+)
+
+scheduler.add_job(
+    generate_climate_alerts,
+    trigger=CronTrigger(hour="*/6"),
+    id="climate_alerts",
+    name="Alertas criticas - cada 6hs",
     replace_existing=True,
 )
