@@ -57,6 +57,11 @@ onMounted(loadFields)
                     <div><dt>Siembra/brotación</dt><dd>{{ field.planting_date }}</dd></div>
                     <div><dt>Malla antigranizo</dt><dd>{{ field.has_hail_net ? 'Sí' : 'No' }}</dd></div>
                 </dl>
+                <div class="field-actions" v-if="field.status === 'active'">
+                    <RouterLink :to="`/fields/${field.id}/recommendation`" class="btn-recommendation">
+                        Ver recomendación de hoy ->
+                    </RouterLink>
+                </div>
             </li>
         </ul>
     </div>
@@ -98,4 +103,16 @@ onMounted(loadFields)
 .field-info > div { display: flex; flex-direction: column; }
 .field-info dt { font-size: 0.8rem; color: #666; }
 .field-info dd { margin: 0; font-weight: 500; }
+
+.field-actions { margin-top: 0.75rem; }
+.btn-recommendation {
+    display: inline-block;
+    padding: 0.4rem 0.9rem;
+    background: #2e7d32;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+.btn-recommendation:hover { background: #1b5e20; }
 </style>

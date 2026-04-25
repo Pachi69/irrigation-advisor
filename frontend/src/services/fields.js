@@ -14,3 +14,8 @@ export async function getFieldById(id) {
     const { data } = await api.get(`/fields/${id}`)
     return data
 }
+
+export async function getRecommendation(fieldId) {
+    const { data } = await api.get(`/fields/${fieldId}/recommendation`)
+    return data
+}
