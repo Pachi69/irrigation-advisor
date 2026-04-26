@@ -44,10 +44,7 @@ function handleLogout() {
     router.push('/login')
 }
 
-onMounted(async () => {
-    console.log('VAPID KEY: ', import.meta.env.VITE_VAPID_PUBLIC_KEY)
-    setupPushNotifications()
-})
+onMounted(setupPushNotifications)
 </script>
 
 <template>
