@@ -30,7 +30,7 @@ function handleLogout() {
       <RouterLink v-if="isAdmin" to="/admin/fields" class="admin-link">
         Panel admin
       </RouterLink>
-      <button class="link-btn" @click="handleLogout">Cerrar sesión</button>
+      <button class="link-btn btn-logout" @click="handleLogout">Cerrar sesión</button>
     </template>
     <template v-else>
       <RouterLink to="/login">Login</RouterLink>
@@ -62,6 +62,14 @@ nav {
   font-size: 1rem;
   padding: 0;
   text-decoration: underline;
+}
+.btn-logout {
+    background: none;
+    border: 1px solid #ccc;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
 }
 main {
   padding: 1rem;

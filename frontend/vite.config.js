@@ -10,6 +10,9 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       manifest: {
         name: 'Irrigation Advisor',
@@ -20,6 +23,10 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [],
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module',
       },
     }),
   ],

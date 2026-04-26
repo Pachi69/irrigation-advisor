@@ -7,6 +7,7 @@ from app.models.field import Field as FieldModel, FieldStatus
 from app.models.alert import Alert
 from app.ingestion.climate import get_forecast
 from app.decision.alerts import check_climate_alerts
+from app.services.push import send_push_to_user
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,18 @@ def generate_climate_alerts() -> None:
                         )
                 db.commit()
                 ok += 1
+
+                # Notificacion push al productor
+                try:
+                    for alert in new_alerts:
+                        send_push_to_user(
+                            user_id=field.user_id,
+                            title="Alerta climatica",
+                            body=alert.message,
+                            db=db
+                        )
+                except Exception as e:
+                    logger.warning("No se pudo enviar push en campo %d: %s", field.id, e)
             except Exception as e:
                 logger.error("Error procesando alertas campo %d: %s", field.id, e)
                 errors += 1

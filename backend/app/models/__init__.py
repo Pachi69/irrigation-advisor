@@ -5,3 +5,4 @@ from app.models.irrigation_confirmation import IrrigationConfirmation
 from app.models.recommendation import Recommendation, KcSource, PhenologicalStage, UrgencyLevel, ConfidenceLevel
 from app.models.alert import Alert, AlertType
 from app.models.satellite_record import SatelliteRecord, SatelliteSource
+from app.models.push_subscription import PushSubscription

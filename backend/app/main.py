@@ -9,6 +9,7 @@ from app.api.admin import router as admin_router
 from app.api.climate import router as climate_router
 from app.api.recommendation import router as recommendation_router
 from app.jobs.scheduler import scheduler
+from app.api.push import router as push_router
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ app.include_router(field_router)
 app.include_router(admin_router)
 app.include_router(climate_router)
 app.include_router(recommendation_router)
+app.include_router(push_router)
 
 @app.get("/health")
 def health_check():

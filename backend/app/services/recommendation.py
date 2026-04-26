@@ -19,6 +19,7 @@ from app.calculation.kc import calculate_kc
 from app.calculation.water_balance import calculate_water_balance
 from app.calculation.crop_params import get_root_depth, get_depletion_factor
 from app.calculation.urgency import calculate_urgency
+from app.services.push import send_push_to_user
 
 logger = logging.getLogger(__name__)
 NDVI_MAX_AGE_DAYS = 15
@@ -136,6 +137,17 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         "Recomendacion persistida - campo %d fecha %s urgencia %s",
         field.id, yesterday, urgency.urgency_level,
     )
+
+    # Notificacion push al productor
+    try:
+        send_push_to_user(
+            user_id=field.user_id,
+            title="Recomendacion de riego",
+            body=f"{urgency.reason[:80]}..." if len(urgency.reason) > 80 else urgency.reason,
+            db=db,
+        )
+    except Exception as e:
+        logger.warning("Error al enviar notificacion push: %s", e)
 
     return RecommendationResponse(
         field_id=field.id,
