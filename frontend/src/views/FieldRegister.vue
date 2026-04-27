@@ -70,6 +70,7 @@ function cancel() {
                 <select v-model="form.crop_type" required :disabled="loading">
                     <option value="vine">Vid</option>
                     <option value="peach">Durazno</option>
+                    <option value="alfalfa">Alfalfa</option>
                 </select>
             </label>
 

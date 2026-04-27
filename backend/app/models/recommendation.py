@@ -45,6 +45,10 @@ class Recommendation(Base):
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     precipitation_mm: Mapped[float] = mapped_column(Float, nullable=False)
     confidence: Mapped[ConfidenceLevel] = mapped_column(Enum(ConfidenceLevel), nullable=False)
+    taw_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    raw_mm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ndvi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ndvi_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     field: Mapped["Field"] = relationship(back_populates="recommendations")

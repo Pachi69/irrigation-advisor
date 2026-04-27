@@ -99,6 +99,7 @@ onMounted(() => { load(); fetchAlerts() })
     <div class="rec-page">
         <header class="rec-header">
             <button class="btn-back" @click="router.push('/fields')"><- Mis campos</button>
+            <RouterLink :to="`/fields/${route.params.id}/history`" class="btn-history">Historial</RouterLink>
             <span class="rec-date" v-if="rec">{{ rec.date }}</span>
         </header>
 
@@ -378,4 +379,12 @@ onMounted(() => { load(); fetchAlerts() })
     line-height: 1;
 }
 .alert-dismiss:hover { opacity: 1; }
+.btn-history {
+    font-size: 0.85rem;
+    color: #2e7d32;
+    text-decoration: none;
+    border: 1px solid #2e7d32;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+}
 </style>

@@ -39,8 +39,19 @@ def get_recommendation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Genera y persiste la recomendacion de riego para el campo indicado."""
+    """Devuelve la ultima recomendacion guardada. Solo recalcula si no existe ninguna."""
     field = _get_active_field(field_id, current_user, db)
+
+    existing = (
+        db.query(Recommendation)
+        .filter(Recommendation.field_id == field_id, Recommendation.taw_mm != None)
+        .order_by(Recommendation.date.desc())
+        .first()
+    )
+
+    if existing:
+        return existing
+
     try:
         return run_recommendation_pipeline(field, db)
     except (ValueError, RuntimeError) as e:

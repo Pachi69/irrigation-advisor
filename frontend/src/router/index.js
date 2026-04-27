@@ -7,6 +7,7 @@ import FieldRegister from '../views/FieldRegister.vue'
 import { useAuth } from '../stores/auth'
 import AdminFields from '../views/AdminFields.vue'
 import FieldRecommendation from '../views/FieldRecommendation.vue'
+import FieldHistory from '../views/FieldHistory.vue'
 
 const routes = [
   {
@@ -31,6 +32,12 @@ const routes = [
     path: '/fields/:id/recommendation',
     name: 'field-recommendation',
     component: FieldRecommendation,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/fields/:id/history',
+    name: 'field-history',
+    component: FieldHistory,
     meta: { requiresAuth: true },
   },
   {

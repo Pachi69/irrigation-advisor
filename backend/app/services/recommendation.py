@@ -131,6 +131,10 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
     rec.reason = urgency.reason
     rec.precipitation_mm = climate.precipitation_mm
     rec.confidence = urgency.confidence
+    rec.taw_mm = balance.taw_mm
+    rec.raw_mm = balance.raw_mm
+    rec.ndvi = sat_record.ndvi if sat_record else None
+    rec.ndvi_date = ndvi_date
 
     db.commit()
     logger.info(

@@ -1,15 +1,15 @@
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.models.recommendation import UrgencyLevel, ConfidenceLevel, KcSource, PhenologicalStage
 
 
 class RecommendationResponse(BaseModel):
-    """Respuesta complketa de la recomendacion de riego para un campo."""
+    """Respuesta completa de la recomendacion de riego para un campo."""
     field_id: int
     date: date
 
     # Resultado final
-    urgency_level: UrgencyLevel
+    urgency_level: UrgencyLevel = Field(validation_alias='urgency')
     recommended_irrigation_mm: float
     reason: str
     confidence: ConfidenceLevel
@@ -17,8 +17,8 @@ class RecommendationResponse(BaseModel):
     # Balance hidrico
     water_deficit_mm: float
     ks: float
-    taw_mm: float
-    raw_mm: float
+    taw_mm: float | None = None
+    raw_mm: float | None = None
 
     # Evapotranspiracion
     eto_mm: float
@@ -32,6 +32,8 @@ class RecommendationResponse(BaseModel):
     ndvi: float | None = None
     ndvi_date: date | None = None
 
+    model_config = {"from_attributes": True, "populate_by_name": True}
+
 
 class RecommendationHistoryItem(BaseModel):
     """Item del historial de recomendaciones de un campo."""
@@ -42,6 +44,7 @@ class RecommendationHistoryItem(BaseModel):
     reason: str
     confidence: ConfidenceLevel
     water_deficit_mm: float
+    taw_mm: float | None = None
     ks: float
     eto_mm: float
     kc: float
