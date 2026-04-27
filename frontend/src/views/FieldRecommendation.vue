@@ -1,7 +1,7 @@
 <script setup>
 import  { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter} from 'vue-router'
-import { getRecommendation } from '../services/fields'
+import { getRecommendation, getFieldAlerts } from '../services/fields'
 
 const router = useRouter()
 const route = useRoute()
@@ -9,6 +9,13 @@ const route = useRoute()
 const rec = ref(null)
 const loading = ref(true)
 const error = ref('')
+
+const alerts = ref([])
+
+const ALERT_LABELS = {
+    frost: 'Alerta de helada',
+    heat_wave: 'Alerta de ola de calor',
+}
 
 const URGENCY_LABELS = {
     low: 'Sin urgencia',
@@ -60,7 +67,24 @@ async function load() {
     }
 }
 
-onMounted(load)
+function formatAlertDate(dateStr) {
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(today.getDate() + 1)
+    const d = new Date(dateStr + 'T00:00:00')
+    if (d.toDateString() === tomorrow.toDateString()) return 'mañana'
+    return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+async function fetchAlerts() {
+    try {
+        alerts.value = await getFieldAlerts(route.params.id)
+    } catch {
+        // Alertas opcionales
+    }
+}
+
+onMounted(() => { load(); fetchAlerts() })
 </script>
 
 <template>
@@ -88,6 +112,15 @@ onMounted(load)
                     Confianza: {{ CONFIDENCE_LABELS[rec.confidence] }}
                 </span>
              </div>
+
+             <!-- Alertas climaticas -->
+              <section v-if="alerts.length > 0" class="section alerts-section">
+                <h2>Alertas climaticas</h2>
+                <div v-for="alert in alerts" :key="alert.id" :class="['alert-item', `alert-${alert.type}`]">
+                    <span class="alert-icon">{{ ALERT_LABELS[alert.type] }}</span>
+                    <span class="alert-date">{{ formatAlertDate(alert.date) }}</span>
+                </div>
+              </section>
 
              <!-- Balance hidrico-->
               <section class="section">
@@ -312,4 +345,18 @@ onMounted(load)
     margin-top: 0.5rem;
     margin-bottom: 0;
 }
+.alerts-section h2 { color: #b71c1c; }
+.alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.alert-frost     { background: #e3f2fd; color: #0d47a1; }
+.alert-heat_wave { background: #fff3e0; color: #e65100; }
+.alert-date { font-size: 0.85rem; opacity: 0.8; }
 </style>

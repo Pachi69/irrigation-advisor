@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import date as date_type
 
 from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel
+from app.models.alert import Alert
 from app.schemas.field import FieldCreate, FieldPublic
+from app.schemas.alert import AlertPublic
 from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/fields", tags=["fields"])
@@ -62,3 +65,33 @@ def get_my_field(
     if field is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
     return field
+
+
+@router.get("/{field_id}/alerts", response_model=list[AlertPublic])
+def get_field_alerts(
+    field_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retorna las alertas del dia mas proximo (date > today) para un campo"""
+    field = (
+        db.query(FieldModel)
+        .filter(FieldModel.id == field_id, FieldModel.user_id == current_user.id)
+        .first()
+    )
+    if field is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
+    
+    today = date_type.today()
+    alerts = (
+        db.query(Alert)
+        .filter(Alert.field_id == field_id, Alert.date > today)
+        .order_by(Alert.date.asc())
+        .all()
+    )
+
+    if not alerts:
+        return []
+    
+    nearest_date = alerts[0].date
+    return [a for a in alerts if a.date == nearest_date]

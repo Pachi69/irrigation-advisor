@@ -19,3 +19,8 @@ export async function getRecommendation(fieldId) {
     const { data } = await api.get(`/fields/${fieldId}/recommendation`)
     return data
 }
+
+export async function getFieldAlerts(fieldId) {
+    const { data } = await api.get(`/fields/${fieldId}/alerts`)
+    return data
+}
