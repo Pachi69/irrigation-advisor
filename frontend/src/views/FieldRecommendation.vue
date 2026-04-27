@@ -11,6 +11,7 @@ const loading = ref(true)
 const error = ref('')
 
 const alerts = ref([])
+const dismissedAlerts = JSON.parse(localStorage.getItem('dismissedAlerts') || '[]')
 
 const ALERT_LABELS = {
     frost: 'Alerta de helada',
@@ -78,10 +79,17 @@ function formatAlertDate(dateStr) {
 
 async function fetchAlerts() {
     try {
-        alerts.value = await getFieldAlerts(route.params.id)
+        const all = await getFieldAlerts(route.params.id)
+        alerts.value = all.filter(a => !dismissedAlerts.includes(a.id))
     } catch {
         // Alertas opcionales
     }
+}
+
+function dismissAlert(id) {
+    const updated = [...dismissedAlerts, id]
+    localStorage.setItem('dismissedAlerts', JSON.stringify(updated))
+    alerts.value = alerts.value.filter(a => a.id !== id)
 }
 
 onMounted(() => { load(); fetchAlerts() })
@@ -119,6 +127,7 @@ onMounted(() => { load(); fetchAlerts() })
                 <div v-for="alert in alerts" :key="alert.id" :class="['alert-item', `alert-${alert.type}`]">
                     <span class="alert-icon">{{ ALERT_LABELS[alert.type] }}</span>
                     <span class="alert-date">{{ formatAlertDate(alert.date) }}</span>
+                    <button class="alert-dismiss" @click="dismissAlert(alert.id)">X</button>
                 </div>
               </section>
 
@@ -359,4 +368,14 @@ onMounted(() => { load(); fetchAlerts() })
 .alert-frost     { background: #e3f2fd; color: #0d47a1; }
 .alert-heat_wave { background: #fff3e0; color: #e65100; }
 .alert-date { font-size: 0.85rem; opacity: 0.8; }
+.alert-dismiss {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    opacity: 0.5;
+    padding: 0 0.25rem;
+    line-height: 1;
+}
+.alert-dismiss:hover { opacity: 1; }
 </style>
