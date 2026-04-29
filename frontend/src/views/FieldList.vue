@@ -7,7 +7,7 @@ const fields = ref([])
 const loading = ref(true)
 const error = ref('')
 
-const CROP_LABELS = { vine: 'Vid', peach: 'Durazno' }
+const CROP_LABELS = { vine: 'Vid', peach: 'Durazno', alfalfa: 'Alfalfa' }
 const SOIL_LABELS = { sandy: 'Arenoso', clay: 'Arcilloso', loamy: 'Franco' }
 const IRRIGATION_LABELS = { drip: 'Goteo', sprinkler: 'Aspersión', flood: 'Surco' }
 const STATUS_LABELS = { pending: 'Pendiente de aprobación', active: 'Activo', inactive: 'Inactivo' }
@@ -61,6 +61,9 @@ onMounted(loadFields)
                     <RouterLink :to="`/fields/${field.id}/recommendation`" class="btn-recommendation">
                         Ver recomendación de hoy ->
                     </RouterLink>
+                    <RouterLink :to="`/fields/${field.id}/edit`" class="btn-edit">
+                        Editar
+                    </RouterLink>
                 </div>
             </li>
         </ul>
@@ -87,9 +90,9 @@ onMounted(loadFields)
 }
 .field-head {
   display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.75rem; 
 }
-.field-head h2 { margin: 0; font-size: 1.2rem; }
+.field-head h2 { margin: 0; font-size: 1.2rem; color:#383d41}
 .status {
   font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 12px;
 }
@@ -115,4 +118,15 @@ onMounted(loadFields)
     font-size: 0.9rem;
 }
 .btn-recommendation:hover { background: #1b5e20; }
+.btn-edit {
+    display: inline-block;
+    padding: 0.4rem 0.9rem;
+    background: none;
+    color: #2e7d32;
+    border: 1px solid #2e7d32;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+.btn-edit:hover { background: #f1f8f1; }
 </style>

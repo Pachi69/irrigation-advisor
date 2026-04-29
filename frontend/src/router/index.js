@@ -8,6 +8,7 @@ import { useAuth } from '../stores/auth'
 import AdminFields from '../views/AdminFields.vue'
 import FieldRecommendation from '../views/FieldRecommendation.vue'
 import FieldHistory from '../views/FieldHistory.vue'
+import FieldEdit from '../views/FieldEdit.vue'
 
 const routes = [
   {
@@ -26,6 +27,12 @@ const routes = [
     path: '/fields/new',
     name: 'field-register',
     component: FieldRegister,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/fields/:id/edit',
+    name: 'field-edit',
+    component: FieldEdit,
     meta: { requiresAuth: true },
   },
   {

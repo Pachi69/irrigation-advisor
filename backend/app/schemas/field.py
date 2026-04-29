@@ -32,3 +32,14 @@ class FieldPublic(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class FieldUpdate(BaseModel):
+    """ Campos editables por el productor. Todos opcionales - solo se actualizan los enviados."""
+    name: str | None = Field(default=None, min_length=2, max_length=255)
+    crop_type: CropType | None = None
+    area_ha: float | None = Field(default=None, gt=0, le=10000)
+    irrigation_type: IrrigationType | None = None
+    soil_type: SoilType | None = None
+    has_hail_net: bool | None = None
+    planting_date: date | None = None

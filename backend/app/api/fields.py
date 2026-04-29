@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel
 from app.models.alert import Alert
-from app.schemas.field import FieldCreate, FieldPublic
+from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate
 from app.schemas.alert import AlertPublic
 from app.auth.dependencies import get_current_user
 
@@ -95,3 +95,27 @@ def get_field_alerts(
     
     nearest_date = alerts[0].date
     return [a for a in alerts if a.date == nearest_date]
+
+
+@router.patch("/{field_id}", response_model=FieldPublic)
+def update_field(
+    field_id: int,
+    data: FieldUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Actualiza los datos editables de un campo del usuario autenticado."""
+    field = (
+        db.query(FieldModel)
+        .filter(FieldModel.id == field_id, FieldModel.user_id == current_user.id)
+        .first()
+    )
+    if field is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
+    
+    for attr, value in data.model_dump(exclude_none=True).items():
+        setattr(field, attr, value)
+
+    db.commit()
+    db.refresh(field)
+    return field
