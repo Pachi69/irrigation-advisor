@@ -18,8 +18,6 @@ class SatelliteRecord(Base):
     date: Mapped[date] = mapped_column(Date, nullable=False)
     source: Mapped[SatelliteSource] = mapped_column(Enum(SatelliteSource), nullable=False)
     ndvi: Mapped[float] = mapped_column(Float, nullable=False)
-    ndwi: Mapped[float] = mapped_column(Float, nullable=False)
-    evi: Mapped[float] = mapped_column(Float, nullable=False)
     backscatter_vv: Mapped[float] = mapped_column(Float, nullable=True)
     backscatter_vh: Mapped[float] = mapped_column(Float, nullable=True)
     cloud_cover_pct: Mapped[float] = mapped_column(Float, nullable=False)

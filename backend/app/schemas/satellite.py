@@ -8,8 +8,6 @@ class SatelliteData(BaseModel):
     date: date
     source: SatelliteSource
     ndvi: float | None = None
-    ndwi: float | None = None
-    evi: float | None = None
     backscatter_vv: float | None = None
     backscatter_vh: float | None = None
     cloud_cover_pct: float | None = None

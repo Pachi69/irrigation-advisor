@@ -64,7 +64,7 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
                 sat_record = SatelliteRecord(
                     field_id=field.id, date=yesterday,
                     source=SatelliteSource.sentinel2,
-                    ndvi=indices.ndvi, ndwi=indices.ndwi, evi=indices.evi,
+                    ndvi=indices.ndvi,
                     cloud_cover_pct=indices.cloud_cover_pct,
                     moisture_event_detected=False,
                 )

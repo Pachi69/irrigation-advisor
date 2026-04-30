@@ -47,8 +47,6 @@ erDiagram
         date fecha
         enum fuente "sentinel2 | sentinel1"
         float ndvi "null si fuente=sentinel1"
-        float ndwi "null si fuente=sentinel1"
-        float evi "null si fuente=sentinel1"
         float backscatter_vv "null si fuente=sentinel2"
         float backscatter_vh "null si fuente=sentinel2"
         float nubosidad_pct "null si fuente=sentinel1"
@@ -109,7 +107,7 @@ erDiagram
 ### Lo que va en la base de datos
 - Parámetros de suelo (FC, WP, densidad) se derivan del `tipo_suelo` del campo usando tablas FAO estáticas al momento de activar el campo. Se guardan en `suelo` para no recalcular.
 - El `deficit_hidrico_mm` de la última `recomendacion` es el punto de partida del balance del día siguiente.
-- `registro_satelital` unifica datos de Sentinel-2 (NDVI/NDWI/EVI) y Sentinel-1 (backscatter + detección de humedad) en una sola tabla.
+- `registro_satelital` unifica datos de Sentinel-2 (NDVI) y Sentinel-1 (backscatter + detección de humedad) en una sola tabla.
 
 ### Lo que NO va en la base de datos (configuración estática en YAML)
 - Kc por etapa fenológica para cada cultivo

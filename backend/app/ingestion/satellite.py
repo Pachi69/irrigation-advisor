@@ -50,18 +50,14 @@ def _mask_s2_clouds(image: ee.Image) -> ee.Image:
 class SatelliteIndices:
     """Indices espectrales calculados desde Sentinel-2"""
     ndvi: float
-    ndwi: float
-    evi: float
     cloud_cover_pct: float
 
 
 def get_satellite_indices(polygon_geojson: dict, target_date: date) -> SatelliteIndices | None:
     """
-    Obtiene NDVI, NDWI y EVI promedio desde Sentinel-2 en una sola llamada GEE.
+    Obtiene NDVI promedio desde Sentinel-2 via GEE.
 
-    NDVI = (B8 - B4) / (B8 + B4) -> vigor vegetal
-    NDWI = (B3 - B8) / (B3 + B8) -> contenido hídrico de la vegetación
-    EVI  = 2.5 x (B8-B4) / (B8 + 6B4 - 7.5B2 + 1) -> índice mejorado
+    NDVI = (B8 - B4) / (B8 + B4)
 
     Args:
         polygon_geojson: geometría GeoJSON del campo.
@@ -97,16 +93,10 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
         image = collection.first()
         cloud_cover = float(image.get("CLOUDY_PIXEL_PERCENTAGE").getInfo() or 0.0)
 
-        # Calcular los tres índices sobre la misma imagen
         ndvi_band = image.normalizedDifference(["B8", "B4"]).rename("NDVI")
-        ndwi_band = image.normalizedDifference(["B3", "B8"]).rename("NDWI")
-        evi_band  = image.expression(
-            "2.5 * (NIR - RED) / (NIR + 6.0 * RED - 7.5 * BLUE + 1.0)",
-            {"NIR": image.select("B8"), "RED": image.select("B4"), "BLUE": image.select("B2")},
-        ).rename("EVI")
 
         result = (
-            ndvi_band.addBands(ndwi_band).addBands(evi_band)
+            ndvi_band
             .reduceRegion(
                 reducer=ee.Reducer.mean(),
                 geometry=geometry,
@@ -118,19 +108,14 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
 
         ndvi_val = result.get("NDVI")
         if ndvi_val is None:
-            logger.warning("Índices son None para el polígono - posiblemente cubierto por nubes.")
+            logger.warning("NDVI es None para el polígono - posiblemente cubierto por nubes.")
             return None
 
         indices = SatelliteIndices(
             ndvi=float(ndvi_val),
-            ndwi=float(result.get("NDWI") or 0.0),
-            evi=float(result.get("EVI") or 0.0),
             cloud_cover_pct=cloud_cover,
         )
-        logger.info(
-            "Índices satelitales calculados — NDVI=%.4f NDWI=%.4f EVI=%.4f",
-            indices.ndvi, indices.ndwi, indices.evi,
-        )
+        logger.info("NDVI obtenido desde GEE: %.4f", indices.ndvi)
         return indices
 
     except Exception as e:
