@@ -43,3 +43,17 @@ class FieldUpdate(BaseModel):
     soil_type: SoilType | None = None
     has_hail_net: bool | None = None
     planting_date: date | None = None
+
+
+class DeficitPoint(BaseModel):
+    date: date
+    pct: float
+
+class NdviPoint(BaseModel):
+    date: date
+    value: float
+
+class FieldChartData(BaseModel):
+    deficit: list[DeficitPoint]
+    ndvi: list[NdviPoint]
+    raw_threshold_pct: float

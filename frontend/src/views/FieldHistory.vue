@@ -33,6 +33,7 @@ onMounted(async () => {
         <header class="history-header">
             <button class="btn-back" @click="router.push(`/fields/${route.params.id}/recommendation`)"> <- Recomendacion</button>
             <h1>Historial</h1>
+            <RouterLink :to="`/fields/${route.params.id}/chart`" class="btn-chart">Grafico</RouterLink>
         </header>
 
         <div v-if="loading" class="center">Cargando historial ...</div>
@@ -104,4 +105,12 @@ onMounted(async () => {
 .item-mm { font-size: 0.9rem; font-weight: 600; color: #333; }
 .center { text-align: center; padding: 2rem; color: #666; }
 .error  { color: #c00; text-align: center; padding: 1rem; }
+.btn-chart {
+    font-size: 0.85rem;
+    color: #2e7d32;
+    text-decoration: none;
+    border: 1px solid #2e7d32;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+}
 </style>

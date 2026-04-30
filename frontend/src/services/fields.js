@@ -34,3 +34,8 @@ export async function updateField(fieldId, payload) {
     const { data } = await api.patch(`/fields/${fieldId}`, payload)
     return data
 }
+
+export async function getFieldChartData(fieldId) {
+    const { data } = await api.get(`/fields/${fieldId}/chart`)
+    return data
+}

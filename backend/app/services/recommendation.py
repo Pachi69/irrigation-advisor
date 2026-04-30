@@ -49,7 +49,35 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         climate = climate.model_copy(update={"eto_reference_mm": eto_result.eto_mm})
     eto = EToResult(eto_mm=climate.eto_reference_mm)
 
-    # NDVI mas reciente (maximo NDVI_MAX_AGE_DAYS dias)
+    # Intenta obtener la imagen S2 mas reciente disponible
+    if field.polygon_geojson:
+        try:
+            new_indices = get_satellite_indices(field.polygon_geojson, today)
+            if new_indices is not None:
+                # Evitar duplicar si ya tenemos esa fecha de imagen
+                existing = (
+                    db.query(SatelliteRecord)
+                    .filter(
+                        SatelliteRecord.field_id == field.id,
+                        SatelliteRecord.date == new_indices.image_date,
+                    )
+                    .first()
+                )
+                if existing is None:
+                    db.add(SatelliteRecord(
+                        field_id=field.id,
+                        date=new_indices.image_date,
+                        source=SatelliteSource.sentinel2,
+                        ndvi=new_indices.ndvi,
+                        cloud_cover_pct=new_indices.cloud_cover_pct,
+                        moisture_event_detected=False,
+                    ))
+                    db.flush()
+                    logger.info("Nueva imagen S2 persistida: fecha %s, NDVI %.4f", new_indices.image_date, new_indices.ndvi)
+        except RuntimeError as e:
+            logger.warning("No se pudo obtener NDVI de GEE: %s. Se usara registro existente o Kc tabular.", e)
+
+    # Usar el registro satelital mas reciente disponible
     cutoff = today - timedelta(days=NDVI_MAX_AGE_DAYS)
     sat_record = (
         db.query(SatelliteRecord)
@@ -57,28 +85,15 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         .order_by(SatelliteRecord.date.desc())
         .first()
     )
-    if sat_record is None and field.polygon_geojson:
-        try:
-            indices = get_satellite_indices(field.polygon_geojson, yesterday)
-            if indices is not None:
-                sat_record = SatelliteRecord(
-                    field_id=field.id, date=yesterday,
-                    source=SatelliteSource.sentinel2,
-                    ndvi=indices.ndvi,
-                    cloud_cover_pct=indices.cloud_cover_pct,
-                    moisture_event_detected=False,
-                )
-                db.add(sat_record)
-                logger.info("NDVI obtenido de GEE: %.4f", indices.ndvi)
-        except RuntimeError as e:
-            logger.warning("No se pudo obtener NDVI de GEE: %s. Se usara Kc tabular.", e)
 
     satellite_data = None
     ndvi_date = None
     if sat_record:
         satellite_data = SatelliteData(
-            field_id=field.id, date=sat_record.date,
-            source=sat_record.source, ndvi=sat_record.ndvi,
+            field_id=field.id,
+            date=sat_record.date,
+            source=sat_record.source,
+            ndvi=sat_record.ndvi,
         )
         ndvi_date = sat_record.date
 

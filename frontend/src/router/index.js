@@ -9,6 +9,7 @@ import AdminFields from '../views/AdminFields.vue'
 import FieldRecommendation from '../views/FieldRecommendation.vue'
 import FieldHistory from '../views/FieldHistory.vue'
 import FieldEdit from '../views/FieldEdit.vue'
+import FieldChart from '../views/FieldChart.vue'
 
 const routes = [
   {
@@ -45,6 +46,12 @@ const routes = [
     path: '/fields/:id/history',
     name: 'field-history',
     component: FieldHistory,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/fields/:id/chart',
+    name: 'field-chart',
+    component: FieldChart,
     meta: { requiresAuth: true },
   },
   {

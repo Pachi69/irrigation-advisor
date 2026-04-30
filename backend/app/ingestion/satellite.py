@@ -51,6 +51,7 @@ class SatelliteIndices:
     """Indices espectrales calculados desde Sentinel-2"""
     ndvi: float
     cloud_cover_pct: float
+    image_date: date
 
 
 def get_satellite_indices(polygon_geojson: dict, target_date: date) -> SatelliteIndices | None:
@@ -83,7 +84,7 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
             .filterDate(start_date, end_date)
             .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", MAX_CLOUD_COVERAGE))
             .map(_mask_s2_clouds)
-            .sort("CLOUDY_PIXEL_PERCENTAGE")
+            .sort("system:time_start", False)
         )
 
         if collection.size().getInfo() == 0:
@@ -92,6 +93,9 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
 
         image = collection.first()
         cloud_cover = float(image.get("CLOUDY_PIXEL_PERCENTAGE").getInfo() or 0.0)
+
+        image_date_str = ee.Date(image.get("system:time_start")).format("YYYY-MM-dd").getInfo()
+        image_date = date.fromisoformat(image_date_str)
 
         ndvi_band = image.normalizedDifference(["B8", "B4"]).rename("NDVI")
 
@@ -114,8 +118,9 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
         indices = SatelliteIndices(
             ndvi=float(ndvi_val),
             cloud_cover_pct=cloud_cover,
+            image_date=image_date
         )
-        logger.info("NDVI obtenido desde GEE: %.4f", indices.ndvi)
+        logger.info("NDVI desde GEE: %.4f (imagen del %s)", indices.ndvi, indices.image_date)
         return indices
 
     except Exception as e:
