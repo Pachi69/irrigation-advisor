@@ -1,20 +1,19 @@
 <script setup> 
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { listPendingFields, approveField } from '../services/admin'
-import { computeCentroidPreview } from '../utils/geo'
+import FieldMapEditor from '../components/FieldMapEditor.vue'
+
 
 const fields = ref([])
 const loading = ref(true)
 const error = ref('')
 
 const approvingField = ref(null)
-const geojsonText = ref('')
-const centroidPreview = ref(null)
-const previewError = ref('')
+const polygonGeoJSON = ref(null)
 const approving = ref(false)
 const approveError = ref('')
 
-const CROP_LABELS = { vine: 'Vid', peach: 'Durazno' }
+const CROP_LABELS = { vine: 'Vid', peach: 'Durazno', alfalfa: 'Alfalfa' }
 const SOIL_LABELS = { sandy: 'Arenoso', clay: 'Arcilloso', loamy: 'Franco' }
 const IRRIGATION_LABELS = { drip: 'Goteo', sprinkler: 'Aspersión', flood: 'Surco' }
 
@@ -32,9 +31,7 @@ async function loadPending() {
 
 function openApproveModal(field) {
     approvingField.value = field
-    geojsonText.value = ''
-    centroidPreview.value = null
-    previewError.value = ''
+    polygonGeoJSON.value = field.polygon_geojson || null
     approveError.value = ''
 }
 
@@ -42,28 +39,12 @@ function closeApproveModal() {
     approvingField.value = null
 }
 
-// Recalcula el preview del centroide cada vez que cambia el textarea
-watch(geojsonText, (text) => {
-    centroidPreview.value = null
-    previewError.value = ''
-    if (!text.trim()) return
-    try {
-        const parsed = JSON.parse(text)
-        centroidPreview.value = computeCentroidPreview(parsed)
-    } catch (err) {
-        previewError.value = err instanceof SyntaxError
-            ? 'JSON inválido'
-            : err.message
-    }
-})
-
 async function confirmApproval() {
-    if (!approvingField.value) return
+    if (!approvingField.value || !polygonGeoJSON.value) return
     approving.value = true
     approveError.value = ''
     try {
-        const parsed = JSON.parse(geojsonText.value)
-        await approveField(approvingField.value.id, parsed)
+        await approveField(approvingField.value.id, polygonGeoJSON.value)
         // Sacamos el campo aprobado de la lista de pendientes
         fields.value = fields.value.filter(f => f.id !== approvingField.value.id)
         closeApproveModal()
@@ -124,26 +105,11 @@ onMounted(loadPending)
                 </header>
 
                 <div class="modal-body">
-                    <label for="geojson-input">Pegá el GeoJSON del polígono:</label>
-                    <textarea
-                        id="geojson-input"
-                        v-model="geojsonText"
-                        rows="10"
-                        placeholder='{"type":"Polygon","coordinates":[[[lon,lat],[lon,lat],[lon,lat],[lon,lat]]]}'
-                    ></textarea>
-
-                    <div v-if="centroidPreview" class="preview preview-ok">
-                        <strong>Centroide:</strong>
-                        lat {{ centroidPreview.latitude.toFixed(5) }},
-                        lon {{ centroidPreview.longitude.toFixed(5) }}
-                    </div>
-                    <div v-else-if="previewError" class="preview preview-error">
-                        {{ previewError }}
-                    </div>
-                    <div v-else class="preview preview-hint">
-                        El centroide se calcula automaticamente al pegar un GeoJSON valido.
-                    </div>
-
+                    <p class="map-hint">
+                        Dibujá el perímetro del campo. Usá el ícono de polígono
+                        o rectángulo en el panel izquierdo del mapa.
+                    </p>
+                    <FieldMapEditor v-model="polygonGeoJSON" height="380px" />
                     <p v-if="approveError" class="error">{{ approveError }}</p>
                 </div>
 
@@ -152,7 +118,7 @@ onMounted(loadPending)
                     <button 
                         class="btn-primary" 
                         @click="confirmApproval" 
-                        :disabled="!centroidPreview || approving"
+                        :disabled="!polygonGeoJSON || approving"
                     > 
                         {{ approving ? 'Aprobando...' : 'Confirmar aprobacion' }}
                     </button>
@@ -208,7 +174,7 @@ onMounted(loadPending)
 }
 .modal {
     background: white; border-radius: 8px;
-    width: min(600px, 92vw);
+    width: min(750px, 96vw);
     max-height: 90vh; overflow-y: auto;
     display: flex; flex-direction: column;
 }
@@ -240,5 +206,13 @@ onMounted(loadPending)
 .modal-footer {
     display: flex; justify-content: flex-end; gap: 0.5rem;
     padding: 1rem 1.25rem; border-top: 1px solid #eee;
+}
+.map-hint {
+    font-size: 0.875rem;
+    color: #555;
+    margin: 0;
+    background: #f5f5f5;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
 }
 </style>

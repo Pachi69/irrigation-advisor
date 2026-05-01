@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createField } from '../services/fields'
+import FieldMapEditor from '../components/FieldMapEditor.vue'
 
 const router = useRouter()
 
@@ -12,11 +13,13 @@ const form = ref({
     irrigation_type: 'drip',
     soil_type: 'loamy',
     has_hail_net: false,
-    planting_date: ''
+    planting_date: '',
+    polygon_geojson: null,
 })
 
 const loading = ref(false)
 const error = ref('')
+const showMapModal = ref(false)
 
 async function handleSubmit() {
     error.value = ''
@@ -47,8 +50,8 @@ function cancel() {
     <div class="form-container">
         <h1>Registrar Nuevo Campo</h1>
         <p class="hint">
-            Después del registr, un administrador asignará el polígono geografico
-            para activar el procesamiento satelital.
+            Dibujá el perímetro de tu campo en el mapa para agilizar la aprobación.
+            El administrador revisará el polígono antes de activar el procesamiento satelital.
         </p>
 
         <form @submit.prevent="handleSubmit">
@@ -106,6 +109,16 @@ function cancel() {
                 />
             </label>
 
+            <div class="map-field">
+                <span class="map-label">Ubicación del campo</span>
+                <span class="field-hint">Marcá el perímetro de tu campo para agilizar la aprobación.</span>
+                <button type="button" class="btn-map" @click="showMapModal = true">
+                    Abrir mapa y marcar campo
+                </button>
+                <span v-if="form.polygon_geojson" class="map-ok">Campo marcado correctamente</span>
+                <span v-else class="map-empty">Sin marcar aún</span>
+            </div>
+
             <label>
                 Fecha de siembra o brotación
                 <input
@@ -136,6 +149,30 @@ function cancel() {
 
             <p v-if="error" class="error">{{ error }}</p>
         </form>
+
+        <div v-if="showMapModal" class="map-backdrop" @click.self="showMapModal = false">
+            <div class="map-modal">
+                <header class="map-modal-header">
+                    <h2>Marcá el perímetro de tu campo</h2>
+                    <button type="button" class="btn-close" @click="showMapModal = false">X</button>
+                </header>
+                <p class="map-modal-hint">
+                    Tocá el ícono de polígono en el panel izquierdo del mapa, luego hacé clic
+                    en cada esquina de tu campo y cerrá el contorno al final.
+                </p>
+                <FieldMapEditor v-model="form.polygon_geojson" height="500px" />
+                <footer class="map-modal-footer">
+                    <button
+                        type="button"
+                        class="btn-primary btn-confirm-map"
+                        :disabled="!form.polygon_geojson"
+                        @click="showMapModal = false"
+                    >
+                        {{ form.polygon_geojson ? 'Confirmar ubicación' : 'Dibujá el campo primero' }}
+                    </button>
+                </footer>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -144,6 +181,9 @@ function cancel() {
 .hint {
   background: #e3f2fd; padding: 0.75rem; border-radius: 4px;
   font-size: 0.9rem; color: #0d47a1; margin-bottom: 1.5rem;
+}
+.field-hint {
+    font-size: 0.82rem; color: #666; margin-bottom: 0.35rem;
 }
 form { display: flex; flex-direction: column; gap: 1rem; }
 label { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -164,4 +204,48 @@ input, select {
 .btn-secondary:hover:not(:disabled) { background: #bdbdbd; }
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 .error { color: #c00; margin: 0; }
+.map-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.map-label { font-size: 1rem; }
+.btn-map {
+    padding: 0.6rem 1rem; background: #e8f5e9; color: #2e7d32;
+    border: 1px solid #2e7d32; border-radius: 4px; cursor: pointer;
+    font-size: 0.95rem; text-align: left;
+}
+.btn-map:hover { background: #c8e6c9; }
+.map-ok { font-size: 0.85rem; color: #2e7d32; font-weight: 500; }
+.map-empty { font-size: 0.85rem; color: #999; }
+
+.map-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.map-modal {
+    background: white; border-radius: 8px;
+    width: min(820px, 96vw);
+    max-height: 92vh; overflow-y: auto;
+    display: flex; flex-direction: column;
+}
+.map-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1rem 1.25rem; border-bottom: 1px solid #eee;
+}
+.map-modal-header h2 { margin: 0; font-size: 1.1rem; color: #2e7d32; }
+.btn-close {
+    background: none; border: none; font-size: 1.2rem;
+    cursor: pointer; color: #666;
+}
+.map-modal-hint {
+    font-size: 0.88rem; color: #555; margin: 0;
+    padding: 0.75rem 1.25rem; background: #f9f9f9;
+    border-bottom: 1px solid #eee;
+}
+.map-modal-footer {
+    padding: 1rem 1.25rem; border-top: 1px solid #eee;
+    display: flex; justify-content: flex-end;
+}
+.btn-confirm-map {
+    padding: 0.7rem 1.5rem; font-size: 1rem;
+}
 </style>

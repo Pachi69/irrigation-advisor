@@ -13,6 +13,7 @@ class FieldCreate(BaseModel):
     soil_type: SoilType
     has_hail_net: bool = False
     planting_date: date
+    polygon_geojson: dict | None = None
 
 class FieldPublic(BaseModel):
     """Lo que la API devuelve al cliente"""

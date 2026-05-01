@@ -4,7 +4,7 @@ from datetime import date as date_type, timedelta
 
 from app.database import get_db
 from app.models.user import User
-from app.models.field import Field as FieldModel
+from app.models.field import Field as FieldModel, FieldStatus
 from app.models.alert import Alert
 from app.models.recommendation import Recommendation
 from app.models.satellite_record import SatelliteRecord
@@ -12,6 +12,7 @@ from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate, FieldChartD
 from app.schemas.alert import AlertPublic
 from app.auth.dependencies import get_current_user
 from app.calculation.crop_params import get_depletion_factor
+from app.api._geo import validate_and_compute_centroid
 
 router = APIRouter(prefix="/fields", tags=["fields"])
 
@@ -23,6 +24,30 @@ def create_field(
 ):
     """Crea un campo asociado al usuario autenticado. Queda en estado 'pendind'
     hasta que un admin le asigne un polígono."""
+    existing_pending = (
+        db.query(FieldModel)
+        .filter(
+            FieldModel.user_id == current_user.id,
+            FieldModel.status == FieldStatus.pending,
+        )
+        .first()
+    )
+    if existing_pending:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="Ya tenes un campo pendiente de aprobacion. Espera a que sea procesado antes de registrar otro"
+        )
+    
+    latitude, longitude = None, None
+    if data.polygon_geojson:
+        try:
+            latitude, longitude = validate_and_compute_centroid(data.polygon_geojson)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+                detail=f"GeoJSON invalido: {e}"
+            )
+
     field = FieldModel(
         user_id=current_user.id,
         name=data.name,
@@ -32,8 +57,9 @@ def create_field(
         soil_type=data.soil_type,
         has_hail_net=data.has_hail_net,
         planting_date=data.planting_date,
-        # status = pending (default del modelo)
-        # polygon_geojson, elevation_m, latitude, longitude = None hasta HU-21
+        polygon_geojson=data.polygon_geojson,
+        latitude=latitude,
+        longitude=longitude,
     )
     db.add(field)
     db.commit()

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { listMyFields } from '../services/fields'
 
@@ -25,13 +25,16 @@ async function loadFields() {
 }
 
 onMounted(loadFields)
+
+const hasPending = computed(() => fields.value.some(f=> f.status === 'pending'))
 </script>
 
 <template>
     <div class="fields-container">
         <header class="fields-header">
             <h1>Mis Campos</h1>
-            <RouterLink to="/fields/new" class="btn-primary">+ Registrar Campo</RouterLink>
+            <RouterLink v-if="!hasPending" to="/fields/new" class="btn-primary">+ Registrar Campo</RouterLink>
+            <span v-else class="btn-disabled" title="Tenés un campo pendiente de aprobación">+ Registrar Campo</span>
         </header>
         
         <p v-if="loading">Cargando...</p>
@@ -129,4 +132,8 @@ onMounted(loadFields)
     font-size: 0.9rem;
 }
 .btn-edit:hover { background: #f1f8f1; }
+.btn-disabled {
+    padding: 0.5rem 1rem; background: #bdbdbd; color: white;
+    border-radius: 4px; cursor: not-allowed; font-size: 1rem;
+}
 </style>
