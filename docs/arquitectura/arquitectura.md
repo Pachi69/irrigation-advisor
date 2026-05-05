@@ -6,9 +6,9 @@
 |---|---|---|
 | Backend | FastAPI + Python | Liviano, tipado, ideal para APIs y procesamiento científico |
 | Base de datos | PostgreSQL | Soporte de datos relacionales y geoespaciales |
-| Procesamiento satelital | Google Earth Engine (Python client) | Acceso a Sentinel-2 sin infraestructura propia |
+| Procesamiento satelital | Planet Labs (primaria) + Google Earth Engine (fallback) | Planet provee PlanetScope diario a 3m/pixel. GEE/Sentinel-2 actúa como respaldo ante falta de imagen disponible en Planet. |
 | Datos climáticos | Open-Meteo API (primaria) + NASA POWER (fallback) | Gratuitos, sin credenciales; Open-Meteo sirve modelos ECMWF/ERA5 y calcula ETo FAO-56. Detalle en sección "Fuentes de datos climáticos". |
-| Jobs automáticos | APScheduler | Job diario (22hs) + job de alertas (cada 6hs) |
+| Jobs automáticos | APScheduler | Job Planet NDVI (21hs) + job recomendación (00:01hs) + job notificaciones push (08:00hs) + job alertas climáticas (cada 6hs) |
 | Frontend | Vue 3 + Vite (PWA) | Liviano, rápido de desarrollar, soporte PWA nativo |
 | Notificaciones | Web Push (VAPID) | Estándar PWA, sin costo, sin dependencia de terceros |
 | Deploy | Railway | Simple, económico, soporte de monorepo |
@@ -18,7 +18,8 @@
 ## Componentes del sistema
 
 ### Fuentes de datos externas
-- **Google Earth Engine**: extracción de NDVI promedio sobre el polígono del campo usando imágenes Sentinel-2 (10m/pixel).
+- **Planet Labs (primaria)**: extracción de NDVI promedio sobre el polígono del campo usando imágenes PlanetScope (3m/pixel, frecuencia diaria). Job dedicado a las 21hs activa assets de superficie reflectante, descarga bandas Red+NIR, calcula NDVI y persiste en `satellite_records`.
+- **Google Earth Engine (fallback)**: extracción de NDVI desde Sentinel-2 (10m/pixel, cada 5-15 días). Se usa cuando Planet no tiene imagen disponible para el período solicitado.
 - **Open-Meteo API**: datos climáticos actuales y pronóstico a 5 días (temperatura, humedad, viento, radiación, precipitación y probabilidad de precipitación). También disponible ETo calculada para validación cruzada.
 
 ### Backend (FastAPI)
@@ -88,7 +89,7 @@ irrigation-advisor/
 |---|---|
 | I. Codebase | Un único repositorio Git (monorepo) para backend y frontend |
 | II. Dependencies | `requirements.txt` (Python) y `package.json` (Node) declaran todas las dependencias explícitamente |
-| III. Config | Variables de entorno via `.env` (nunca en el código). Incluye claves GEE, configuración de BD, claves VAPID |
+| III. Config | Variables de entorno via `.env` (nunca en el código). Incluye claves Planet Labs, claves GEE, configuración de BD, claves VAPID |
 | IV. Backing services | PostgreSQL y Open-Meteo tratados como recursos adjuntos, configurables por variable de entorno |
 | V. Build, release, run | Pipeline separado: build de la PWA, build del backend, deploy en Railway |
 | VI. Processes | Backend stateless. El estado persiste únicamente en PostgreSQL |
@@ -103,8 +104,8 @@ irrigation-advisor/
 
 ## Decisiones técnicas relevantes
 
-- **Kc dinámico con fallback tabular**: el Kc se calcula desde NDVI cuando hay imagen disponible. Si GEE no retorna datos (nubosidad, malla antigranizo), se usa Kc tabular por etapa fenológica del cultivo.
-- **Polígono asignado por admin**: el productor registra su campo con datos básicos. El admin aprueba y asigna el polígono GeoJSON. Esto garantiza calidad del área de análisis satelital.
+- **Kc dinámico con fallback en cascada**: el Kc se calcula desde NDVI cuando hay imagen disponible. Fuente primaria: Planet Labs (PlanetScope, diario, 3m). Fallback nivel 1: GEE/Sentinel-2 (cada 5-15 días, 10m). Fallback nivel 2: Kc tabular FAO-56 por etapa fenológica cuando no hay imagen de ninguna fuente.
+- **Polígono dibujado por el productor**: al registrar el campo, el productor dibuja el polígono de su parcela en un mapa interactivo (Leaflet + Geoman). El admin lo revisa y ajusta si es necesario antes de aprobar. Un productor no puede tener más de un campo pendiente a la vez.
 - **Buffer negativo en polígono**: al procesar en GEE se aplica un buffer negativo de ~20m para evitar píxeles mixtos en los bordes del campo.
 
 ---

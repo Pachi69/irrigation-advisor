@@ -20,9 +20,14 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 - **FAO — Precipitación efectiva:** https://www.fao.org/4/x5560e/x5560e03.htm
 - **FAO — Coeficientes de cultivo Kc:** Capítulo 6 del FAO Paper 56
 
-### Sentinel-2 y procesamiento satelital
-- **Google Earth Engine — Sentinel-2:** https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED
-- **Google Earth Engine — Sentinel-1:** https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S1_GRD
+### Planet Labs y procesamiento satelital
+- **Planet Labs — Documentación general API:** https://developers.planet.com/docs/
+- **Planet Labs — Data API (búsqueda de escenas):** https://developers.planet.com/docs/data/
+- **Planet Labs — Orders API (descarga de bandas):** https://developers.planet.com/docs/orders/
+- **Planet Labs — Python SDK:** https://planet-sdk-for-python-v2.readthedocs.io/
+- **Planet Labs — PlanetScope especificaciones técnicas:** https://docs.planet.com/data/imagery/planetscope/
+- **Planet Labs — Programa Education & Research:** https://www.planet.com/industries/education-and-research/
+- **Google Earth Engine — Sentinel-2 (fallback):** https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED
 - **NDVI a Kc — durum wheat semi-árido:** https://www.sciencedirect.com/science/article/abs/pii/S037837742030233X
 - **NDVI a Kcb — viñedo semi-árido (Campos et al. 2010):** https://www.sciencedirect.com/science/article/abs/pii/S0378377410002428
 - **Revisión VI → Kc (Glenn et al. 2011):** https://onlinelibrary.wiley.com/doi/10.1002/hyp.8392
