@@ -18,9 +18,9 @@ erDiagram
         int id PK
         int usuario_id FK
         string nombre
-        enum cultivo "vid | durazno"
+        enum cultivo "vid | durazno | alfalfa"
         float superficie_ha
-        enum tipo_riego "inundacion | goteo | aspersion"
+        enum tipo_riego "goteo | aspersion | surco"
         enum tipo_suelo "arenoso | franco | arcilloso"
         enum estado "pendiente | activo | inactivo"
         json poligono_geojson
@@ -29,6 +29,8 @@ erDiagram
         float longitud
         bool tiene_malla_antigranizo
         date fecha_siembra_brotacion
+        float ultimo_deficit_mm
+        date ultima_fecha_deficit
         timestamp created_at
     }
 
@@ -45,11 +47,9 @@ erDiagram
         int id PK
         int campo_id FK
         date fecha
-        enum fuente "sentinel2 | sentinel1"
-        float ndvi "null si fuente=sentinel1"
-        float backscatter_vv "null si fuente=sentinel2"
-        float backscatter_vh "null si fuente=sentinel2"
-        float nubosidad_pct "null si fuente=sentinel1"
+        enum fuente "sentinel2 | planet"
+        float ndvi
+        float nubosidad_pct
         bool evento_humedad_detectado
         timestamp created_at
     }
@@ -60,10 +60,14 @@ erDiagram
         date fecha
         float eto_mm
         float kc
-        enum kc_fuente "s2_dinamico | tabular"
+        enum kc_fuente "planet_dinamico | s2_dinamico | tabular"
         float etc_mm
         float deficit_hidrico_mm "Dr acumulado"
         float ks "coef. estres hidrico 0-1"
+        float taw_mm "agua total disponible mm"
+        float raw_mm "agua facilmente disponible mm"
+        float ndvi "valor usado para calcular Kc"
+        date fecha_ndvi "fecha de la imagen satelital usada"
         enum etapa_fenologica "inicial | desarrollo | media | final"
         float lamina_recomendada_mm
         enum urgencia "baja | media | alta | critica"
@@ -92,12 +96,22 @@ erDiagram
         timestamp created_at
     }
 
-    usuario      ||--o{ campo              : "tiene"
-    campo        ||--||  suelo             : "tiene"
-    campo        ||--o{ registro_satelital : "genera"
-    campo        ||--o{ recomendacion      : "recibe"
-    campo        ||--o{ alerta             : "genera"
+    suscripcion_push {
+        int id PK
+        int usuario_id FK
+        text endpoint
+        string p256dh
+        string auth
+        timestamp created_at
+    }
+
+    usuario       ||--o{ campo              : "tiene"
+    campo         ||--||  suelo             : "tiene"
+    campo         ||--o{ registro_satelital : "genera"
+    campo         ||--o{ recomendacion      : "recibe"
+    campo         ||--o{ alerta             : "genera"
     recomendacion ||--o| confirmacion_riego : "confirma"
+    usuario       ||--o{ suscripcion_push   : "registra"
 ```
 
 ---
@@ -106,10 +120,11 @@ erDiagram
 
 ### Lo que va en la base de datos
 - Parámetros de suelo (FC, WP, densidad) se derivan del `tipo_suelo` del campo usando tablas FAO estáticas al momento de activar el campo. Se guardan en `suelo` para no recalcular.
-- El `deficit_hidrico_mm` de la última `recomendacion` es el punto de partida del balance del día siguiente.
-- `registro_satelital` unifica datos de Sentinel-2 (NDVI) y Sentinel-1 (backscatter + detección de humedad) en una sola tabla.
+- El `ultimo_deficit_mm` y `ultima_fecha_deficit` del campo permiten el backfill retroactivo del balance hídrico ante días sin recomendación guardada.
+- `registro_satelital` unifica registros de distintas fuentes satelitales (Planet Labs y Sentinel-2) en una sola tabla, identificadas por el campo `fuente`.
+- `ndvi` y `fecha_ndvi` en `recomendacion` registran qué imagen satelital se usó para calcular el Kc de ese día.
 
-### Lo que NO va en la base de datos (configuración estática en YAML)
+### Lo que NO va en la base de datos (configuración estática en código)
 - Kc por etapa fenológica para cada cultivo
 - Duración de cada etapa fenológica por cultivo
 - Profundidad de raíces (Zr) por etapa por cultivo
@@ -120,6 +135,7 @@ erDiagram
 ### Flujo de confianza de Kc
 | Situación | kc_fuente | confianza |
 |---|---|---|
-| Sentinel-2 disponible, nubosidad baja, sin malla | s2_dinamico | alta |
-| Sentinel-2 muy nublada | tabular | media |
-| Campo con malla antigranizo | tabular | media |
+| Planet Labs disponible, nubosidad baja | planet_dinamico | alta |
+| Sin imagen Planet, Sentinel-2 disponible, nubosidad baja | s2_dinamico | alta |
+| Imagen disponible pero campo con malla antigranizo | tabular | media |
+| Sin imagen de ninguna fuente satelital | tabular | media |
