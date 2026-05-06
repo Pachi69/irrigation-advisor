@@ -119,6 +119,7 @@ onMounted(() => { load(); fetchAlerts() })
                 <p class="reason">{{ rec.reason }}</p>
                 <span class="confidence">
                     Confianza: {{ CONFIDENCE_LABELS[rec.confidence] }}
+                    <span class="dt-hint">Calidad del cálculo</span>
                 </span>
              </div>
 
@@ -148,15 +149,15 @@ onMounted(() => { load(); fetchAlerts() })
                         <dd>{{ rec.water_deficit_mm?.toFixed(1) }} mm</dd>
                     </div>
                     <div>
-                        <dt>TAW</dt>
+                        <dt>TAW<span class="dt-hint">Agua total en el suelo</span></dt>
                         <dd>{{ rec.taw_mm?.toFixed(1) }} mm</dd>
                     </div>
                     <div>
-                        <dt>RAW</dt>
+                        <dt>RAW<span class="dt-hint">Déficit máximo sin estrés</span></dt>
                         <dd>{{ rec.raw_mm?.toFixed(1) }} mm</dd>
                     </div>
                     <div>
-                        <dt>Estres hidrico (Ks)</dt>
+                        <dt>Estres hidrico (Ks)<span class="dt-hint">1.0 = sin estrés · 0 = crítico</span></dt>
                         <dd>{{ rec.ks?.toFixed(2) }}</dd>
                     </div>
                 </dl>
@@ -171,15 +172,15 @@ onMounted(() => { load(); fetchAlerts() })
                         <dd>{{ STAGE_LABELS[rec.phenological_stage] }}</dd>
                     </div>
                     <div>
-                        <dt>Kc</dt>
+                        <dt>Kc<span class="dt-hint">Factor de demanda del cultivo</span></dt>
                         <dd>{{ rec.kc?.toFixed(3) }}</dd>
                     </div>
                     <div>
-                        <dt>Fuente Kc</dt>
+                        <dt>Fuente Kc<span class="dt-hint">Cómo se calculó el Kc</span></dt>
                         <dd>{{ KC_SOURCE_LABELS[rec.kc_source] }}</dd>
                     </div>
                     <div>
-                        <dt>ETo ayer</dt>
+                        <dt>ETo ayer<span class="dt-hint">Evaporación de referencia</span></dt>
                         <dd>{{ rec.eto_mm?.toFixed(2) }} mm/día</dd>
                     </div>
                 </dl>
@@ -190,7 +191,7 @@ onMounted(() => { load(); fetchAlerts() })
                     <h2>Imagen satelital</h2>
                     <dl class="data-grid">
                         <div>
-                            <dt>NDVI</dt>
+                            <dt>NDVI<span class="dt-hint">Índice de verdor satelital</span></dt>
                             <dd>{{ rec.ndvi?.toFixed(4) }}</dd>
                         </div>
                         <div>
@@ -279,6 +280,9 @@ onMounted(() => { load(); fetchAlerts() })
 .confidence {
     font-size: 0.8rem;
     opacity: 0.8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Secciones */
@@ -386,5 +390,13 @@ onMounted(() => { load(); fetchAlerts() })
     border: 1px solid #2e7d32;
     padding: 0.25rem 0.6rem;
     border-radius: 4px;
+}
+.dt-hint {
+    display: block;
+    font-size: 0.68rem;
+    color: #bbb;
+    font-weight: 400;
+    margin-top: 1px;
+    line-height: 1.2;
 }
 </style>
