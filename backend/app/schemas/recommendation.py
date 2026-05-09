@@ -31,6 +31,7 @@ class RecommendationResponse(BaseModel):
     # Satelite (None si no hay imagen reciente)
     ndvi: float | None = None
     ndvi_date: date | None = None
+    cloud_cover_pct: float | None = None
 
     model_config = {"from_attributes": True, "populate_by_name": True}
 

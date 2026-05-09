@@ -1,7 +1,9 @@
 <script setup>
-import  { ref, onMounted, computed } from 'vue'
+import  { ref, onMounted, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter} from 'vue-router'
-import { getRecommendation, getFieldAlerts } from '../services/fields'
+import { getRecommendation, getFieldAlerts, getFieldSatelliteImage, getFieldById } from '../services/fields'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -92,7 +94,61 @@ function dismissAlert(id) {
     alerts.value = alerts.value.filter(a => a.id !== id)
 }
 
-onMounted(() => { load(); fetchAlerts() })
+
+const satelliteImageUrl = ref(null)
+const mapRef = ref(null)
+let map = null
+const overlayOpacity = ref(0.8)
+let overlayLayer = null
+
+async function loadSatelliteImage() {
+    try {
+        const blob = await getFieldSatelliteImage(route.params.id)
+        satelliteImageUrl.value = URL.createObjectURL(blob)
+    } catch {
+        // Imagen satelital opcional
+    }
+}
+
+const fieldData = ref(null)
+
+async function loadFieldData() {
+    try {
+        fieldData.value = await getFieldById(route.params.id)
+    } catch {
+    }
+}
+
+watch([satelliteImageUrl, fieldData, rec], ([imgUrl, field]) => {
+    if (!imgUrl || !field?.polygon_geojson) return
+    if (!mapRef.value || map) return
+
+    const coords = field.polygon_geojson.coordinates[0]
+    const lats = coords.map(c => c[1])
+    const lngs = coords.map(c => c[0])
+    const bounds = [
+        [Math.min(...lats), Math.min(...lngs)],
+        [Math.max(...lats), Math.max(...lngs)],
+    ]
+
+    map = L.map(mapRef.value, { zoomControl: true, attributionControl: false})
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    }).addTo(map)
+    overlayLayer = L.imageOverlay(imgUrl, bounds, { opacity: overlayOpacity.value }).addTo(map)
+    L.polygon(coords.map(c => [c[1], c[0]]), {
+        color: 'white', weight: 2, fill: false
+    }).addTo(map)
+    map.fitBounds(bounds, { padding: [10, 10]})
+    setTimeout(() => map?.invalidateSize(), 100)
+}, { flush: 'post' })
+
+watch(overlayOpacity, (val) => { overlayLayer?.setOpacity(val) })
+
+onBeforeUnmount(() => { map?.remove(); map = null; overlayLayer = null })
+
+onMounted(() => { load(); fetchAlerts(); loadSatelliteImage(); loadFieldData() })
 </script>
 
 <template>
@@ -186,10 +242,27 @@ onMounted(() => { load(); fetchAlerts() })
                 </dl>
                </section>
 
-               <!-- NDVI -->
-                <section class="section" v-if="rec.ndvi !== null">
+                <!-- Imagen satelital -->
+                 <section class="section" v-if="rec.ndvi !== null || satelliteImageUrl">
                     <h2>Imagen satelital</h2>
-                    <dl class="data-grid">
+
+                    <div v-if="satelliteImageUrl">
+                        <div ref="mapRef" class="ndvi-map"></div>
+                        <div class="legend">
+                            <span class="legend-label">Estrés 0.0</span>
+                            <div class="legend-bar"></div>
+                            <span class="legend-label">1.0 Vigor</span>
+                        </div>
+                    </div>
+
+                    <div v-if="satelliteImageUrl" class="opacity-row">
+                        <span class="opacity-label">Opacidad</span>
+                        <input type="range" min="0" max="1" step="0.05"
+                            v-model.number="overlayOpacity" class="opacity-slider" />
+                        <span class="opacity-val">{{ Math.round(overlayOpacity * 100) }}%</span>
+                    </div>
+
+                    <dl class="data-grid sat-meta" v-if="rec.ndvi !== null">
                         <div>
                             <dt>NDVI<span class="dt-hint">Índice de verdor satelital</span></dt>
                             <dd>{{ rec.ndvi?.toFixed(4) }}</dd>
@@ -198,17 +271,22 @@ onMounted(() => { load(); fetchAlerts() })
                             <dt>Fecha imagen</dt>
                             <dd :class="{ 'text-warning': ndviAge > 15 }">
                                 {{ rec.ndvi_date }}
-                                <span v-if="ndviAge !== null">(hace {{ ndviAge }} días)</span>
+                                <span v-if="ndviAge !== null"></span>
                             </dd>
                         </div>
+                        <div v-if="rec.cloud_cover_pct != null">
+                            <dt>Nubosidad<span class="dt-hint">En la imagen utilizada</span></dt>
+                            <dd>{{ rec.cloud_cover_pct?.toFixed(0) }}%</dd>
+                        </div>
                     </dl>
+
                     <p v-if="ndviAge > 15" class="warning-text">
-                        La imagen tiene mas de 15 dias. El Kc puede no reflejar el estado actual del cultivo
+                        La imagen tiene más de 15 días. El Kc puede no reflejar el estado actual del cultivo.
                     </p>
-                </section>
-                <section class="section" v-else>
-                    <h2>Imagen satelital</h2>
-                    <p class="muted">No hay imagen reciente disponible. Se usó Kc tabular FAO-56.</p>
+
+                    <p v-if="rec.ndvi === null && !satelliteImageUrl" class="muted">
+                        No hay imagen reciente disponible. Se usó Kc tabular FAO-56.
+                    </p>
                 </section>
         </template>
     </div>
@@ -399,4 +477,33 @@ onMounted(() => { load(); fetchAlerts() })
     margin-top: 1px;
     line-height: 1.2;
 }
+.ndvi-map {
+    width: 100%;
+    height: 250px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+.legend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.legend-bar {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #d73027, #fc8d59, #fee08b, #a6d96a, #1a9850);
+}
+.legend-label { font-size: 0.7rem; color: #888; }
+.sat-meta { margin-top: 0.75rem; grid-template-columns: repeat(3, 1fr); }
+.opacity-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+.opacity-label { font-size: 0.8rem; color: #666; white-space: nowrap; }
+.opacity-slider { flex: 1; accent-color: #2e7d32; }
+.opacity-val { font-size: 0.8rem; color: #555; width: 3rem; text-align: right; }
 </style>

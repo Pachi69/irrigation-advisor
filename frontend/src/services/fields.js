@@ -39,3 +39,8 @@ export async function getFieldChartData(fieldId) {
     const { data } = await api.get(`/fields/${fieldId}/chart`)
     return data
 }
+
+export async function getFieldSatelliteImage(fieldId) {
+    const resp = await api.get(`/fields/${fieldId}/satellite-image`, { responseType: 'blob' })
+    return resp.data
+}

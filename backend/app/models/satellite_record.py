@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime, date
 
-from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, String, func, Boolean
+from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, String, func, Boolean, LargeBinary
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -22,6 +22,7 @@ class SatelliteRecord(Base):
     backscatter_vh: Mapped[float] = mapped_column(Float, nullable=True)
     cloud_cover_pct: Mapped[float] = mapped_column(Float, nullable=False)
     moisture_event_detected: Mapped[bool] = mapped_column(Boolean, default=False)
+    thumbnail_png: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     field: Mapped["Field"] = relationship(back_populates="satellite_records")

@@ -47,6 +47,7 @@ def _get_satellite_data_for_date(
         SatelliteData(
             field_id=field.id, date=sat_record.date,
             source=sat_record.source, ndvi=sat_record.ndvi,
+            cloud_cover_pct=sat_record.cloud_cover_pct,
         ),
         sat_record.date,
     )
@@ -192,6 +193,7 @@ def _fetch_latest_s2_if_available(field: FieldModel, today: DateType, db: Sessio
                 ndvi=new_indices.ndvi,
                 cloud_cover_pct=new_indices.cloud_cover_pct,
                 moisture_event_detected=False,
+                thumbnail_png=new_indices.thumbnail_png,
             ))
             db.flush()
             logger.info(
@@ -278,4 +280,5 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         phenological_stage=kc_result.phenological_stage,
         ndvi=satellite_data.ndvi if satellite_data else None,
         ndvi_date=ndvi_date,
+        cloud_cover_pct=satellite_data.cloud_cover_pct if satellite_data else None,
     )

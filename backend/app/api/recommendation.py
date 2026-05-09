@@ -1,13 +1,14 @@
 from datetime import date as DateType
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 
 
 from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel, FieldStatus
+from app.models.satellite_record import SatelliteRecord
 from app.models.recommendation import Recommendation
 from app.schemas.recommendation import RecommendationResponse, RecommendationHistoryItem
 from app.auth.dependencies import get_current_user
@@ -50,7 +51,21 @@ def get_recommendation(
     )
 
     if existing:
-        return existing
+        cloud_cover = None
+        if existing.ndvi_date:
+            sat_rec = (
+                db.query(SatelliteRecord)
+                .filter(
+                    SatelliteRecord.field_id == field_id,
+                    SatelliteRecord.date == existing.ndvi_date,
+                )
+                .first()
+            )
+            if sat_rec:
+                cloud_cover = sat_rec.cloud_cover_pct
+        return RecommendationResponse.model_validate(existing).model_copy(
+            update={"cloud_cover_pct": cloud_cover}
+        )
 
     try:
         return run_recommendation_pipeline(field, db)
@@ -80,3 +95,30 @@ def get_recommendation_history(
         .all()
     )
     return records
+
+
+@router.get("/{field_id}/satellite-image")
+def get_satellite_image(
+    field_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Devuelve el thumbnail PNG NDVI del ultimo registro satelital del campo."""
+    field = db.query(FieldModel).filter(FieldModel.id == field_id).first()
+    if not field or field.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
+    
+    record = (
+        db.query(SatelliteRecord)
+        .filter(
+            SatelliteRecord.field_id == field_id,
+            SatelliteRecord.thumbnail_png.is_not(None)
+        )
+        .order_by(SatelliteRecord.date.desc())
+        .first()
+    )
+
+    if not record or not record.thumbnail_png:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen satelital no encontrada")
+    
+    return Response(content=record.thumbnail_png, media_type="image/png")

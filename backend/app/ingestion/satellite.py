@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from dataclasses import dataclass
 
 import ee
+import requests
 
 from app.config import settings
 
@@ -52,6 +53,7 @@ class SatelliteIndices:
     ndvi: float
     cloud_cover_pct: float
     image_date: date
+    thumbnail_png: bytes | None = None  # Opcional: imagen en miniatura para verificación visual
 
 
 def get_satellite_indices(polygon_geojson: dict, target_date: date) -> SatelliteIndices | None:
@@ -121,6 +123,26 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
             image_date=image_date
         )
         logger.info("NDVI desde GEE: %.4f (imagen del %s)", indices.ndvi, indices.image_date)
+
+        # Thumbnail NDVI coloreado para visualización
+        try:
+            original_geom = ee.Geometry(geojson)
+            thumb_url = ndvi_band.clip(original_geom).getThumbURL({
+                "min": 0,
+                "max": 1,
+                "palette": ["#d73027", "#fc8d59", "#fee08b", "#a6d96a", "#1a9850"],
+                "region": original_geom,
+                "dimensions": 512,
+                "format": "png",
+            })
+            thumb_resp = requests.get(thumb_url, timeout=30)
+            thumb_resp.raise_for_status()
+            indices.thumbnail_png = thumb_resp.content
+            logger.info("Thumbnail NDVI generado (%d bytes)", len(thumb_resp.content))
+        except Exception as e:
+            logger.warning("No se pudo generar thumbnail NDVI: %s", e)
+            indices.thumbnail_png = None
+
         return indices
 
     except Exception as e:
