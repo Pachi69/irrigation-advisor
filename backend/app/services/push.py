@@ -21,7 +21,11 @@ def send_push_notification(endpoint: str, p256dh: str, auth: str, title: str, bo
         True si se envio correctamente, False si fallo.
     """
     try:
-        private_key = settings.vapid_private_key.replace("\\n", "\n")
+        raw = settings.vapid_private_key
+        logger.info("VAPID raw[:40]=%r len=%d has_literal_backslash_n=%s has_real_newline=%s",
+                    raw[:40], len(raw), "\\n" in raw, "\n" in raw)
+        private_key = raw.replace("\\n", "\n")
+        logger.info("VAPID parsed[:40]=%r len=%d", private_key[:40], len(private_key))
         webpush(
             subscription_info={
                 "endpoint": endpoint,
