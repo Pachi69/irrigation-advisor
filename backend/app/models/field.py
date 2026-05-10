@@ -18,9 +18,18 @@ class IrrigationType(enum.Enum):
     flood = "flood"
 
 class SoilType(enum.Enum):
-    sandy = "sandy"
+    sand = "sand"
+    loamy_sand = "loamy_sand"
+    sandy_loam = "sandy_loam"
+    sandy_clay_loam = "sandy_clay_loam"
+    loam = "loam"
+    silt_loam = "silt_loam"
+    silt = "silt"
+    clay_loam = "clay_loam"
+    silty_clay_loam = "silty_clay_loam"
+    sandy_clay = "sandy_clay"
+    silty_clay = "silty_clay"
     clay = "clay"
-    loamy = "loamy"
 
 class FieldStatus(enum.Enum):
     active = "active"

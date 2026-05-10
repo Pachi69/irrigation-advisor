@@ -18,9 +18,18 @@ const CROP_OPTIONS = [
 ]
 
 const SOIL_OPTIONS = [
-    {value: 'sandy', label: 'Arenoso'},
-    {value: 'loamy', label: 'Franco'},
-    {value: 'clay', label: 'Arcilloso'},
+    { value: 'sand',            label: 'Arena' },
+    { value: 'loamy_sand',      label: 'Arena franca' },
+    { value: 'sandy_loam',      label: 'Franco arenoso' },
+    { value: 'sandy_clay_loam', label: 'Franco arcillo arenoso' },
+    { value: 'loam',            label: 'Franco' },
+    { value: 'silt_loam',       label: 'Franco limoso' },
+    { value: 'silt',            label: 'Limoso' },
+    { value: 'clay_loam',       label: 'Franco arcilloso' },
+    { value: 'silty_clay_loam', label: 'Arcillo limoso franco' },
+    { value: 'sandy_clay',      label: 'Arcillo arenoso' },
+    { value: 'silty_clay',      label: 'Arcillo limoso' },
+    { value: 'clay',            label: 'Arcilloso' },
 ]
 
 const IRRIGATION_OPTIONS = [

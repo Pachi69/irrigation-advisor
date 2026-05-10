@@ -7,6 +7,8 @@ from app.models.field import Field as FieldModel, FieldStatus
 from app.schemas.admin import FieldApproval, FieldAdminView
 from app.auth.dependencies import get_current_admin
 from app.api._geo import validate_and_compute_centroid
+from app.ingestion.soil import get_soil_type_from_coords
+from app.ingestion.climate import get_elevation
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -51,6 +53,9 @@ def approve_field(
         )
     try:
         latitude, longitude = validate_and_compute_centroid(data.polygon_geojson)
+        detected_soil = get_soil_type_from_coords(latitude, longitude)
+        if detected_soil is not None:
+            field.soil_type = detected_soil
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -60,7 +65,7 @@ def approve_field(
     field.polygon_geojson = data.polygon_geojson
     field.latitude = latitude
     field.longitude = longitude
-    # elevation_m queda null - se llenara en E2
+    field.elevation_m = get_elevation(latitude, longitude)
     field.status = FieldStatus.active
     db.commit()
     db.refresh(field)

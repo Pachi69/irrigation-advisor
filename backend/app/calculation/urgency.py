@@ -120,7 +120,7 @@ def calculate_urgency(
         (day.precipitation_probability_pct for day in forecast[:3]), default=0.0
     )
 
-    # Bjar urgencia solo si hay alta probabilidad de lluvia suficiente
+    # Bajar urgencia solo si hay alta probabilidad de lluvia suficiente
     # Si Ks < piso critico, no bajamos aunque llueva: la planta ya esta sufriendo
     if urgency == UrgencyLevel.critical and ks >= _KS_CRITICAL_FLOOR:
         if weighted_rain_3d > 0.6 and max_prob_3d >= 80:

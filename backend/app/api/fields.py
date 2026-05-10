@@ -13,6 +13,7 @@ from app.schemas.alert import AlertPublic
 from app.auth.dependencies import get_current_user
 from app.calculation.crop_params import get_depletion_factor
 from app.api._geo import validate_and_compute_centroid
+from app.ingestion.soil import get_soil_type_from_coords
 
 router = APIRouter(prefix="/fields", tags=["fields"])
 
@@ -39,6 +40,7 @@ def create_field(
         )
     
     latitude, longitude = None, None
+    soil_type = data.soil_type
     if data.polygon_geojson:
         try:
             latitude, longitude = validate_and_compute_centroid(data.polygon_geojson)
@@ -47,6 +49,9 @@ def create_field(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
                 detail=f"GeoJSON invalido: {e}"
             )
+        detected = get_soil_type_from_coords(latitude, longitude)
+        if detected is not None:
+            soil_type = detected
 
     field = FieldModel(
         user_id=current_user.id,
@@ -54,7 +59,7 @@ def create_field(
         crop_type=data.crop_type,
         area_ha=data.area_ha,
         irrigation_type=data.irrigation_type,
-        soil_type=data.soil_type,
+        soil_type=soil_type,
         has_hail_net=data.has_hail_net,
         planting_date=data.planting_date,
         polygon_geojson=data.polygon_geojson,

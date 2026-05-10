@@ -10,7 +10,7 @@ class FieldCreate(BaseModel):
     crop_type: CropType
     area_ha: float = Field(gt=0, le=10000)
     irrigation_type: IrrigationType
-    soil_type: SoilType
+    soil_type: SoilType = SoilType.loam
     has_hail_net: bool = False
     planting_date: date
     polygon_geojson: dict | None = None

@@ -11,7 +11,6 @@ const form = ref({
     crop_type: 'vine',
     area_ha: null,
     irrigation_type: 'drip',
-    soil_type: 'loamy',
     has_hail_net: false,
     planting_date: '',
     polygon_geojson: null,
@@ -74,15 +73,6 @@ function cancel() {
                     <option value="vine">Vid</option>
                     <option value="peach">Durazno</option>
                     <option value="alfalfa">Alfalfa</option>
-                </select>
-            </label>
-
-            <label>
-                Tipo de suelo
-                <select v-model="form.soil_type" required :disabled="loading">
-                    <option value="sandy">Arenoso</option>
-                    <option value="loamy">Franco</option>
-                    <option value="clay">Arcilloso</option>
                 </select>
             </label>
 

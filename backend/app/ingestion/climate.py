@@ -9,6 +9,7 @@ import logging
 from datetime import date
 
 import httpx
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -165,3 +166,19 @@ def get_forecast(latitude: float, longitude: float, days: int = 5) -> list[Forec
         result.append(ForecastDay(date=date.fromisoformat(iso_date), **row))
 
     return result
+
+
+def get_elevation(lat: float, lon: float) -> float | None:
+    """Obtiene la elevacion en metros desde Open-Meteo (SRTM-90)."""
+    try:
+        url = "https://api.open-meteo.com/v1/elevation"
+        resp = requests.get(url, params={"latitude": lat, "longitude": lon}, timeout=TIMEOUT_SECONDS)
+        resp.raise_for_status()
+        elevation = resp.json().get("elevation", [None])[0]
+        if elevation is not None:
+            logger.info("Elevacion obtenida: %.1f m para (%.4f, %.4f)", elevation, lat, lon)
+        return float(elevation) if elevation is not None else None
+    except Exception as e:
+        logger.warning("No se pudo obtener elevacion: %s", e)
+        return None
+    

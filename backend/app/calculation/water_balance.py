@@ -35,9 +35,18 @@ from app.schemas.calculation import EToResult, KcResult, WaterBalanceResult
 # theta_fc = contenido volumetrico a capacidad de campo (m3/m3)
 # theta_wp = contenido volumetrico en punto de marchitez permanente (m3/m3)
 _SOIL_PROPS: dict[SoilType, dict[str, float]] = {
-    SoilType.sandy: {"theta_fc": 0.15, "theta_wp": 0.07},
-    SoilType.loamy: {"theta_fc": 0.25, "theta_wp": 0.12},
-    SoilType.clay: {"theta_fc": 0.38, "theta_wp": 0.22},
+    SoilType.sand:            {"theta_fc": 0.10, "theta_wp": 0.04},
+    SoilType.loamy_sand:      {"theta_fc": 0.12, "theta_wp": 0.05},
+    SoilType.sandy_loam:      {"theta_fc": 0.18, "theta_wp": 0.08},
+    SoilType.sandy_clay_loam: {"theta_fc": 0.23, "theta_wp": 0.13},
+    SoilType.loam:            {"theta_fc": 0.27, "theta_wp": 0.12},
+    SoilType.silt_loam:       {"theta_fc": 0.30, "theta_wp": 0.13},
+    SoilType.silt:            {"theta_fc": 0.32, "theta_wp": 0.15},
+    SoilType.clay_loam:       {"theta_fc": 0.32, "theta_wp": 0.20},
+    SoilType.silty_clay_loam: {"theta_fc": 0.34, "theta_wp": 0.21},
+    SoilType.sandy_clay:      {"theta_fc": 0.36, "theta_wp": 0.24},
+    SoilType.silty_clay:      {"theta_fc": 0.38, "theta_wp": 0.25},
+    SoilType.clay:            {"theta_fc": 0.40, "theta_wp": 0.27},
 }
 
 def _effective_precipitation(precipitation_mm: float) -> float:
