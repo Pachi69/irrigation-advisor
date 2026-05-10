@@ -70,3 +70,11 @@ def approve_field(
     db.commit()
     db.refresh(field)
     return field
+
+
+@router.post("/trigger-notifications")
+def trigger_notifications_now(_admin: User = Depends(get_current_admin)):
+    """[TEST] Dispara manualmente el job de notificaciones de recomendacion."""
+    from app.jobs.notification_job import send_daily_recommendation_notifications
+    send_daily_recommendation_notifications()
+    return {"detail": "Job ejecutado, revisar logs"}
