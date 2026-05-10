@@ -1,6 +1,7 @@
 """Servicio de envio de notificaciones Web Push via VAPID."""
 import json
 import logging
+from py_vapid import Vapid01
 from pywebpush import webpush, WebPushException
 from app.models.push_subscription import PushSubscription
 from app.config import settings
@@ -8,46 +9,34 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-def send_push_notification(endpoint: str, p256dh: str, auth: str, title: str, body: str) -> bool:
-    """Envia notificacion push a una suscripcion.
-    Args:
-        endpoint: URL del endpoint del browser.
-        p256dh: clave publica del cliente.
-        auth: clave de autenticacion del cliente.
-        title: titulo de la notificacion.
-        body: cuerpo de la notificacion.
+def _load_vapid() -> Vapid01:
+    """Carga el VAPID Vapid01 desde la PEM en settings (una sola vez por proceso)."""
+    pem = settings.vapid_private_key.replace("\\n", "\n").encode()
+    return Vapid01.from_pem(pem)
 
-    Returns:
-        True si se envio correctamente, False si fallo.
-    """
+
+_vapid = _load_vapid()
+
+
+def send_push_notification(endpoint: str, p256dh: str, auth: str, title: str, body: str) -> bool:
     try:
-        raw = settings.vapid_private_key
-        logger.info("VAPID raw[:40]=%r len=%d has_literal_backslash_n=%s has_real_newline=%s",
-                    raw[:40], len(raw), "\\n" in raw, "\n" in raw)
-        private_key = raw.replace("\\n", "\n")
-        logger.info("VAPID parsed[:40]=%r len=%d", private_key[:40], len(private_key))
         webpush(
             subscription_info={
                 "endpoint": endpoint,
                 "keys": {"p256dh": p256dh, "auth": auth},
-                
             },
             data=json.dumps({"title": title, "body": body}),
-            vapid_private_key=private_key,
+            vapid_private_key=_vapid,  # objeto Vapid01, NO string
             vapid_claims={"sub": settings.vapid_subject},
         )
         return True
     except WebPushException as e:
         logger.warning("Error al enviar push notification: %s", e)
         return False
-    
 
-def send_push_to_user(user_id: int, title: str, body:str, db) -> int:
-    """Envia notificacion push a todas las suscripciones activas de un usuario.
-    
-    Returns:
-        Cantidad de notificaciones enviadas exitosamente.
-    """
+
+def send_push_to_user(user_id: int, title: str, body: str, db) -> int:
+    """Envia notificacion push a todas las suscripciones activas de un usuario."""
     subscriptions = (
         db.query(PushSubscription)
         .filter(PushSubscription.user_id == user_id)
@@ -58,9 +47,7 @@ def send_push_to_user(user_id: int, title: str, body:str, db) -> int:
         if send_push_notification(sub.endpoint, sub.p256dh, sub.auth, title, body):
             sent += 1
         else:
-            # Subscripcion invalida o expirada - eliminarla
             db.delete(sub)
     if sent > 0:
         db.commit()
     return sent
-    
