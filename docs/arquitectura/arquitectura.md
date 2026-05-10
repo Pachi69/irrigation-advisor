@@ -6,9 +6,10 @@
 |---|---|---|
 | Backend | FastAPI + Python | Liviano, tipado, ideal para APIs y procesamiento científico |
 | Base de datos | PostgreSQL | Soporte de datos relacionales y geoespaciales |
-| Procesamiento satelital | Planet Labs (primaria) + Google Earth Engine (fallback) | Planet provee PlanetScope diario a 3m/pixel. GEE/Sentinel-2 actúa como respaldo ante falta de imagen disponible en Planet. |
+| Procesamiento satelital | Google Earth Engine (Sentinel-2) | Sentinel-2 SR Harmonizado, 10m/pixel, cada 5–15 días. Autenticación via cuenta de servicio GEE. |
+| Datos de suelo | SoilGrids 2.0 (ISRIC) | API REST gratuita (CC-BY 4.0). Devuelve fracciones arena/limo/arcilla en g/kg a 250m. Sin credenciales requeridas. |
 | Datos climáticos | Open-Meteo API (primaria) + NASA POWER (fallback) | Gratuitos, sin credenciales; Open-Meteo sirve modelos ECMWF/ERA5 y calcula ETo FAO-56. Detalle en sección "Fuentes de datos climáticos". |
-| Jobs automáticos | APScheduler | Job Planet NDVI (21hs) + job recomendación (00:01hs) + job notificaciones push (08:00hs) + job alertas climáticas (cada 6hs) |
+| Jobs automáticos | APScheduler | Job recomendación (00:01hs) + job notificaciones push (08:00hs) + job alertas climáticas (cada 6hs) |
 | Frontend | Vue 3 + Vite (PWA) | Liviano, rápido de desarrollar, soporte PWA nativo |
 | Notificaciones | Web Push (VAPID) | Estándar PWA, sin costo, sin dependencia de terceros |
 | Deploy | Railway | Simple, económico, soporte de monorepo |
@@ -18,8 +19,8 @@
 ## Componentes del sistema
 
 ### Fuentes de datos externas
-- **Planet Labs (primaria)**: extracción de NDVI promedio sobre el polígono del campo usando imágenes PlanetScope (3m/pixel, frecuencia diaria). Job dedicado a las 21hs activa assets de superficie reflectante, descarga bandas Red+NIR, calcula NDVI y persiste en `satellite_records`.
-- **Google Earth Engine (fallback)**: extracción de NDVI desde Sentinel-2 (10m/pixel, cada 5-15 días). Se usa cuando Planet no tiene imagen disponible para el período solicitado.
+- **Google Earth Engine — Sentinel-2 (fuente primaria NDVI)**: extracción de NDVI promedio sobre el polígono del campo. Sentinel-2 SR Harmonizado, 10m/pixel, frecuencia 5–15 días según nubosidad. Se aplica buffer negativo de 20m para evitar píxeles mixtos. Fallback a Kc tabular FAO-56 cuando no hay imagen clara disponible en los últimos 30 días.
+- **SoilGrids 2.0 (ISRIC)**: consulta REST por coordenadas del campo para determinar tipo de suelo automáticamente. Retorna fracciones de arena, limo y arcilla (g/kg) que se clasifican según el triángulo USDA y se mapean al enum `SoilType` del sistema.
 - **Open-Meteo API**: datos climáticos actuales y pronóstico a 5 días (temperatura, humedad, viento, radiación, precipitación y probabilidad de precipitación). También disponible ETo calculada para validación cruzada.
 
 ### Backend (FastAPI)
@@ -104,7 +105,8 @@ irrigation-advisor/
 
 ## Decisiones técnicas relevantes
 
-- **Kc dinámico con fallback en cascada**: el Kc se calcula desde NDVI cuando hay imagen disponible. Fuente primaria: Planet Labs (PlanetScope, diario, 3m). Fallback nivel 1: GEE/Sentinel-2 (cada 5-15 días, 10m). Fallback nivel 2: Kc tabular FAO-56 por etapa fenológica cuando no hay imagen de ninguna fuente.
+- **Kc dinámico con fallback**: el Kc se calcula desde NDVI cuando hay imagen disponible. Fuente única: GEE/Sentinel-2 (cada 5–15 días, 10m). Fallback: Kc tabular FAO-56 por etapa fenológica cuando no hay imagen disponible o la nubosidad supera el 20%.
+- **Tipo de suelo automático desde SoilGrids**: al crear un campo, se consulta la API SoilGrids con las coordenadas del centroide para determinar el tipo de suelo (arenoso/franco/arcilloso) sin intervención del productor. Si la API falla, el sistema solicita selección manual como fallback.
 - **Polígono dibujado por el productor**: al registrar el campo, el productor dibuja el polígono de su parcela en un mapa interactivo (Leaflet + Geoman). El admin lo revisa y ajusta si es necesario antes de aprobar. Un productor no puede tener más de un campo pendiente a la vez.
 - **Buffer negativo en polígono**: al procesar en GEE se aplica un buffer negativo de ~20m para evitar píxeles mixtos en los bordes del campo.
 

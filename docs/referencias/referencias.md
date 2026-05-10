@@ -47,6 +47,10 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 - **Soil Water Parameters — Cornell:** https://nrcca.cals.cornell.edu/soil/CA2/CA0212.1-3.php
 - **Water Balance Approach — Colorado State:** https://extension.colostate.edu/resource/irrigation-scheduling-the-water-balance-approach/
 
+### SoilGrids — tipo de suelo por coordenadas
+- **SoilGrids 2.0 REST API (ISRIC):** https://rest.isric.org/soilgrids/v2.0/properties/query
+- **Documentación WCS (fallback):** https://docs.isric.org/globaldata/soilgrids/wcs.html
+
 ### Integración de pronóstico climático
 - **Forecast integration in irrigation:** https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2023WR035810
 
@@ -65,3 +69,11 @@ Justifica el uso de NDVI como único índice satelital para estimar Kcb en viñe
 > Glenn, E.P., Neale, C.M.U., Hunsaker, D.J., Nagler, P.L. (2011). *Vegetation index-based crop coefficients to estimate evapotranspiration by remote sensing in agricultural and natural ecosystems.* Hydrological Processes, 25(26), 4050–4062. https://doi.org/10.1002/hyp.8392
 
 Revisión de referencia que valida el uso de índices de vegetación (NDVI principalmente) para estimar Kc en múltiples cultivos. Confirma que NDVI es suficiente para estimar transpiración potencial y que el estrés hídrico debe modelarse por separado vía balance hídrico (Ks), no mediante modificadores del índice.
+
+> Poggio, L., de Sousa, L.M., Batjes, N.H., Heuvelink, G.B.M., Kempen, B., Ribeiro, E., Rossiter, D. (2021). *SoilGrids 2.0: producing soil information for the globe with quantified spatial uncertainty.* SOIL, 7, 217–240. https://doi.org/10.5194/soil-7-217-2021
+
+Fuente de datos de textura del suelo (arena/limo/arcilla en g/kg a 250m de resolución) usada para determinar automáticamente el tipo de suelo del campo desde sus coordenadas. Validado contra ~240.000 perfiles globales. Licencia CC-BY 4.0.
+
+> Calera, A., Campos, I., Osann, A., D'Urso, G., Menenti, M. (2017). *Remote Sensing for Crop Water Management: From ET Modelling to Services for the End Users.* Sensors, 17(5), 1104. https://doi.org/10.3390/s17051104
+
+Establece el marco de trabajo de combinar datos de teledetección con el balance hídrico FAO-56 para scheduling operativo de riego — precisamente el enfoque de este sistema. Valida el uso de datos de suelo en grilla como entrada estándar para derivar θ_fc y θ_wp.
