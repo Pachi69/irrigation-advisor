@@ -4,7 +4,7 @@ Se ejecuta a las 08:00 hs (hora Mendoza). Busca la recomendacion generada
 esta madrugada y envia la notificacion push al productor.
 """
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 from app.database import SessionLocal
 from app.models.field import Field as FieldModel, FieldStatus
@@ -24,7 +24,7 @@ URGENCY_LABELS = {
 def send_daily_recommendation_notifications() -> None:
     """Envia push con la recomendacion de reigo del dia a cada productor."""
     db = SessionLocal()
-    today = date.today()
+    target_date = date.today() - timedelta(days=1)  # La recomendacion se genera a las 00:00, asi que es para el dia anterior
     try:
         fields = (
             db.query(FieldModel)
@@ -40,12 +40,12 @@ def send_daily_recommendation_notifications() -> None:
                     db.query(Recommendation)
                     .filter(
                         Recommendation.field_id == field.id,
-                        Recommendation.date == today,
+                        Recommendation.date == target_date,
                     )
                     .first()
                 )
                 if not rec:
-                    logger.info("Campo %d: sin recomendacion para hoy, saltando", field.id)
+                    logger.info("Campo %d: sin recomendacion para hoy, saltando", field.id, target_date)
                     skipped += 1
                     continue
 
