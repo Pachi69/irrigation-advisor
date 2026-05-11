@@ -62,6 +62,7 @@ def create_field(
         soil_type=soil_type,
         has_hail_net=data.has_hail_net,
         planting_date=data.planting_date,
+        last_saturation_date=data.last_saturation_date,
         polygon_geojson=data.polygon_geojson,
         latitude=latitude,
         longitude=longitude,

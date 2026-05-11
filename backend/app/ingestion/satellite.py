@@ -147,3 +147,97 @@ def get_satellite_indices(polygon_geojson: dict, target_date: date) -> Satellite
 
     except Exception as e:
         raise RuntimeError(f"Error al obtener índices satelitales desde GEE: {e}") from e
+    
+
+def get_satellite_indices_for_range(
+        polygon_geojson: dict,
+        start_date: date,
+        end_date: date,
+) -> list[SatelliteIndices]:
+    """Obtiene todas las imagenes Sentinel-2 disponibles entre dos fechas.
+    
+    Usa una sola llamada batch a GEE (collection.map().getInfo()) para procesar
+    todas las imagenes del periodo en lugar de una llamada por dia.
+    Pensado para inicializacion / backfill - no genera thumbnails.
+    
+    Args:
+        polygon_geojson: geometria GeoJSON del campo.
+        start_date: fecha inicial del rango (inclusive).
+        end_date: fecha final del rango (inclusive).
+
+    Returns:
+        Lista de SatelliteIndices ordenadas por fecha ascendente, sin duplicados.
+
+    Raises:
+        RuntimeError: si GEE falla.
+    """
+    try:
+        _initialize_ee()
+
+        geojson = (
+            polygon_geojson.get("geometry", polygon_geojson)
+            if polygon_geojson.get("type") == "Feature" else polygon_geojson
+        )
+
+        geometry = ee.Geometry(geojson).buffer(BUFFER_METERS)
+        start_str = start_date.strftime("%Y-%m-%d")
+        # GEE filterDate es [start, end), por eso sumamos 1 dia
+        end_str = (end_date + timedelta(days=1)).strftime("%Y-%m-%d")
+
+        collection = (
+            ee.ImageCollection(S2_COLLECTION)
+            .filterBounds(geometry)
+            .filterDate(start_str, end_str)
+            .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", MAX_CLOUD_COVERAGE))
+            .map(_mask_s2_clouds)
+        )
+
+        def _compute(image: ee.Image) -> ee.Feature:
+            ndvi_mean = (
+                image.normalizedDifference(["B8", "B4"])
+                .reduceRegion(
+                    reducer=ee.Reducer.mean(),
+                    geometry=geometry,
+                    scale=10,
+                    maxPixels=1e9,
+                )
+                .get("nd")
+            )
+            return ee.Feature(None, {
+                "ndvi": ndvi_mean,
+                "cloud_cover_pct": image.get("CLOUDY_PIXEL_PERCENTAGE"),
+                "image_date": image.date().format("YYYY-MM-dd")
+            })
+        
+        features_info = collection.map(_compute).getInfo()
+
+        seen: set[date] = set()
+        results: list[SatelliteIndices] = []
+        for feat in features_info.get("features", []):
+            props = feat.get("properties", {}) or {}
+            ndvi_val = props.get("ndvi")
+            image_date_str = props.get("image_date")
+            if ndvi_val is None or image_date_str is None:
+                continue # Imagen completamente nublada o sin fecha
+            img_date = date.fromisoformat(image_date_str)
+            if img_date in seen:
+                continue
+            seen.add(img_date)
+            results.append(SatelliteIndices(
+                ndvi=float(ndvi_val),
+                cloud_cover_pct=float(props.get("cloud_cover_pct") or 0.0),
+                image_date=img_date,
+                thumbnail_png=None,
+            ))
+
+        results.sort(key=lambda r: r.image_date)
+        logger.info(
+            "GEE batch: %d imagenes S2 unicas entre %s y %s",
+            len(results), start_date, end_date,
+        )
+        return results
+
+    except Exception as e:
+        raise RuntimeError(
+            f"Error al obtener indices satelitales por rango desde GEE: {e}"
+        ) from e

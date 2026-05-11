@@ -14,12 +14,13 @@ from app.schemas.climate import ClimateData
 from app.schemas.recommendation import RecommendationResponse
 from app.schemas.satellite import SatelliteData
 from app.ingestion.climate import get_climate_data, get_forecast
-from app.ingestion.satellite import get_satellite_indices
+from app.ingestion.satellite import get_satellite_indices, get_satellite_indices_for_range
 from app.calculation.eto import calculate_eto
 from app.calculation.kc import calculate_kc
 from app.calculation.water_balance import calculate_water_balance
 from app.calculation.crop_params import get_root_depth, get_depletion_factor
 from app.calculation.urgency import calculate_urgency
+
 
 logger = logging.getLogger(__name__)
 NDVI_MAX_AGE_DAYS = 15
@@ -170,7 +171,11 @@ def _save_retroactive_day(field: FieldModel, target_date: DateType, db: Session)
 
 
 def _fetch_latest_s2_if_available(field: FieldModel, today: DateType, db: Session) -> None:
-    """Consulta GEE para la imagen S2 mas reciente y la persiste si no esta duplicada."""
+    """Consulta GEE para la imagen S2 mas reciente y la persiste si no esta duplicada.
+
+    Si la fila para esa fecha ya existe pero sin thumbnail (caso del prefetch
+    batch que no genera thumbnails), lo actualiza con el thumbnail nuevo.
+    """
     if not field.polygon_geojson:
         return
     try:
@@ -199,6 +204,13 @@ def _fetch_latest_s2_if_available(field: FieldModel, today: DateType, db: Sessio
             logger.info(
                 "Nueva imagen S2 persistida: fecha %s, NDVI %.4f",
                 new_indices.image_date, new_indices.ndvi,
+            )
+        elif existing.thumbnail_png is None and new_indices.thumbnail_png is not None:
+            existing.thumbnail_png = new_indices.thumbnail_png
+            db.flush()
+            logger.info(
+                "Thumbnail agregado a registro existente del %s",
+                new_indices.image_date,
             )
     except RuntimeError as e:
         logger.warning(
@@ -282,3 +294,117 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         ndvi_date=ndvi_date,
         cloud_cover_pct=satellite_data.cloud_cover_pct if satellite_data else None,
     )
+
+
+def _prefetch_s2_imagery_for_init(
+        field: FieldModel,
+        start_date: DateType,
+        end_date: DateType,
+        db: Session,
+) -> None:
+    """Trae todas las imagenes S2 del periodo y las persiste antes del backfill.
+    
+    Asi cada dia retroactivo puede usar Kc dinamico desde NDVI en vez de fallback tabular.
+    Amplia la ventana NDVI_MAX_AGE_DAYS hacia atras para que el primer dia tambien tenga imagen.
+    """
+    if not field.polygon_geojson:
+        return
+    lookback_start = start_date - timedelta(days=NDVI_MAX_AGE_DAYS)
+    try:
+        indices_list = get_satellite_indices_for_range(
+            field.polygon_geojson, lookback_start, end_date,
+        )
+    except RuntimeError as e:
+        logger.warning(
+            "No se pudieron traer imagenes S2 para campo %d: %s. Backfill usara Kc tabular.",
+            field.id, e,
+        )
+        return
+    if not indices_list:
+        logger.info(
+            "Sin imagenes S2 disponibles para campo %d entre %s y %s",
+            field.id, lookback_start, end_date,
+        )
+        return
+    persisted = 0
+    for idx in indices_list:
+        existing = (
+            db.query(SatelliteRecord)
+            .filter(
+                SatelliteRecord.field_id == field.id,
+                SatelliteRecord.date == idx.image_date,
+            )
+            .first()
+        )
+        if existing is None:
+            db.add(SatelliteRecord(
+                field_id=field.id,
+                date=idx.image_date,
+                source=SatelliteSource.sentinel2,
+                ndvi=idx.ndvi,
+                cloud_cover_pct=idx.cloud_cover_pct,
+                moisture_event_detected=False,
+                thumbnail_png=None,
+            ))
+            persisted += 1
+    db.flush()
+    logger.info(
+        "Prefetch S2 campo %d: %d imagenes nuevas persistidas (rango %s a %s)",
+        field.id, persisted, lookback_start, end_date,
+    )
+
+
+def initialize_water_balance(field: FieldModel, db: Session) -> None:
+    """Inicializa el balance hidrico de un campo recien aprobado.
+    
+    Estrategia (FAO-56 Sec. 8.4.2 'Initial depletion'):
+    - Si el productor declaro last_saturation_date < hoy:
+        asume Dr=0 ese dia y aplica Ec.82 hacia adelante hasta ayer.
+    - Si declaro last_saturation_date == hoy (o None):
+        no hace backfill; asume Dr=0 hoy (campo recien saturado).
+    """
+    today = DateType.today()
+    saturation = field.last_saturation_date
+
+    if saturation is None or saturation >= today:
+        field.last_deficit_mm = 0.0
+        field.last_deficit_date = today
+        db.commit()
+        logger.info(
+            "Init balance campo %d: sin backfill (Dr=0 hoy)", field.id
+        )
+        return
+    
+    # Pre-traer imagenes S2 del periodo para que el backfill use Kc dinamico
+    _prefetch_s2_imagery_for_init(field, saturation, today, db)
+
+    # Backfill desde el dia siguiente al evento de saturacion
+    field.last_deficit_mm = 0.0
+    field.last_deficit_date = saturation
+    db.flush()
+
+    day = saturation + timedelta(days=1)
+    while day < today:
+        try:
+            _save_retroactive_day(field, day, db)
+        except Exception as e:
+            logger.warning(
+                "Backfill init campo %d dia %s fallo: %s", field.id, day, e,
+            )
+            break
+        day += timedelta(days=1)
+    db.commit()
+    logger.info(
+        "Init balance campo %d: backfill desde %s (deficit final %.1f mm)",
+        field.id, saturation, field.last_deficit_mm or 0.0,
+    )
+
+    # Re-ejecutar el pipeline live para que la fila de "ayer" quede con urgencia,
+    # razon y confianza reales (la fila creada por el backfill tiene placeholders).
+    try:
+        run_recommendation_pipeline(field, db)
+    except Exception as e:
+        logger.warning(
+            "No se pudo re-ejecutar pipeline live al final de init: %s. "
+            "La recomendacion de ayer queda con valores de backfill.", e,
+        )

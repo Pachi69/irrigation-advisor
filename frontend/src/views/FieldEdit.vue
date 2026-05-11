@@ -38,6 +38,8 @@ const IRRIGATION_OPTIONS = [
     {value: 'flood', label: 'Surco'},
 ]
 
+const todayStr = new Date().toISOString().slice(0, 10)
+
 onMounted(async () => {
     try {
         const field = await getFieldById(route.params.id)
@@ -49,6 +51,7 @@ onMounted(async () => {
             soil_type: field.soil_type,
             has_hail_net: field.has_hail_net,
             planting_date: field.planting_date,
+            last_saturation_date: field.last_saturation_date,
         }
     } catch {
         error.value = 'No se pudo cargar el campo'
@@ -119,6 +122,14 @@ async function handleSubmit() {
                 <input v-model="form.planting_date" type="date" required :disabled="saving">
             </label>
 
+            <label>
+                Último riego completo o lluvia abundante
+                <input v-model="form.last_saturation_date" type="date" :max="todayStr" :disabled="saving">
+                <small class="input-hint">
+                    Actualizá esta fecha tras un riego completo o lluvia abundante para recalibrar el balance hídrico.
+                </small>
+            </label>
+
             <label class="checkbox">
                 <input v-model="form.has_hail_net" type="checkbox" :disabled="saving">
                 El campo tiene malla antigranizo
@@ -158,4 +169,5 @@ input, select {
 button:disabled { opacity: 0.6; cursor: not-allowed; }
 .error { color: #c00; margin: 0; }
 .center { text-align: center; padding: 2rem; color: #666; }
+.input-hint { color: #666; font-size: 0.8rem; }
 </style>

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
+import logging
+
 from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel, FieldStatus
@@ -9,6 +11,8 @@ from app.auth.dependencies import get_current_admin
 from app.api._geo import validate_and_compute_centroid
 from app.ingestion.soil import get_soil_type_from_coords
 from app.ingestion.climate import get_elevation
+from app.services.recommendation import initialize_water_balance
+
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -69,4 +73,10 @@ def approve_field(
     field.status = FieldStatus.active
     db.commit()
     db.refresh(field)
+    # Inicializa balance hidrico (FAO-56 Sec 8.4.2)
+    try:
+        initialize_water_balance(field, db)
+    except Exception as e:
+        # No bloquear la aprobacion si falla el backfill
+        logging.getLogger(__name__).error("initialize_water_balance fallo para campo %d: %s", field.id, e)
     return field

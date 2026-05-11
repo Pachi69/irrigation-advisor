@@ -13,6 +13,7 @@ const form = ref({
     irrigation_type: 'drip',
     has_hail_net: false,
     planting_date: '',
+    last_saturation_date: new Date().toISOString().slice(0, 10),
     polygon_geojson: null,
 })
 
@@ -43,6 +44,8 @@ async function handleSubmit() {
 function cancel() {
     router.push('/fields')
 }
+
+const todayStr = new Date().toISOString().slice(0, 10)
 </script>
 
 <template>
@@ -117,6 +120,21 @@ function cancel() {
                     required
                     :disabled="loading"
                 />
+            </label>
+
+            <label>
+                Ultimo riego completo o lluvia abundante
+                <input
+                    v-model="form.last_saturation_date"
+                    type="date"
+                    :max="todayStr"
+                    required
+                    :disabled="loading"
+                />
+                <small class="input-hint">
+                    Ultima fecha en que el suelo quedo bien empapado (riego completo o lluvia abundante).
+                    Si no sabe o el campo esta recien regado, deje la fecha de hoy.
+                </small>
             </label>
 
             <label class="checkbox">
@@ -238,4 +256,5 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-confirm-map {
     padding: 0.7rem 1.5rem; font-size: 1rem;
 }
+.input-hint { color: #666; font-size: 0.8rem; }
 </style>
