@@ -8,7 +8,20 @@ const loading = ref(true)
 const error = ref('')
 
 const CROP_LABELS = { vine: 'Vid', peach: 'Durazno', alfalfa: 'Alfalfa' }
-const SOIL_LABELS = { sandy: 'Arenoso', clay: 'Arcilloso', loamy: 'Franco' }
+const SOIL_LABELS = {
+    sand:            'Arena',
+    loamy_sand:      'Arena franca',
+    sandy_loam:      'Franco arenoso',
+    sandy_clay_loam: 'Franco arcillo arenoso',
+    loam:            'Franco',
+    silt_loam:       'Franco limoso',
+    silt:            'Limoso',
+    clay_loam:       'Franco arcilloso',
+    silty_clay_loam: 'Arcillo limoso franco',
+    sandy_clay:      'Arcillo arenoso',
+    silty_clay:      'Arcillo limoso',
+    clay:            'Arcilloso',
+}
 const IRRIGATION_LABELS = { drip: 'Goteo', sprinkler: 'Aspersión', flood: 'Surco' }
 const STATUS_LABELS = { pending: 'Pendiente de aprobación', active: 'Activo', inactive: 'Inactivo' }
 
