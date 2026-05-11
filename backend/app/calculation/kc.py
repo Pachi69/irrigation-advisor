@@ -87,7 +87,7 @@ def _kc_tabular(days: int, p: _CropKcParams) -> tuple[float, PhenologicalStage]:
     return kc, stage
 
 
-def _kc_from_ndvi(ndvi: float, p: _CropKcParams) -> tuple[float, PhenologicalStage]:
+def _kc_from_ndvi(ndvi: float, days: int, p: _CropKcParams) -> tuple[float, PhenologicalStage]:
     """
     Kc dinamico desde NDVI usando cobertura fraccionada.
     
@@ -100,14 +100,8 @@ def _kc_from_ndvi(ndvi: float, p: _CropKcParams) -> tuple[float, PhenologicalSta
 
     kc = p.kc_ini + (p.kc_mid - p.kc_ini) * fc
     
-    # Etapa fenologica estimada desde cobertura fraccionada
-    if fc < 0.2:
-        stage = PhenologicalStage.initial
-    elif fc < 0.5:
-        stage = PhenologicalStage.development
-    else:
-        stage = PhenologicalStage.mid
-
+    # Etapa fenologica desde calendario (FAO-56 Tabla 11), No desde cobertura
+    stage = _stage_from_days(days, p)
     return kc, stage
 
 
@@ -138,7 +132,7 @@ def calculate_kc(
 
     # Estrategia 1: Kc dinamico desde NDVI Satelital
     if satellite_data is not None and satellite_data.ndvi is not None:
-        kc, stage = _kc_from_ndvi(satellite_data.ndvi, params)
+        kc, stage = _kc_from_ndvi(satellite_data.ndvi, days, params)
         return KcResult(kc=kc, source=KcSource.s2_dynamic, phenological_stage=stage)
     
     # Estrategia 2: Kc tabular FAO-56
