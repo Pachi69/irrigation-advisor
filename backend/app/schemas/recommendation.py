@@ -1,6 +1,6 @@
 from datetime import date
 from pydantic import BaseModel, Field
-from app.models.recommendation import UrgencyLevel, ConfidenceLevel, KcSource, PhenologicalStage
+from app.models.enums import UrgencyLevel, ConfidenceLevel, KcSource, PhenologicalStage
 
 
 class RecommendationResponse(BaseModel):

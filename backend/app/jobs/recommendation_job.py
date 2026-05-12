@@ -4,8 +4,8 @@ Se ejecuta a las 22:00 hs (hora Mendoza) para todos los campos activos.
 """
 import logging
 from app.database import SessionLocal
-from app.models.field import Field as FieldModel, FieldStatus
 from app.services.recommendation import run_recommendation_pipeline
+from app.api._helpers import iter_active_fields
 
 logger = logging.getLogger(__name__)
 
@@ -13,11 +13,7 @@ def generate_daily_recommendations() -> None:
     """Genera y persiste recomendaciones para todos los campos activos."""
     db = SessionLocal()
     try:
-        fields = (
-            db.query(FieldModel)
-            .filter(FieldModel.status == FieldStatus.active)
-            .all()
-        )
+        fields = iter_active_fields(db)
         logger.info("Job diario: procesado %d campos activos", len(fields))
         ok = errors = 0
         for field in fields:

@@ -7,9 +7,9 @@ import logging
 from datetime import date, timedelta
 
 from app.database import SessionLocal
-from app.models.field import Field as FieldModel, FieldStatus
-from app.models.recommendation import Recommendation
+from app.models.daily_water_balance import DailyWaterBalance
 from app.services.push import send_push_to_user
+from app.api._helpers import iter_active_fields
 
 logger = logging.getLogger(__name__)
 
@@ -26,29 +26,25 @@ def send_daily_recommendation_notifications() -> None:
     db = SessionLocal()
     target_date = date.today() - timedelta(days=1)  # La recomendacion se genera a las 00:00, asi que es para el dia anterior
     try:
-        fields = (
-            db.query(FieldModel)
-            .filter(FieldModel.status == FieldStatus.active)
-            .all()
-        )
+        fields = iter_active_fields(db)
         logger.info("Job notificaciones: procesando %d campos activos", len(fields))
         ok = skipped = errors = 0
 
         for field in fields:
             try:
-                rec = (
-                    db.query(Recommendation)
+                wb = (
+                    db.query(DailyWaterBalance)
                     .filter(
-                        Recommendation.field_id == field.id,
-                        Recommendation.date == target_date,
+                        DailyWaterBalance.field_id == field.id,
+                        DailyWaterBalance.date == target_date,
                     )
                     .first()
                 )
-                if not rec:
-                    logger.info("Campo %d: sin recomendacion para hoy, saltando", field.id, target_date)
+                if not wb or not wb.recommendation:
                     skipped += 1
                     continue
 
+                rec = wb.recommendation
                 urgency_label = URGENCY_LABELS.get(rec.urgency.value, rec.urgency.value)
                 sent = send_push_to_user(
                     user_id=field.user_id,

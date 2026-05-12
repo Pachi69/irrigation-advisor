@@ -28,7 +28,7 @@ Referencia:
 """
 from __future__ import annotations
 
-from app.models.field import SoilType
+from app.models.enums import SoilType
 from app.schemas.calculation import EToResult, KcResult, WaterBalanceResult
 
 # Propiedades hidraulicas del suelo (FAOP-56 Tabla 19)

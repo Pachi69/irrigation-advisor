@@ -23,8 +23,7 @@ from __future__ import annotations
 from datetime import date
 from dataclasses import dataclass
 
-from app.models.field import CropType
-from app.models.recommendation import KcSource, PhenologicalStage
+from app.models.enums import CropType, KcSource, PhenologicalStage
 from app.schemas.calculation import KcResult
 from app.schemas.satellite import SatelliteData
 

@@ -13,7 +13,7 @@ Lógica:
 """
 from __future__ import annotations
 
-from app.models.recommendation import ConfidenceLevel, KcSource, UrgencyLevel
+from app.models.enums import ConfidenceLevel, KcSource, UrgencyLevel
 from app.schemas.calculation import KcResult, WaterBalanceResult, UrgencyResult
 from app.schemas.climate import ForecastDay
 

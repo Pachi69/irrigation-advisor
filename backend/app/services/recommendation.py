@@ -1,166 +1,92 @@
-"""Servicio de pipeline de recomendacion de riego.
-
-Contiene la logica central reutilizada por el endpoint REST y el job automatico.
-"""
+"""Servicio de recomendacion de riego: pipeline diario y persistencia."""
 from datetime import date as DateType, timedelta
-from sqlalchemy.orm import Session
+
 import logging
 
+from sqlalchemy.orm import Session
+
 from app.models.field import Field as FieldModel
-from app.models.satellite_record import SatelliteRecord, SatelliteSource
-from app.models.recommendation import Recommendation, UrgencyLevel, ConfidenceLevel
-from app.schemas.calculation import EToResult, KcResult, WaterBalanceResult
-from app.schemas.climate import ClimateData
+from app.models.daily_water_balance import DailyWaterBalance
+from app.models.recommendation import Recommendation
+from app.models.enums import UrgencyLevel, ConfidenceLevel
 from app.schemas.recommendation import RecommendationResponse
-from app.schemas.satellite import SatelliteData
-from app.ingestion.climate import get_climate_data, get_forecast
-from app.ingestion.satellite import get_satellite_indices, get_satellite_indices_for_range
-from app.calculation.eto import calculate_eto
-from app.calculation.kc import calculate_kc
-from app.calculation.water_balance import calculate_water_balance
-from app.calculation.crop_params import get_root_depth, get_depletion_factor
+from app.ingestion.climate import get_forecast
 from app.calculation.urgency import calculate_urgency
+from app.services.satellite import fetch_latest_s2
+from app.services.water_balance import compute_balance_for_day, save_water_balance
 
 
 logger = logging.getLogger(__name__)
-NDVI_MAX_AGE_DAYS = 15
 
-
-def _get_satellite_data_for_date(
-    field: FieldModel, target_date: DateType, db: Session
-) -> tuple[SatelliteData | None, DateType | None]:
-    """Devuelve el NDVI vigente a una fecha (mas reciente con fecha <= target_date,
-    dentro de los ultimos NDVI_MAX_AGE_DAYS dias)."""
-    cutoff = target_date - timedelta(days=NDVI_MAX_AGE_DAYS)
-    sat_record = (
-        db.query(SatelliteRecord)
-        .filter(
-            SatelliteRecord.field_id == field.id,
-            SatelliteRecord.date <= target_date,
-            SatelliteRecord.date >= cutoff,
-        )
-        .order_by(SatelliteRecord.date.desc())
-        .first()
-    )
-    if sat_record is None:
-        return None, None
-    return (
-        SatelliteData(
-            field_id=field.id, date=sat_record.date,
-            source=sat_record.source, ndvi=sat_record.ndvi,
-            cloud_cover_pct=sat_record.cloud_cover_pct,
-        ),
-        sat_record.date,
-    )
-
-
-def _compute_balance_for_day(
-    field: FieldModel, target_date: DateType, db: Session
-) -> tuple[ClimateData, EToResult, SatelliteData | None, DateType | None, KcResult, WaterBalanceResult]:
-    """Calcula clima, ETo, Kc y balance hidrico para una fecha.
-
-    Actualiza field.last_deficit_mm y field.last_deficit_date.
-    """
-    climate = get_climate_data(field.latitude, field.longitude, target_date)
-    if climate.eto_reference_mm is None:
-        eto_result = calculate_eto(climate, field.latitude, target_date, field.elevation_m)
-        climate = climate.model_copy(update={"eto_reference_mm": eto_result.eto_mm})
-    eto = EToResult(eto_mm=climate.eto_reference_mm)
-
-    satellite_data, ndvi_date = _get_satellite_data_for_date(field, target_date, db)
-
-    kc_result = calculate_kc(
-        crop_type=field.crop_type,
-        planting_date=field.planting_date,
-        current_date=target_date,
-        satellite_data=satellite_data,
-    )
-
-    last_rec = (
-        db.query(Recommendation)
-        .filter(
-            Recommendation.field_id == field.id,
-            Recommendation.date < target_date,
-            Recommendation.water_deficit_mm.is_not(None),
-        )
-        .order_by(Recommendation.date.desc())
-        .first()
-    )
-    previous_deficit = last_rec.water_deficit_mm if last_rec else 0.0
-    balance = calculate_water_balance(
-        eto=eto, 
-        kc=kc_result,
-        precipitation_mm=climate.precipitation_mm,
-        previous_deficit_mm=previous_deficit,
-        soil_type=field.soil_type,
-        root_depth_m=get_root_depth(field.crop_type),
-        depletion_factor_p=get_depletion_factor(field.crop_type),
-    )
-
-    field.last_deficit_mm = balance.water_deficit_mm
-    field.last_deficit_date = target_date
-
-    return climate, eto, satellite_data, ndvi_date, kc_result, balance
-
-
-def _upsert_recommendation(
-    field: FieldModel,
-    target_date: DateType,
+def save_recommendation(
+    wb: DailyWaterBalance,
     db: Session,
     *,
-    climate: ClimateData,
-    eto: EToResult,
-    kc_result: KcResult,
-    balance: WaterBalanceResult,
-    satellite_data: SatelliteData | None,
-    ndvi_date: DateType | None,
     urgency_level: UrgencyLevel,
     recommended_irrigation_mm: float,
     reason: str,
     confidence: ConfidenceLevel,
 ) -> Recommendation:
-    """Crea o actualiza la Recommendation para un campo en una fecha."""
+    """Crea o actualiza la recomendacion asociada a un DailyWaterBalance dado"""
     rec = (
         db.query(Recommendation)
-        .filter(Recommendation.field_id == field.id, Recommendation.date == target_date)
+        .filter(Recommendation.water_balance_id == wb.id)
         .first()
     )
+
     if rec is None:
-        rec = Recommendation(field_id=field.id, date=target_date)
+        rec = Recommendation(water_balance_id=wb.id)
         db.add(rec)
 
-    rec.eto_mm = eto.eto_mm
-    rec.kc = kc_result.kc
-    rec.kc_source = kc_result.source
-    rec.etc_mm = eto.eto_mm * kc_result.kc
-    rec.water_deficit_mm = balance.water_deficit_mm
-    rec.ks = balance.ks
-    rec.phenological_stage = kc_result.phenological_stage
     rec.recommended_irrigation_mm = recommended_irrigation_mm
     rec.urgency = urgency_level
     rec.reason = reason
-    rec.precipitation_mm = climate.precipitation_mm
     rec.confidence = confidence
-    rec.taw_mm = balance.taw_mm
-    rec.raw_mm = balance.raw_mm
-    rec.ndvi = satellite_data.ndvi if satellite_data else None
-    rec.ndvi_date = ndvi_date
+
     return rec
 
+def build_recommendation_response(
+    wb: DailyWaterBalance,
+    rec: Recommendation,
+    cloud_cover_pct: float | None = None,
+) -> RecommendationResponse:
+    """Construye RecommendationResponse plano desde los dos modelos separados."""
+    return RecommendationResponse(
+        field_id=wb.field_id,
+        date=wb.date,
+        urgency_level=rec.urgency,
+        recommended_irrigation_mm=rec.recommended_irrigation_mm,
+        reason=rec.reason,
+        confidence=rec.confidence,
+        water_deficit_mm=wb.water_deficit_mm,
+        ks=wb.ks,
+        taw_mm=wb.taw_mm,
+        raw_mm=wb.raw_mm,
+        eto_mm=wb.eto_mm,
+        kc=wb.kc,
+        kc_source=wb.kc_source,
+        phenological_stage=wb.phenological_stage,
+        ndvi=wb.ndvi,
+        ndvi_date=wb.ndvi_date,
+        cloud_cover_pct=cloud_cover_pct,
+    )
 
-def _save_retroactive_day(field: FieldModel, target_date: DateType, db: Session) -> None:
+def save_retroactive_day(field: FieldModel, target_date: DateType, db: Session) -> None:
     """Calcula balance hidrico para una fecha pasada y guarda Recommendation retroactiva.
 
     Usado para rellenar dias faltantes entre la ultima recomendacion guardada y ayer,
     manteniendo la continuidad del deficit acumulado.
     """
-    climate, eto, satellite_data, ndvi_date, kc_result, balance = _compute_balance_for_day(
+    climate, eto, satellite_data, ndvi_date, kc_result, balance = compute_balance_for_day(
         field, target_date, db
     )
-    _upsert_recommendation(
+    wb = save_water_balance(
         field, target_date, db,
         climate=climate, eto=eto, kc_result=kc_result, balance=balance,
         satellite_data=satellite_data, ndvi_date=ndvi_date,
+    )
+    save_recommendation(
+        wb, db,
         urgency_level=UrgencyLevel.low,
         recommended_irrigation_mm=0.0,
         reason="Recalculado retroactivamente (backfill)",
@@ -169,64 +95,8 @@ def _save_retroactive_day(field: FieldModel, target_date: DateType, db: Session)
     db.flush()
     logger.info("Backfill: dia %s, deficit %.2f mm", target_date, balance.water_deficit_mm)
 
-
-def _fetch_latest_s2_if_available(field: FieldModel, today: DateType, db: Session) -> None:
-    """Consulta GEE para la imagen S2 mas reciente y la persiste si no esta duplicada.
-
-    Si la fila para esa fecha ya existe pero sin thumbnail (caso del prefetch
-    batch que no genera thumbnails), lo actualiza con el thumbnail nuevo.
-    """
-    if not field.polygon_geojson:
-        return
-    try:
-        new_indices = get_satellite_indices(field.polygon_geojson, today)
-        if new_indices is None:
-            return
-        existing = (
-            db.query(SatelliteRecord)
-            .filter(
-                SatelliteRecord.field_id == field.id,
-                SatelliteRecord.date == new_indices.image_date,
-            )
-            .first()
-        )
-        if existing is None:
-            db.add(SatelliteRecord(
-                field_id=field.id,
-                date=new_indices.image_date,
-                source=SatelliteSource.sentinel2,
-                ndvi=new_indices.ndvi,
-                cloud_cover_pct=new_indices.cloud_cover_pct,
-                moisture_event_detected=False,
-                thumbnail_png=new_indices.thumbnail_png,
-            ))
-            db.flush()
-            logger.info(
-                "Nueva imagen S2 persistida: fecha %s, NDVI %.4f",
-                new_indices.image_date, new_indices.ndvi,
-            )
-        elif existing.thumbnail_png is None and new_indices.thumbnail_png is not None:
-            existing.thumbnail_png = new_indices.thumbnail_png
-            db.flush()
-            logger.info(
-                "Thumbnail agregado a registro existente del %s",
-                new_indices.image_date,
-            )
-    except RuntimeError as e:
-        logger.warning(
-            "No se pudo obtener NDVI de GEE: %s. Se usara registro existente o Kc tabular.", e,
-        )
-
-
 def run_recommendation_pipeline(field: FieldModel, db: Session) -> RecommendationResponse:
     """Ejecuta el pipeline completo de recomendacion para un campo activo.
-
-    Args:
-        field: campo activo con poligono asignado.
-        db: sesion de base de datos activa.
-
-    Returns:
-        RecommendationResponse con todos los resultados del pipeline.
 
     Raises:
         ValueError: si faltan variables climaticas obligatorias.
@@ -240,17 +110,17 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         gap_date = field.last_deficit_date + timedelta(days=1)
         while gap_date < yesterday:
             try:
-                _save_retroactive_day(field, gap_date, db)
+                save_retroactive_day(field, gap_date, db)
             except Exception as e:
                 logger.error("Error en backfill dia %s campo %d: %s", gap_date, field.id, e)
                 break
             gap_date += timedelta(days=1)
 
-    # Intenta obtener la imagen S2 mas reciente disponible
-    _fetch_latest_s2_if_available(field, today, db)
+    # Obtener imagen S2 mas reciente
+    fetch_latest_s2(field, today, db)
 
     # Calcular balance hidrico de ayer
-    climate, eto, satellite_data, ndvi_date, kc_result, balance = _compute_balance_for_day(
+    climate, eto, satellite_data, ndvi_date, kc_result, balance = compute_balance_for_day(
         field, yesterday, db
     )
 
@@ -258,11 +128,14 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
     forecast = get_forecast(field.latitude, field.longitude, days=3)
     urgency = calculate_urgency(balance, forecast, kc_result)
 
-    # Persistir recomendacion completa
-    _upsert_recommendation(
+    # Persistir
+    wb = save_water_balance(
         field, yesterday, db,
         climate=climate, eto=eto, kc_result=kc_result, balance=balance,
         satellite_data=satellite_data, ndvi_date=ndvi_date,
+    )
+    rec = save_recommendation(
+        wb, db,
         urgency_level=urgency.urgency_level,
         recommended_irrigation_mm=urgency.recommended_irrigation_mm,
         reason=urgency.reason,
@@ -275,136 +148,7 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         field.id, yesterday, urgency.urgency_level,
     )
 
-    return RecommendationResponse(
-        field_id=field.id,
-        date=yesterday,
-        urgency_level=urgency.urgency_level,
-        recommended_irrigation_mm=urgency.recommended_irrigation_mm,
-        reason=urgency.reason,
-        confidence=urgency.confidence,
-        water_deficit_mm=balance.water_deficit_mm,
-        ks=balance.ks,
-        taw_mm=balance.taw_mm,
-        raw_mm=balance.raw_mm,
-        eto_mm=eto.eto_mm,
-        kc=kc_result.kc,
-        kc_source=kc_result.source,
-        phenological_stage=kc_result.phenological_stage,
-        ndvi=satellite_data.ndvi if satellite_data else None,
-        ndvi_date=ndvi_date,
+    return build_recommendation_response(
+        wb, rec,
         cloud_cover_pct=satellite_data.cloud_cover_pct if satellite_data else None,
     )
-
-
-def _prefetch_s2_imagery_for_init(
-        field: FieldModel,
-        start_date: DateType,
-        end_date: DateType,
-        db: Session,
-) -> None:
-    """Trae todas las imagenes S2 del periodo y las persiste antes del backfill.
-    
-    Asi cada dia retroactivo puede usar Kc dinamico desde NDVI en vez de fallback tabular.
-    Amplia la ventana NDVI_MAX_AGE_DAYS hacia atras para que el primer dia tambien tenga imagen.
-    """
-    if not field.polygon_geojson:
-        return
-    lookback_start = start_date - timedelta(days=NDVI_MAX_AGE_DAYS)
-    try:
-        indices_list = get_satellite_indices_for_range(
-            field.polygon_geojson, lookback_start, end_date,
-        )
-    except RuntimeError as e:
-        logger.warning(
-            "No se pudieron traer imagenes S2 para campo %d: %s. Backfill usara Kc tabular.",
-            field.id, e,
-        )
-        return
-    if not indices_list:
-        logger.info(
-            "Sin imagenes S2 disponibles para campo %d entre %s y %s",
-            field.id, lookback_start, end_date,
-        )
-        return
-    persisted = 0
-    for idx in indices_list:
-        existing = (
-            db.query(SatelliteRecord)
-            .filter(
-                SatelliteRecord.field_id == field.id,
-                SatelliteRecord.date == idx.image_date,
-            )
-            .first()
-        )
-        if existing is None:
-            db.add(SatelliteRecord(
-                field_id=field.id,
-                date=idx.image_date,
-                source=SatelliteSource.sentinel2,
-                ndvi=idx.ndvi,
-                cloud_cover_pct=idx.cloud_cover_pct,
-                moisture_event_detected=False,
-                thumbnail_png=None,
-            ))
-            persisted += 1
-    db.flush()
-    logger.info(
-        "Prefetch S2 campo %d: %d imagenes nuevas persistidas (rango %s a %s)",
-        field.id, persisted, lookback_start, end_date,
-    )
-
-
-def initialize_water_balance(field: FieldModel, db: Session) -> None:
-    """Inicializa el balance hidrico de un campo recien aprobado.
-    
-    Estrategia (FAO-56 Sec. 8.4.2 'Initial depletion'):
-    - Si el productor declaro last_saturation_date < hoy:
-        asume Dr=0 ese dia y aplica Ec.82 hacia adelante hasta ayer.
-    - Si declaro last_saturation_date == hoy (o None):
-        no hace backfill; asume Dr=0 hoy (campo recien saturado).
-    """
-    today = DateType.today()
-    saturation = field.last_saturation_date
-
-    if saturation is None or saturation >= today:
-        field.last_deficit_mm = 0.0
-        field.last_deficit_date = today
-        db.commit()
-        logger.info(
-            "Init balance campo %d: sin backfill (Dr=0 hoy)", field.id
-        )
-        return
-    
-    # Pre-traer imagenes S2 del periodo para que el backfill use Kc dinamico
-    _prefetch_s2_imagery_for_init(field, saturation, today, db)
-
-    # Backfill desde el dia siguiente al evento de saturacion
-    field.last_deficit_mm = 0.0
-    field.last_deficit_date = saturation
-    db.flush()
-
-    day = saturation + timedelta(days=1)
-    while day < today:
-        try:
-            _save_retroactive_day(field, day, db)
-        except Exception as e:
-            logger.warning(
-                "Backfill init campo %d dia %s fallo: %s", field.id, day, e,
-            )
-            break
-        day += timedelta(days=1)
-    db.commit()
-    logger.info(
-        "Init balance campo %d: backfill desde %s (deficit final %.1f mm)",
-        field.id, saturation, field.last_deficit_mm or 0.0,
-    )
-
-    # Re-ejecutar el pipeline live para que la fila de "ayer" quede con urgencia,
-    # razon y confianza reales (la fila creada por el backfill tiene placeholders).
-    try:
-        run_recommendation_pipeline(field, db)
-    except Exception as e:
-        logger.warning(
-            "No se pudo re-ejecutar pipeline live al final de init: %s. "
-            "La recomendacion de ayer queda con valores de backfill.", e,
-        )

@@ -13,7 +13,7 @@ Referencia:
 
 from __future__ import annotations
 
-from app.models.field import CropType
+from app.models.enums import CropType
 
 # root_depth_m: profundida radicular efectiva(m)
 # depletion_factor_p: fraccion de TAW que puede agotarse antes del estres

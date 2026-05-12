@@ -6,35 +6,7 @@ from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, String,
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
-class CropType(enum.Enum):
-    vine = "vine"
-    peach = "peach"
-    alfalfa = "alfalfa"
-
-class IrrigationType(enum.Enum):
-    drip = "drip"
-    sprinkler = "sprinkler"
-    flood = "flood"
-
-class SoilType(enum.Enum):
-    sand = "sand"
-    loamy_sand = "loamy_sand"
-    sandy_loam = "sandy_loam"
-    sandy_clay_loam = "sandy_clay_loam"
-    loam = "loam"
-    silt_loam = "silt_loam"
-    silt = "silt"
-    clay_loam = "clay_loam"
-    silty_clay_loam = "silty_clay_loam"
-    sandy_clay = "sandy_clay"
-    silty_clay = "silty_clay"
-    clay = "clay"
-
-class FieldStatus(enum.Enum):
-    active = "active"
-    inactive = "inactive"
-    pending = "pending"
+from app.models.enums import CropType, IrrigationType, SoilType, FieldStatus
 
 class Field(Base):
     __tablename__ = "fields"
@@ -58,8 +30,7 @@ class Field(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="fields")
-    soil: Mapped["Soil"] = relationship(back_populates="field", uselist=False)
     satellite_records: Mapped[list["SatelliteRecord"]] = relationship(back_populates="field", cascade="all, delete-orphan")
-    recommendations: Mapped[list["Recommendation"]] = relationship(back_populates="field", cascade="all, delete-orphan")
+    water_balances: Mapped[list["DailyWaterBalance"]] = relationship(back_populates="field", cascade="all, delete-orphan")
     irrigation_confirmations: Mapped[list["IrrigationConfirmation"]] = relationship(back_populates="field", cascade="all, delete-orphan")
     alerts: Mapped[list["Alert"]] = relationship(back_populates="field", cascade="all, delete-orphan")

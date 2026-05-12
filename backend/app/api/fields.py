@@ -4,9 +4,10 @@ from datetime import date as date_type, timedelta
 
 from app.database import get_db
 from app.models.user import User
-from app.models.field import Field as FieldModel, FieldStatus
+from app.models.field import Field as FieldModel
+from app.models.enums import FieldStatus
 from app.models.alert import Alert
-from app.models.recommendation import Recommendation
+from app.models.daily_water_balance import DailyWaterBalance
 from app.models.satellite_record import SatelliteRecord
 from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate, FieldChartData, DeficitPoint, NdviPoint
 from app.schemas.alert import AlertPublic
@@ -14,6 +15,7 @@ from app.auth.dependencies import get_current_user
 from app.calculation.crop_params import get_depletion_factor
 from app.api._geo import validate_and_compute_centroid
 from app.ingestion.soil import get_soil_type_from_coords
+from app.api._helpers import owned_field
 
 router = APIRouter(prefix="/fields", tags=["fields"])
 
@@ -86,41 +88,20 @@ def list_my_fields(
     )
 
 @router.get("/{field_id}", response_model=FieldPublic)
-def get_my_field(
-    field_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Detalle de un campo del usuario autenticado."""
-    field = (
-        db.query(FieldModel)
-        .filter(FieldModel.id == field_id, FieldModel.user_id == current_user.id)
-        .first()
-    )
-    if field is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
+def get_my_field(field: FieldModel = Depends(owned_field)):
     return field
 
 
 @router.get("/{field_id}/alerts", response_model=list[AlertPublic])
 def get_field_alerts(
-    field_id: int,
-    current_user: User = Depends(get_current_user),
+    field: FieldModel = Depends(owned_field),
     db: Session = Depends(get_db),
 ):
     """Retorna las alertas del dia mas proximo (date > today) para un campo"""
-    field = (
-        db.query(FieldModel)
-        .filter(FieldModel.id == field_id, FieldModel.user_id == current_user.id)
-        .first()
-    )
-    if field is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
-    
     today = date_type.today()
     alerts = (
         db.query(Alert)
-        .filter(Alert.field_id == field_id, Alert.date > today)
+        .filter(Alert.field_id == field.id, Alert.date > today)
         .order_by(Alert.date.asc())
         .all()
     )
@@ -134,20 +115,11 @@ def get_field_alerts(
 
 @router.patch("/{field_id}", response_model=FieldPublic)
 def update_field(
-    field_id: int,
     data: FieldUpdate,
-    current_user: User = Depends(get_current_user),
+    field: FieldModel = Depends(owned_field),
     db: Session = Depends(get_db),
 ):
-    """Actualiza los datos editables de un campo del usuario autenticado."""
-    field = (
-        db.query(FieldModel)
-        .filter(FieldModel.id == field_id, FieldModel.user_id == current_user.id)
-        .first()
-    )
-    if field is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
-    
+    """Actualiza los datos editables de un campo del usuario autenticado."""    
     for attr, value in data.model_dump(exclude_none=True).items():
         setattr(field, attr, value)
 
@@ -157,36 +129,27 @@ def update_field(
 
 @router.get("/{field_id}/chart", response_model=FieldChartData)
 def get_field_chart_data(
-    field_id: int,
-    current_user: User = Depends(get_current_user),
+    field: FieldModel = Depends(owned_field),
     db: Session = Depends(get_db),
 ):
     """Devuelve series temporales de deficit hidrico % y NDVI para el grafico historico."""
-    field = (
-        db.query(FieldModel)
-        .filter(FieldModel.id == field_id, FieldModel.user_id == current_user.id)
-        .first()
-    )
-    if field is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
-    
     cutoff = date_type.today() - timedelta(days=90)
 
-    recommendations = (
-        db.query(Recommendation)
+    balances = (
+        db.query(DailyWaterBalance)
         .filter(
-            Recommendation.field_id == field_id,
-            Recommendation.date >= cutoff,
-            Recommendation.taw_mm != None,
-            )
-        .order_by(Recommendation.date.asc())
+            DailyWaterBalance.field_id == field.id,
+            DailyWaterBalance.date >= cutoff,
+            DailyWaterBalance.taw_mm.is_not(None),
+        )
+        .order_by(DailyWaterBalance.date.asc())
         .all()
     )
 
     satellite_records = (
         db.query(SatelliteRecord)
         .filter(
-            SatelliteRecord.field_id == field_id,
+            SatelliteRecord.field_id == field.id,
             SatelliteRecord.date >= cutoff,
         )
         .order_by(SatelliteRecord.date.asc())
@@ -195,11 +158,11 @@ def get_field_chart_data(
 
     deficit_series = [
         DeficitPoint(
-            date=rec.date,
-            pct=round(min(100, (rec.water_deficit_mm / rec.taw_mm) * 100), 1),
+            date=b.date,
+            pct=round(min(100, (b.water_deficit_mm / b.taw_mm) * 100), 1),
         )
-        for rec in recommendations
-        if rec.taw_mm and rec.taw_mm > 0
+        for b in balances
+        if b.taw_mm and b.taw_mm > 0
     ]
 
     ndvi_series = [

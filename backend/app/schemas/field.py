@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.field import CropType, IrrigationType, SoilType, FieldStatus
+from app.models.enums import CropType, IrrigationType, SoilType, FieldStatus
 
 class FieldCreate(BaseModel):
     """Lo que el productor envía al registrar un campo"""

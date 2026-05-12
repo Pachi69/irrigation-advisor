@@ -3,11 +3,11 @@ Se ejecuta cada 6 horas para todos los campos activos.
 """
 import logging
 from app.database import SessionLocal
-from app.models.field import Field as FieldModel, FieldStatus
 from app.models.alert import Alert
 from app.ingestion.climate import get_forecast
 from app.decision.alerts import check_climate_alerts
 from app.services.push import send_push_to_user
+from app.api._helpers import iter_active_fields
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +18,7 @@ def generate_climate_alerts() -> None:
     """Detecta y persiste alertas climaticas criticas para todos los campos activos."""
     db = SessionLocal()
     try:
-        fields = (
-            db.query(FieldModel)
-            .filter(FieldModel.status == FieldStatus.active)
-            .all()
-        )
+        fields = iter_active_fields(db)
         logger.info("Job alertas: procesando %d campos activos", len(fields))
         ok = errors = 0
         for field in fields:

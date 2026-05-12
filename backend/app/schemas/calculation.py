@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.models.recommendation import KcSource, PhenologicalStage, UrgencyLevel, ConfidenceLevel
+from app.models.enums import KcSource, PhenologicalStage, UrgencyLevel, ConfidenceLevel
 
 
 class EToResult(BaseModel):

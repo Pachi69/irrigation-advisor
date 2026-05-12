@@ -1,18 +1,15 @@
-from datetime import date as DateType
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from sqlalchemy.orm import Session
-
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models.user import User
-from app.models.field import Field as FieldModel, FieldStatus
+from app.models.field import Field as FieldModel
 from app.models.satellite_record import SatelliteRecord
-from app.models.recommendation import Recommendation
+from app.models.daily_water_balance import DailyWaterBalance
 from app.schemas.recommendation import RecommendationResponse, RecommendationHistoryItem
-from app.auth.dependencies import get_current_user
-from app.services.recommendation import run_recommendation_pipeline
+from app.services.recommendation import run_recommendation_pipeline, build_recommendation_response
+from app.api._helpers import owned_field, active_field
 
 
 import logging
@@ -22,96 +19,88 @@ router = APIRouter(prefix="/fields", tags=["recommendation"])
 
 NDVI_MAX_AGE_DAYS = 30
 
-def _get_active_field(field_id: int, current_user: User, db: Session) -> FieldModel:
-    field = db.query(FieldModel).filter(FieldModel.id == field_id).first()
-    if not field or field.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
-    if field.status != FieldStatus.active:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="El campo aun no fue aprobado (sin poligono asignado)"
-        )
-    return field
-
 
 @router.get("/{field_id}/recommendation", response_model=RecommendationResponse)
 def get_recommendation(
-    field_id: int,
-    current_user: User = Depends(get_current_user),
+    field: FieldModel = Depends(active_field),
     db: Session = Depends(get_db),
 ):
     """Devuelve la ultima recomendacion guardada. Solo recalcula si no existe ninguna."""
-    field = _get_active_field(field_id, current_user, db)
 
-    existing = (
-        db.query(Recommendation)
-        .filter(Recommendation.field_id == field_id, Recommendation.taw_mm != None)
-        .order_by(Recommendation.date.desc())
+    existing_wb = (
+        db.query(DailyWaterBalance)
+        .filter(DailyWaterBalance.field_id == field.id)
+        .options(joinedload(DailyWaterBalance.recommendation))
+        .order_by(DailyWaterBalance.date.desc())
         .first()
     )
 
-    if existing:
+    if existing_wb and existing_wb.recommendation:
         cloud_cover = None
-        if existing.ndvi_date:
+        if existing_wb.ndvi_date:
             sat_rec = (
                 db.query(SatelliteRecord)
                 .filter(
-                    SatelliteRecord.field_id == field_id,
-                    SatelliteRecord.date == existing.ndvi_date,
+                    SatelliteRecord.field_id == field.id,
+                    SatelliteRecord.date == existing_wb.ndvi_date,
                 )
                 .first()
             )
             if sat_rec:
                 cloud_cover = sat_rec.cloud_cover_pct
-        return RecommendationResponse.model_validate(existing).model_copy(
-            update={"cloud_cover_pct": cloud_cover}
-        )
+        return build_recommendation_response(existing_wb, existing_wb.recommendation, cloud_cover)
 
     try:
         return run_recommendation_pipeline(field, db)
     except (ValueError, RuntimeError) as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(e),
-        )
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 
 
 @router.get("/{field_id}/recommendations", response_model=List[RecommendationHistoryItem])
 def get_recommendation_history(
-    field_id: int,
-    current_user: User = Depends(get_current_user),
+    field: FieldModel = Depends(owned_field),
     db: Session = Depends(get_db),
 ):
-    """Devuelve el historial de recomendaciones del campo, ordenado del mas reciente al mas antiguo"""
-    field = db.query(FieldModel).filter(FieldModel.id == field_id).first()
-    if not field or field.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
-    
-    records = (
-        db.query(Recommendation)
-        .filter(Recommendation.field_id == field_id)
-        .order_by(Recommendation.date.desc())
+    """Devuelve el historial de recomendaciones del campo, ordenado del mas reciente al mas antiguo""" 
+    balances = (
+        db.query(DailyWaterBalance)
+        .filter(DailyWaterBalance.field_id == field.id)
+        .options(joinedload(DailyWaterBalance.recommendation))
+        .order_by(DailyWaterBalance.date.desc())
         .limit(90)
         .all()
     )
-    return records
+    return [
+        RecommendationHistoryItem(
+            id=b.recommendation.id,
+            date=b.date,
+            urgency=b.recommendation.urgency,
+            recommended_irrigation_mm=b.recommendation.recommended_irrigation_mm,
+            reason=b.recommendation.reason,
+            confidence=b.recommendation.confidence,
+            water_deficit_mm=b.water_deficit_mm,
+            taw_mm=b.taw_mm,
+            ks=b.ks,
+            eto_mm=b.eto_mm,
+            kc=b.kc,
+            kc_source=b.kc_source,
+            phenological_stage=b.phenological_stage,
+        )
+        for b in balances
+        if b.recommendation is not None
+    ]
 
 
 @router.get("/{field_id}/satellite-image")
 def get_satellite_image(
-    field_id: int,
-    current_user: User = Depends(get_current_user),
+    field: FieldModel = Depends(owned_field),
     db: Session = Depends(get_db),
 ):
     """Devuelve el thumbnail PNG NDVI del ultimo registro satelital del campo."""
-    field = db.query(FieldModel).filter(FieldModel.id == field_id).first()
-    if not field or field.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
-    
     record = (
         db.query(SatelliteRecord)
         .filter(
-            SatelliteRecord.field_id == field_id,
+            SatelliteRecord.field_id == field.id,
             SatelliteRecord.thumbnail_png.is_not(None)
         )
         .order_by(SatelliteRecord.date.desc())

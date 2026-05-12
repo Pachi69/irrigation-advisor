@@ -15,5 +15,4 @@ class IrrigationConfirmation(Base):
     applied_irrigation_mm: Mapped[float] = mapped_column(Float, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    recommendation: Mapped["Recommendation"] = relationship(back_populates="irrigation_confirmation")
     field: Mapped["Field"] = relationship(back_populates="irrigation_confirmations")

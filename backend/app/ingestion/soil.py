@@ -8,7 +8,7 @@ https://doi.org/10.5194/soil-7-217-2021
 import logging
 import httpx
 
-from app.models.field import SoilType
+from app.models.enums import SoilType
 
 logger = logging.getLogger(__name__)
 

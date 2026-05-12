@@ -1,8 +1,12 @@
+from app.models.enums import (
+    CropType, IrrigationType, SoilType, FieldStatus,
+    KcSource, PhenologicalStage, UrgencyLevel, ConfidenceLevel,
+)
 from app.models.user import User, UserRole
-from app.models.field import Field, CropType, IrrigationType, SoilType, FieldStatus
-from app.models.soil import Soil
+from app.models.field import Field
+from app.models.daily_water_balance import DailyWaterBalance
+from app.models.recommendation import Recommendation
 from app.models.irrigation_confirmation import IrrigationConfirmation
-from app.models.recommendation import Recommendation, KcSource, PhenologicalStage, UrgencyLevel, ConfidenceLevel
 from app.models.alert import Alert, AlertType
 from app.models.satellite_record import SatelliteRecord, SatelliteSource
 from app.models.push_subscription import PushSubscription
