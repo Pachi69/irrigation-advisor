@@ -9,7 +9,6 @@ const router = useRouter()
 const form = ref({
     name: '',
     crop_type: 'vine',
-    area_ha: null,
     irrigation_type: 'drip',
     has_hail_net: false,
     planting_date: '',
@@ -27,7 +26,6 @@ async function handleSubmit() {
     try {
         await createField({
             ...form.value,
-            area_ha: Number(form.value.area_ha),
         })
         router.push('/fields')
     } catch (err) {
@@ -86,20 +84,6 @@ const todayStr = new Date().toISOString().slice(0, 10)
                     <option value="sprinkler">Aspersión</option>
                     <option value="flood">Surco</option>
                 </select>
-            </label>
-
-            <label>
-                Superficie (hectáreas)
-                <input
-                    v-model="form.area_ha"
-                    type="number"
-                    required
-                    min="0.01"
-                    max="10000"
-                    step="0.01"
-                    placeholder="Ej: 2.5"
-                    :disabled="loading"
-                />
             </label>
 
             <div class="map-field">

@@ -9,7 +9,7 @@ from app.models.field import Field as FieldModel
 from app.models.enums import FieldStatus
 from app.schemas.admin import FieldApproval, FieldAdminView
 from app.auth.dependencies import get_current_admin
-from app.api._geo import validate_and_compute_centroid
+from app.api._geo import validate_and_compute_centroid, compute_area_ha
 from app.ingestion.soil import get_soil_type_from_coords
 from app.ingestion.climate import get_elevation
 from app.services.field import initialize_water_balance
@@ -58,6 +58,7 @@ def approve_field(
         )
     try:
         latitude, longitude = validate_and_compute_centroid(data.polygon_geojson)
+        field.area_ha = compute_area_ha(data.polygon_geojson)
         detected_soil = get_soil_type_from_coords(latitude, longitude)
         if detected_soil is not None:
             field.soil_type = detected_soil

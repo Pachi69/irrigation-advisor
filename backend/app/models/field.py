@@ -14,7 +14,7 @@ class Field(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     crop_type: Mapped[CropType] = mapped_column(Enum(CropType), nullable=False)
-    area_ha: Mapped[float] = mapped_column(Float, nullable=False)
+    area_ha: Mapped[Optional[float]] = mapped_column(Float, nullable=False)
     irrigation_type: Mapped[IrrigationType] = mapped_column(Enum(IrrigationType), nullable=False)
     soil_type: Mapped[SoilType] = mapped_column(Enum(SoilType), nullable=False)
     status: Mapped[FieldStatus] = mapped_column(Enum(FieldStatus), nullable=False, default=FieldStatus.pending)

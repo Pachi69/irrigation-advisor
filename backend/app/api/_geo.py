@@ -1,5 +1,6 @@
 """Utilidades geometricas para procesamiento de poligonos GeoJSON"""
 from typing import Any
+import math
 
 
 def validate_and_compute_centroid(geojson: dict[str, Any]) -> tuple[float, float]:
@@ -76,3 +77,47 @@ def validate_and_compute_centroid(geojson: dict[str, Any]) -> tuple[float, float
         raise ValueError(f"Estructura de coordenadas invalidas: {e}")
 
     return (centroids_lat, centroids_lon)
+
+
+def compute_area_ha(geojson: dict[str, Any]) -> float:
+    """Calcula el area en hectareas de un GeoJSON Polygon/MultiPolygon.
+    
+    Usa proyeccion equirectangular local centrada en el centroide del poligono.
+    Adecuada para parcelas agricolas (<10km de extension): error <0.1%.
+    Asume coordenadas WGS84 (lon, lat) en grados, Soporta hoyos (interior rings).
+
+    Raises ValueError si el GeoJSON no es valido o no es un poligono
+    """
+    centroid_lat, centroid_lon = validate_and_compute_centroid(geojson)
+    geometry = geojson["geometry"] if geojson.get("type") == "Feature" else geojson
+    geom_type = geometry["type"]
+    coordinates = geometry["coordinates"]
+
+    M_PER_DEG = 111_320.0 # ~longitud de 1 grado de latitud en metros
+    cos_lat = math.cos(math.radians(centroid_lat))
+
+    def ring_area_m2(ring: list[list[float]]) -> float:
+        n = len(ring)
+        if n < 3:
+            return 0.0
+        xs = [(pt[0] - centroid_lon) * cos_lat * M_PER_DEG for pt in ring]
+        ys = [(pt[1] - centroid_lat) * M_PER_DEG for pt in ring]
+        area2 = 0.0
+        for i in range(n):
+            j = (i + 1) % n
+            area2 += xs[i] * ys[j] - xs[j] * ys[i]
+        return abs(area2) / 2.0
+    
+    total_m2 = 0.0
+    if geom_type == "Polygon":
+        rings = coordinates
+        total_m2 = ring_area_m2(rings[0])
+        for hole in rings[1:]:
+            total_m2 -= ring_area_m2(hole)
+    else: # Multipolygon
+        for polygon in coordinates:
+            total_m2 += ring_area_m2(polygon[0])
+            for hole in polygon[1:]:
+                total_m2 -= ring_area_m2(hole)
+    
+    return round(max(0.0, total_m2) / 10_000.0, 4)

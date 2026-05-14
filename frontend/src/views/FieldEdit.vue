@@ -46,7 +46,6 @@ onMounted(async () => {
         form.value = {
             name: field.name,
             crop_type: field.crop_type,
-            area_ha: field.area_ha,
             irrigation_type: field.irrigation_type,
             soil_type: field.soil_type,
             has_hail_net: field.has_hail_net,
@@ -66,7 +65,6 @@ async function handleSubmit() {
     try {
         await updateField(route.params.id, {
             ...form.value,
-            area_ha: Number(form.value.area_ha),
         })
         router.push('/fields')
     } catch {
@@ -110,11 +108,6 @@ async function handleSubmit() {
                 <select v-model="form.irrigation_type" required :disabled="saving">
                     <option v-for="o in IRRIGATION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
-            </label>
-
-            <label>
-                Superficie (hectáreas)
-                <input v-model="form.area_ha" type="number" required min="0.01" max="10000" step="0.01" :disabled="saving">
             </label>
             
             <label>

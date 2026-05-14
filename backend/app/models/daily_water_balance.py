@@ -33,5 +33,5 @@ class DailyWaterBalance(Base):
 
     field: Mapped["Field"] = relationship(back_populates="water_balances")
     recommendation: Mapped[Optional["Recommendation"]] = relationship(
-        back_populates="water_balance", uselist=False
+        back_populates="water_balance", uselist=False, cascade="all, delete-orphan"
     )

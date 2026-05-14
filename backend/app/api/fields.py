@@ -13,7 +13,7 @@ from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate, FieldChartD
 from app.schemas.alert import AlertPublic
 from app.auth.dependencies import get_current_user
 from app.calculation.crop_params import get_depletion_factor
-from app.api._geo import validate_and_compute_centroid
+from app.api._geo import validate_and_compute_centroid, compute_area_ha
 from app.ingestion.soil import get_soil_type_from_coords
 from app.api._helpers import owned_field
 
@@ -42,10 +42,12 @@ def create_field(
         )
     
     latitude, longitude = None, None
+    area_ha = None
     soil_type = data.soil_type
     if data.polygon_geojson:
         try:
             latitude, longitude = validate_and_compute_centroid(data.polygon_geojson)
+            area_ha = compute_area_ha(data.polygon_geojson)
         except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
@@ -59,7 +61,7 @@ def create_field(
         user_id=current_user.id,
         name=data.name,
         crop_type=data.crop_type,
-        area_ha=data.area_ha,
+        area_ha=area_ha,
         irrigation_type=data.irrigation_type,
         soil_type=soil_type,
         has_hail_net=data.has_hail_net,

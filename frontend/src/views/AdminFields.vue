@@ -85,7 +85,7 @@ onMounted(loadPending)
                     <div><dt>Cultivo:</dt><dd>{{ CROP_LABELS[field.crop_type] }}</dd></div>
                     <div><dt>Suelo:</dt><dd>{{ SOIL_LABELS[field.soil_type] }}</dd></div>
                     <div><dt>Riego:</dt><dd>{{ IRRIGATION_LABELS[field.irrigation_type] }}</dd></div>
-                    <div><dt>Superficie:</dt><dd>{{ field.area_ha }} ha</dd></div>
+                    <div><dt>Superficie:</dt><dd>{{ field.area_ha != null ? `${field.area_ha} ha` : '—'  }}</dd></div>
                     <div><dt>Siembra/brotación:</dt><dd>{{ field.planting_date }}</dd></div>
                     <div><dt>Malla antigranizo:</dt><dd>{{ field.has_hail_net ? 'Sí' : 'No' }}</dd></div>
                 </dl>
