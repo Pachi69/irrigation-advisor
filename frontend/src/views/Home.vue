@@ -1,7 +1,6 @@
 <script setup>
-import {ref, onMounted} from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../services/api'
 import { useAuth } from '../stores/auth'
 import { requestPushPermission, subscribeToPush } from '../services/push'
 
@@ -9,7 +8,18 @@ import { requestPushPermission, subscribeToPush } from '../services/push'
 const router = useRouter()
 const { user, logout } = useAuth()
 
-const pushStatus = ref('idle') // idle | requesting | granted | denied | unsupported
+const pushStatus = ref('idle') // idle | requesting | granted | denied | unsupported | error
+
+async function syncSubscription() {
+    // Solo marca 'granted' si la suscripcion se sincronizo de verdad con el backend.
+    try {
+        await subscribeToPush()
+        pushStatus.value = 'granted'
+    } catch (e) {
+        console.error('Error al sincronizar la subscripcion push:', e)
+        pushStatus.value = 'error'
+    }
+}
 
 async function setupPushNotifications() {
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -17,8 +27,7 @@ async function setupPushNotifications() {
         return
     }
     if (Notification.permission === 'granted') {
-        pushStatus.value = 'granted'
-        await subscribeToPush()
+        await syncSubscription()
         return
     }
     if (Notification.permission === 'denied') {
@@ -31,12 +40,11 @@ async function setupPushNotifications() {
 async function enableNotifications() {
     pushStatus.value = 'requesting'
     const granted = await requestPushPermission()
-    if (granted) {
-        await subscribeToPush()
-        pushStatus.value = 'granted'
-    } else {
+    if (!granted) {
         pushStatus.value = 'denied'
+        return
     }
+    await syncSubscription()
 }
 
 function handleLogout() {
@@ -65,6 +73,10 @@ onMounted(setupPushNotifications)
         </div>
         <div v-else-if="pushStatus === 'denied'" class="push-banner push-denied">
             Notificaciones desactivadas. Activalas desde la configuracion del browser.
+        </div>
+        <div v-else-if="pushStatus === 'error'" class="push-banner push-error">
+            <span>No se pudo activar las notificaciones. Reintentá.</span>
+            <button @click="enableNotifications" class="btn-enable">Reintentar</button>
         </div>
 
         <div class="actions">
@@ -124,4 +136,5 @@ onMounted(setupPushNotifications)
     text-decoration: none;
     border-radius: 6px;
 }
+.push-error   { background: #fff3cd; color: #856404; }
 </style>
