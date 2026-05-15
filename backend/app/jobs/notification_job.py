@@ -28,7 +28,7 @@ def send_daily_recommendation_notifications() -> None:
     try:
         fields = iter_active_fields(db)
         logger.info("Job notificaciones: procesando %d campos activos", len(fields))
-        ok = skipped = errors = 0
+        ok = no_recommendation = not_sent = errors = 0
 
         for field in fields:
             try:
@@ -41,7 +41,7 @@ def send_daily_recommendation_notifications() -> None:
                     .first()
                 )
                 if not wb or not wb.recommendation:
-                    skipped += 1
+                    no_recommendation += 1
                     continue
 
                 rec = wb.recommendation
@@ -55,13 +55,16 @@ def send_daily_recommendation_notifications() -> None:
                 if sent:
                     ok += 1
                 else:
-                    skipped += 1
+                    not_sent += 1
 
             except Exception as e:
                 logger.error("Error enviando notificacion campo %d: %s", field.id, e)
                 errors += 1
 
-        logger.info("Job notificaciones completado - ok: %d, sin suscripcion: %d, errores: %d", ok, skipped, errors)
+        logger.info(
+            "Job notificaciones completado - ok: %d, sin recomendacion: %d, sin envio: %d, errores: %d",
+            ok, no_recommendation, not_sent, errors,
+        )
     
     finally:
         db.close()
