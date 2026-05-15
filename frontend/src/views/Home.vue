@@ -68,9 +68,6 @@ onMounted(setupPushNotifications)
             <span> Activá las notificaciones para recibir alertas de riego</span>
             <button @click="enableNotifications" class="btn-enable">Activar</button>
         </div>
-        <div v-else-if="pushStatus === 'granted'" class="push-banner push-granted">
-            Notificaciones activadas
-        </div>
         <div v-else-if="pushStatus === 'denied'" class="push-banner push-denied">
             Notificaciones desactivadas. Activalas desde la configuracion del browser.
         </div>
