@@ -19,6 +19,7 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 const showMapModal = ref(false)
+const showSaturationTip = ref(true)
 
 async function handleSubmit() {
     error.value = ''
@@ -165,6 +166,32 @@ const todayStr = new Date().toISOString().slice(0, 10)
                 </footer>
             </div>
         </div>
+        <div v-if="showSaturationTip" class="map-backdrop">
+            <div class="tip-modal">
+                <header class="map-modal-header">
+                    <h2>Antes de registrar tu campo</h2>
+                </header>
+                <div class="tip-modal-body">
+                    <p>
+                        Para que la primera recomendación de riego sea lo más precisa
+                        posible, te sugerimos hacer un <strong>riego abundante</strong>
+                        el día antes de registrar el campo: regá hasta que el suelo
+                        quede bien empapado, casi barro.
+                    </p>
+                    <p>
+                        Después, en el formulario, indicá esa fecha en
+                        <em>"Último riego completo o lluvia abundante"</em>. Eso le da
+                        al sistema un punto de partida confiable para calcular el
+                        balance de agua del campo.
+                    </p>
+                </div>
+                <footer class="map-modal-footer">
+                    <button type="button" class="btn-primary" @click="showSaturationTip = false">
+                        Entendido
+                    </button>
+                </footer>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -241,4 +268,15 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
     padding: 0.7rem 1.5rem; font-size: 1rem;
 }
 .input-hint { color: #666; font-size: 0.8rem; }
+.tip-modal {
+    background: white; border-radius: 8px;
+    width: min(440px, 94vw);
+    display: flex; flex-direction: column;
+}
+.tip-modal-body {
+    padding: 1rem 1.25rem;
+    font-size: 0.92rem; color: #444; line-height: 1.5;
+}
+.tip-modal-body p { margin: 0 0 0.75rem; }
+.tip-modal-body p:last-child { margin-bottom: 0; }
 </style>
