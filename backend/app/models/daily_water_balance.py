@@ -15,7 +15,7 @@ class DailyWaterBalance(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id"), nullable=False, index=True)
+    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     eto_mm: Mapped[float] = mapped_column(Float, nullable=False)
     kc: Mapped[float] = mapped_column(Float, nullable=False)
@@ -33,5 +33,5 @@ class DailyWaterBalance(Base):
 
     field: Mapped["Field"] = relationship(back_populates="water_balances")
     recommendation: Mapped[Optional["Recommendation"]] = relationship(
-        back_populates="water_balance", uselist=False, cascade="all, delete-orphan"
+        back_populates="water_balance", uselist=False, cascade="all, delete-orphan", passive_deletes=True
     )

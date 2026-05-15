@@ -14,7 +14,7 @@ class SatelliteRecord(Base):
     __tablename__ = "satellite_records"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id"), nullable=False, index=True)
+    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     source: Mapped[SatelliteSource] = mapped_column(Enum(SatelliteSource), nullable=False)
     ndvi: Mapped[float] = mapped_column(Float, nullable=False)

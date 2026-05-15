@@ -30,7 +30,7 @@ class Field(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     user: Mapped["User"] = relationship(back_populates="fields")
-    satellite_records: Mapped[list["SatelliteRecord"]] = relationship(back_populates="field", cascade="all, delete-orphan")
-    water_balances: Mapped[list["DailyWaterBalance"]] = relationship(back_populates="field", cascade="all, delete-orphan")
-    irrigation_confirmations: Mapped[list["IrrigationConfirmation"]] = relationship(back_populates="field", cascade="all, delete-orphan")
-    alerts: Mapped[list["Alert"]] = relationship(back_populates="field", cascade="all, delete-orphan")
+    satellite_records: Mapped[list["SatelliteRecord"]] = relationship(back_populates="field", cascade="all, delete-orphan", passive_deletes=True)
+    water_balances: Mapped[list["DailyWaterBalance"]] = relationship(back_populates="field", cascade="all, delete-orphan", passive_deletes=True)
+    irrigation_confirmations: Mapped[list["IrrigationConfirmation"]] = relationship(back_populates="field", cascade="all, delete-orphan", passive_deletes=True)
+    alerts: Mapped[list["Alert"]] = relationship(back_populates="field", cascade="all, delete-orphan", passive_deletes=True)

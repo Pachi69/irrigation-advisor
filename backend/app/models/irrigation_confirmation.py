@@ -9,8 +9,8 @@ class IrrigationConfirmation(Base):
     __tablename__ = "irrigation_confirmations"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    recommendation_id: Mapped[int] = mapped_column(ForeignKey("recommendations.id"), nullable=False, index=True, unique=True)
-    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id"), nullable=False, index=True)
+    recommendation_id: Mapped[int] = mapped_column(ForeignKey("recommendations.id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
+    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
     irrigation_date: Mapped[date] = mapped_column(Date, nullable=False)
     applied_irrigation_mm: Mapped[float] = mapped_column(Float, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

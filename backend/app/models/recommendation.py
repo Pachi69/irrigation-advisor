@@ -11,7 +11,7 @@ class Recommendation(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     water_balance_id: Mapped[int] = mapped_column(
-        ForeignKey("daily_water_balances.id"), nullable=False, unique=True, index=True
+        ForeignKey("daily_water_balances.id", ondelete="CASCADE"), nullable=False, unique=True, index=True, 
     )
     recommended_irrigation_mm: Mapped[float] = mapped_column(Float, nullable=False)
     urgency: Mapped[UrgencyLevel] = mapped_column(Enum(UrgencyLevel), nullable=False)

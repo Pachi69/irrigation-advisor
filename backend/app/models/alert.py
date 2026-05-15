@@ -16,7 +16,7 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id"), nullable=False, index=True)
+    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
     type: Mapped[AlertType] = mapped_column(Enum(AlertType), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
