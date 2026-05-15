@@ -15,6 +15,40 @@ class PushSubscriptionPayload(BaseModel):
     p256dh: str
     auth: str
 
+class PushSubscriptionMigratePayload(BaseModel):
+    old_endpoint: str
+    endpoint: str
+    p256dh: str
+    auth: str
+
+@router.post("/migrate", status_code=status.HTTP_200_OK)
+def migrate(payload: PushSubscriptionMigratePayload, db: Session = Depends(get_db)):
+    """Migra una suscripcion a un nuevo endpoint tras la rotacion del navegador.
+    
+    No requiere auth: el service worker no tiene el JWT del usuario. La posesion
+    del endpoint viejo (string aleatorio) identifica la suscripcion a migrar."""
+    old = (
+        db.query(PushSubscription)
+        .filter(PushSubscription.endpoint == payload.old_endpoint)
+        .first()
+    )
+    if old is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suscripcion no encontrada")
+    
+    existing_new = (
+        db.query(PushSubscription)
+        .filter(PushSubscription.endpoint == payload.endpoint)
+        .first()
+    )
+    if existing_new and existing_new.id != old.id:
+        # El nuevo endpoint ya estaba registrado: descartar el viejo.
+        db.delete(old)
+    else:
+        old.endpoint = payload.endpoint
+        old.p256dh = payload.p256dh
+        old.auth = payload.auth
+    db.commit()
+    return {"detail": "Suscripcion migrada"}
 
 @router.post("/subscribe", status_code=status.HTTP_201_CREATED)
 def subscribe(
