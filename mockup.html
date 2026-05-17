@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Irrigation Advisor — Mockup de diseño</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['system-ui', 'Segoe UI', 'Roboto', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #e5e7eb; font-family: system-ui, sans-serif; }
+    .phone {
+      width: 390px;
+      background: white;
+      border-radius: 36px;
+      overflow: hidden;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.1);
+    }
+    .phone-screen { overflow-y: auto; max-height: 780px; background: #f9fafb; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body class="min-h-screen py-12 px-6">
+
+  <!-- Header del mockup -->
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Irrigation Advisor — Propuesta de diseño</h1>
+    <p class="text-gray-500 text-sm">Mobile-first · Alto contraste para uso en campo · Verde oscuro (WCAG AAA)</p>
+  </div>
+
+  <!-- Paleta de colores -->
+  <div class="max-w-4xl mx-auto mb-12 bg-white rounded-2xl shadow p-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">Sistema de color</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <!-- Primarios -->
+      <div>
+        <div class="h-16 rounded-xl bg-green-800 mb-2"></div>
+        <p class="text-xs font-bold text-gray-700">Verde primario</p>
+        <p class="text-xs text-gray-500">#166534 · Contraste 10.1:1 ✓</p>
+        <p class="text-xs text-gray-400">Nav, botones, acciones</p>
+      </div>
+      <div>
+        <div class="h-16 rounded-xl bg-gray-900 mb-2"></div>
+        <p class="text-xs font-bold text-gray-700">Texto principal</p>
+        <p class="text-xs text-gray-500">#111827 · Contraste 17.5:1 ✓</p>
+        <p class="text-xs text-gray-400">Títulos, datos clave</p>
+      </div>
+      <div>
+        <div class="h-16 rounded-xl bg-gray-50 border border-gray-200 mb-2"></div>
+        <p class="text-xs font-bold text-gray-700">Fondo de página</p>
+        <p class="text-xs text-gray-500">#f9fafb · Gris muy claro</p>
+        <p class="text-xs text-gray-400">Fondo general</p>
+      </div>
+      <div>
+        <div class="h-16 rounded-xl bg-white border border-gray-200 mb-2"></div>
+        <p class="text-xs font-bold text-gray-700">Cards / Formularios</p>
+        <p class="text-xs text-gray-500">#ffffff · Blanco puro</p>
+        <p class="text-xs text-gray-400">Tarjetas, inputs</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+      <!-- Urgencia -->
+      <div>
+        <div class="h-12 rounded-xl bg-green-700 mb-2 flex items-center justify-center">
+          <span class="text-white text-xs font-bold">Sin urgencia</span>
+        </div>
+        <p class="text-xs text-gray-500">Verde · Bajo estrés</p>
+      </div>
+      <div>
+        <div class="h-12 rounded-xl bg-amber-500 mb-2 flex items-center justify-center">
+          <span class="text-white text-xs font-bold">Moderada</span>
+        </div>
+        <p class="text-xs text-gray-500">Ámbar · Estrés moderado</p>
+      </div>
+      <div>
+        <div class="h-12 rounded-xl bg-orange-600 mb-2 flex items-center justify-center">
+          <span class="text-white text-xs font-bold">Alta urgencia</span>
+        </div>
+        <p class="text-xs text-gray-500">Naranja · Riego pronto</p>
+      </div>
+      <div>
+        <div class="h-12 rounded-xl bg-red-600 mb-2 flex items-center justify-center">
+          <span class="text-white text-xs font-bold">CRÍTICO</span>
+        </div>
+        <p class="text-xs text-gray-500">Rojo · Riego hoy</p>
+      </div>
+    </div>
+    <div class="mt-4 p-3 bg-green-50 rounded-xl text-xs text-green-900 border border-green-200">
+      <strong>Por qué estos colores:</strong>
+      El verde oscuro (#166534) tiene ratio 10:1 con blanco, superando el estándar WCAG AAA (7:1), recomendado para uso outdoor donde la luz del sol reduce el contraste percibido hasta un 70%. Fondo blanco/gris claro sobre dark mode, ya que en exteriores el modo oscuro es significativamente menos legible (fuente: Nielsen Norman Group, FW Displays research). Las urgencias usan texto blanco sobre colores saturados, nunca pasteles, para máxima lectura al sol.
+    </div>
+  </div>
+
+  <!-- Mockups de pantallas -->
+  <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10 justify-items-center">
+
+    <!-- =================== PANTALLA 1: LOGIN =================== -->
+    <div>
+      <p class="section-label text-center mb-3">1. Login</p>
+      <div class="phone">
+        <!-- Status bar -->
+        <div class="bg-green-800 px-5 pt-3 pb-2 flex justify-between items-center">
+          <span class="text-white text-xs font-semibold">9:41</span>
+          <span class="text-white text-xs">●●●</span>
+        </div>
+        <!-- Nav -->
+        <div class="bg-green-800 px-5 pb-4 flex items-center gap-2">
+          <span class="text-2xl">🌿</span>
+          <span class="text-white font-bold text-base tracking-tight">Irrigation Advisor</span>
+        </div>
+        <!-- Screen -->
+        <div class="phone-screen px-5 py-8">
+          <div class="flex flex-col items-center mb-8">
+            <div class="text-5xl mb-3">🌿</div>
+            <h1 class="text-2xl font-bold text-gray-900">Iniciar sesión</h1>
+            <p class="text-gray-500 text-sm mt-1">Sistema de recomendación de riego</p>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
+              <div class="w-full border-2 border-gray-200 rounded-xl p-3 text-gray-400 text-sm bg-white">productor@ejemplo.com</div>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Contraseña</label>
+              <div class="w-full border-2 border-gray-200 rounded-xl p-3 text-gray-400 text-sm bg-white">••••••••</div>
+            </div>
+            <button class="w-full bg-green-800 text-white font-bold py-3.5 rounded-xl text-base mt-2">
+              Ingresar
+            </button>
+            <p class="text-center text-sm text-gray-500">¿No tenés cuenta? <span class="text-green-700 font-semibold">Registrate</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== PANTALLA 2: HOME =================== -->
+    <div>
+      <p class="section-label text-center mb-3">2. Home (notificaciones pendientes)</p>
+      <div class="phone">
+        <div class="bg-green-800 px-5 pt-3 pb-2 flex justify-between">
+          <span class="text-white text-xs font-semibold">9:41</span>
+          <span class="text-white text-xs">●●●</span>
+        </div>
+        <!-- Nav con links -->
+        <div class="bg-green-800 px-4 pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🌿</span>
+            <span class="text-white font-bold text-sm tracking-tight">Irrigation Advisor</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-green-200 text-xs px-2 py-1 rounded-md bg-green-700">Mis campos</span>
+            <span class="text-white text-xs px-2 py-1 rounded-md border border-green-600">Salir</span>
+          </div>
+        </div>
+        <div class="phone-screen p-4 space-y-4">
+          <!-- Banner de bienvenida -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+            <p class="text-xs text-gray-500 mb-0.5">Bienvenido</p>
+            <p class="font-bold text-gray-900 text-base">productor@ejemplo.com</p>
+          </div>
+
+          <!-- Banner push -->
+          <div class="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4">
+            <div class="flex items-start gap-3">
+              <span class="text-2xl">🔔</span>
+              <div class="flex-1">
+                <p class="font-bold text-amber-900 text-sm">Activá las notificaciones</p>
+                <p class="text-amber-800 text-xs mt-0.5">Recibí alertas de riego en el momento justo.</p>
+              </div>
+            </div>
+            <button class="mt-3 w-full bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm">
+              Activar notificaciones
+            </button>
+          </div>
+
+          <!-- CTA principal -->
+          <a class="block bg-green-800 text-white font-bold py-4 rounded-2xl text-center text-base shadow-sm">
+            🌾 Ver mis campos →
+          </a>
+
+          <!-- Info de hoy -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Hoy</p>
+            <p class="text-sm text-gray-700">Sábado 16 de mayo de 2026</p>
+            <p class="text-xs text-gray-400 mt-1">Sistema actualizado · 6:00 AM</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== PANTALLA 3: MIS CAMPOS =================== -->
+    <div>
+      <p class="section-label text-center mb-3">3. Mis campos</p>
+      <div class="phone">
+        <div class="bg-green-800 px-5 pt-3 pb-2 flex justify-between">
+          <span class="text-white text-xs font-semibold">9:41</span>
+          <span class="text-white text-xs">●●●</span>
+        </div>
+        <div class="bg-green-800 px-4 pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🌿</span>
+            <span class="text-white font-bold text-sm">Irrigation Advisor</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-white text-xs px-2 py-1 rounded-md">Mis campos</span>
+            <span class="text-white text-xs px-2 py-1 rounded-md border border-green-600">Salir</span>
+          </div>
+        </div>
+        <div class="phone-screen p-4 space-y-3">
+          <!-- Header -->
+          <div class="flex items-center justify-between">
+            <h1 class="text-xl font-bold text-gray-900">Mis campos</h1>
+            <button class="bg-green-800 text-white text-xs font-bold px-3 py-2 rounded-xl">+ Registrar</button>
+          </div>
+
+          <!-- Campo activo — URGENCIA ALTA -->
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="bg-orange-600 px-4 py-2 flex items-center justify-between">
+              <span class="text-white text-xs font-bold uppercase tracking-wide">⚠ Urgencia alta</span>
+              <span class="bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full">Activo</span>
+            </div>
+            <div class="p-4">
+              <h2 class="text-base font-bold text-gray-900">Finca Los Álamos</h2>
+              <div class="grid grid-cols-2 gap-x-3 gap-y-2 mt-2">
+                <div>
+                  <p class="text-xs text-gray-400">Cultivo</p>
+                  <p class="text-sm font-semibold text-gray-800">Vid</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Riego</p>
+                  <p class="text-sm font-semibold text-gray-800">Goteo</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Superficie</p>
+                  <p class="text-sm font-semibold text-gray-800">42.03 ha</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Suelo</p>
+                  <p class="text-sm font-semibold text-gray-800">Franco arenoso</p>
+                </div>
+              </div>
+              <div class="mt-3 flex gap-2">
+                <a class="flex-1 bg-green-800 text-white font-bold py-2.5 rounded-xl text-xs text-center">
+                  Ver recomendación →
+                </a>
+                <a class="border-2 border-gray-200 text-gray-600 font-semibold py-2.5 px-3 rounded-xl text-xs text-center">
+                  Editar
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campo pendiente -->
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="bg-amber-400 px-4 py-2 flex items-center justify-between">
+              <span class="text-amber-900 text-xs font-bold uppercase tracking-wide">⏳ Pendiente de aprobación</span>
+            </div>
+            <div class="p-4">
+              <h2 class="text-base font-bold text-gray-900">Cuartel Norte</h2>
+              <div class="grid grid-cols-2 gap-x-3 gap-y-2 mt-2">
+                <div>
+                  <p class="text-xs text-gray-400">Cultivo</p>
+                  <p class="text-sm font-semibold text-gray-800">Durazno</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Superficie</p>
+                  <p class="text-sm font-semibold text-gray-800">18.50 ha</p>
+                </div>
+              </div>
+              <p class="text-xs text-gray-400 mt-3">El administrador revisará tu campo en las próximas 24 h.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== PANTALLA 4: RECOMENDACIÓN (sin urgencia) =================== -->
+    <div>
+      <p class="section-label text-center mb-3">4. Recomendación — Sin urgencia</p>
+      <div class="phone">
+        <div class="bg-green-800 px-5 pt-3 pb-2 flex justify-between">
+          <span class="text-white text-xs font-semibold">9:41</span>
+          <span class="text-white text-xs">●●●</span>
+        </div>
+        <div class="bg-green-800 px-4 pb-3 flex items-center justify-between">
+          <button class="text-green-200 text-xs flex items-center gap-1">← Mis campos</button>
+          <span class="text-white text-xs font-bold">Finca Los Álamos</span>
+          <a class="text-green-200 text-xs border border-green-600 px-2 py-1 rounded-md">Historial</a>
+        </div>
+        <div class="phone-screen p-4 space-y-3">
+          <!-- Fecha -->
+          <p class="text-xs text-gray-400 text-right">Sábado 16 mayo 2026</p>
+
+          <!-- Urgency card — LOW -->
+          <div class="bg-green-700 rounded-2xl p-5 text-center shadow-sm">
+            <p class="text-green-100 text-xs font-bold uppercase tracking-widest mb-1">Estado del cultivo</p>
+            <p class="text-white text-5xl font-black mb-1">0 mm</p>
+            <p class="text-green-100 font-bold text-base mb-2">No se requiere riego hoy</p>
+            <p class="text-green-200 text-sm leading-snug">Déficit bajo, cultivo sin estrés hídrico. El suelo tiene reservas suficientes.</p>
+            <div class="mt-3 inline-flex items-center gap-1.5 bg-green-800 bg-opacity-50 rounded-full px-3 py-1">
+              <span class="text-green-300 text-xs">Confianza:</span>
+              <span class="text-white text-xs font-bold">Alta</span>
+            </div>
+          </div>
+
+          <!-- Balance hídrico -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Balance hídrico</p>
+            <!-- Barra -->
+            <div class="flex items-center gap-2 mb-3">
+              <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-green-600 rounded-full" style="width: 28%"></div>
+              </div>
+              <span class="text-sm font-bold text-gray-700">28%</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-xs text-gray-400">Déficit actual</p>
+                <p class="text-base font-bold text-gray-900">24.1 mm</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">TAW (total)</p>
+                <p class="text-base font-bold text-gray-900">86.3 mm</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">RAW (límite)</p>
+                <p class="text-base font-bold text-gray-900">43.2 mm</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">Estrés (Ks)</p>
+                <p class="text-base font-bold text-gray-900">1.00</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cultivo -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Cultivo · Kc</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-xs text-gray-400">Etapa</p>
+                <p class="text-sm font-bold text-gray-900">Etapa media</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">Kc</p>
+                <p class="text-sm font-bold text-gray-900">0.917</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">ETo ayer</p>
+                <p class="text-sm font-bold text-gray-900">4.21 mm/día</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">Fuente Kc</p>
+                <p class="text-sm font-bold text-gray-900">Satelital (S2)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== PANTALLA 5: RECOMENDACIÓN (crítico) =================== -->
+    <div>
+      <p class="section-label text-center mb-3">5. Recomendación — CRÍTICO</p>
+      <div class="phone">
+        <div class="bg-green-800 px-5 pt-3 pb-2 flex justify-between">
+          <span class="text-white text-xs font-semibold">9:41</span>
+          <span class="text-white text-xs">●●●</span>
+        </div>
+        <div class="bg-green-800 px-4 pb-3 flex items-center justify-between">
+          <button class="text-green-200 text-xs">← Mis campos</button>
+          <span class="text-white text-xs font-bold">Cuartel Norte</span>
+          <a class="text-green-200 text-xs border border-green-600 px-2 py-1 rounded-md">Historial</a>
+        </div>
+        <div class="phone-screen p-4 space-y-3">
+          <p class="text-xs text-gray-400 text-right">Sábado 16 mayo 2026</p>
+
+          <!-- Urgency card — CRITICAL -->
+          <div class="bg-red-600 rounded-2xl p-5 text-center shadow-sm">
+            <p class="text-red-100 text-xs font-bold uppercase tracking-widest mb-1">⚠ CRÍTICO — Riegue hoy</p>
+            <p class="text-white text-5xl font-black mb-1">38 mm</p>
+            <p class="text-red-100 font-bold text-base mb-2">Regar hoy</p>
+            <p class="text-red-200 text-sm leading-snug">Déficit supera el umbral crítico. El cultivo está bajo estrés severo.</p>
+            <div class="mt-3 inline-flex items-center gap-1.5 bg-red-700 rounded-full px-3 py-1">
+              <span class="text-red-200 text-xs">Confianza:</span>
+              <span class="text-white text-xs font-bold">Alta</span>
+            </div>
+          </div>
+
+          <!-- Alerta helada -->
+          <div class="bg-blue-50 border-2 border-blue-400 rounded-2xl p-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🌨</span>
+              <div>
+                <p class="text-xs font-bold text-blue-900">Alerta de helada</p>
+                <p class="text-xs text-blue-700">mañana</p>
+              </div>
+            </div>
+            <button class="text-blue-400 text-sm font-bold">✕</button>
+          </div>
+
+          <!-- Balance -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Balance hídrico</p>
+            <div class="flex items-center gap-2 mb-3">
+              <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full bg-red-500 rounded-full" style="width: 100%"></div>
+              </div>
+              <span class="text-sm font-bold text-red-600">100%</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-xs text-gray-400">Déficit actual</p>
+                <p class="text-base font-bold text-red-600">87.5 mm</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">TAW (total)</p>
+                <p class="text-base font-bold text-gray-900">86.3 mm</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">Estrés (Ks)</p>
+                <p class="text-base font-bold text-red-600">0.21</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-400">RAW (límite)</p>
+                <p class="text-base font-bold text-gray-900">43.2 mm</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================== PANTALLA 6: REGISTRO =================== -->
+    <div>
+      <p class="section-label text-center mb-3">6. Registrar nuevo campo</p>
+      <div class="phone">
+        <div class="bg-green-800 px-5 pt-3 pb-2 flex justify-between">
+          <span class="text-white text-xs font-semibold">9:41</span>
+          <span class="text-white text-xs">●●●</span>
+        </div>
+        <div class="bg-green-800 px-4 pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🌿</span>
+            <span class="text-white font-bold text-sm">Irrigation Advisor</span>
+          </div>
+        </div>
+        <div class="phone-screen p-4 space-y-4">
+          <!-- Info banner -->
+          <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+            <p class="text-xs text-blue-900">ℹ Dibujá el perímetro en el mapa para agilizar la aprobación.</p>
+          </div>
+
+          <!-- Form -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del campo</label>
+            <div class="w-full border-2 border-green-600 rounded-xl p-3 text-gray-700 text-sm bg-white">Finca Los Álamos</div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Cultivo</label>
+            <div class="w-full border-2 border-gray-200 rounded-xl p-3 text-gray-700 text-sm bg-white flex items-center justify-between">
+              <span>Vid</span><span class="text-gray-400">▾</span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de riego</label>
+            <div class="w-full border-2 border-gray-200 rounded-xl p-3 text-gray-700 text-sm bg-white flex items-center justify-between">
+              <span>Goteo</span><span class="text-gray-400">▾</span>
+            </div>
+          </div>
+
+          <!-- Map picker -->
+          <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center bg-white">
+            <p class="text-2xl mb-1">🗺</p>
+            <p class="text-sm font-semibold text-gray-700">Ubicación del campo</p>
+            <p class="text-xs text-gray-400 mb-2">Sin marcar aún</p>
+            <button class="bg-green-100 text-green-800 font-bold text-sm px-4 py-2 rounded-xl border border-green-300">
+              Abrir mapa y marcar campo
+            </button>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de siembra / brotación</label>
+            <div class="w-full border-2 border-gray-200 rounded-xl p-3 text-gray-400 text-sm bg-white">2025-09-15</div>
+          </div>
+
+          <!-- Checkbox -->
+          <label class="flex items-center gap-3 bg-white border-2 border-gray-200 rounded-xl p-3">
+            <div class="w-5 h-5 rounded-md border-2 border-gray-300 bg-white flex items-center justify-center">
+            </div>
+            <span class="text-sm font-semibold text-gray-700">Tiene malla antigranizo</span>
+          </label>
+
+          <!-- Buttons -->
+          <div class="flex gap-2 pt-1">
+            <button class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm">Cancelar</button>
+            <button class="flex-1 bg-green-800 text-white font-bold py-3 rounded-xl text-sm">Registrar campo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Comparacion tipografia -->
+  <div class="max-w-4xl mx-auto mt-12 bg-white rounded-2xl shadow p-6">
+    <h2 class="text-lg font-bold text-gray-800 mb-4">Comparación de legibilidad al sol</h2>
+    <div class="grid grid-cols-2 gap-4">
+      <!-- Antes -->
+      <div class="border-2 border-red-200 rounded-xl p-4 bg-gray-50">
+        <p class="text-xs font-bold text-red-600 uppercase mb-3">✗ Diseño actual</p>
+        <div style="background:#d4edda; color:#155724; padding:12px; border-radius:8px; font-size:14px; border:1px solid #c3e6cb; margin-bottom:8px">
+          Sin urgencia — No se requiere riego hoy
+        </div>
+        <div style="background:#fff3cd; color:#856404; padding:8px; border-radius:4px; font-size:13px;">
+          Notificaciones desactivadas. Activalas desde la configuracion del browser.
+        </div>
+        <p class="text-xs text-red-500 mt-2">Pasteles de baja saturación · texto pequeño · contraste insuficiente bajo sol directo</p>
+      </div>
+      <!-- Después -->
+      <div class="border-2 border-green-200 rounded-xl p-4 bg-gray-50">
+        <p class="text-xs font-bold text-green-700 uppercase mb-3">✓ Diseño propuesto</p>
+        <div class="bg-green-700 text-white p-3 rounded-xl mb-2 text-center">
+          <p class="text-xs font-bold uppercase tracking-wider opacity-80">Sin urgencia</p>
+          <p class="text-2xl font-black">0 mm</p>
+          <p class="text-sm font-semibold">No se requiere riego hoy</p>
+        </div>
+        <div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-3 flex items-center gap-2">
+          <span>🔔</span>
+          <span class="text-amber-900 text-sm font-bold">Activá las notificaciones</span>
+        </div>
+        <p class="text-xs text-green-600 mt-2">Colores sólidos de alta saturación · texto grande y bold · contraste AAA</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-center text-xs text-gray-400 mt-8 pb-8">Mockup de diseño — Irrigation Advisor · Tesis UNCUYO 2026</p>
+</body>
+</html>

@@ -2,28 +2,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { listMyFields } from '../services/fields'
+import { Plus, ChevronRight, Clock} from 'lucide-vue-next'
+import { CROP_LABELS, SOIL_LABELS, IRRIGATION_LABELS, STATUS_LABELS } from '../utils/labels'
 
 const fields = ref([])
 const loading = ref(true)
 const error = ref('')
-
-const CROP_LABELS = { vine: 'Vid', peach: 'Durazno', alfalfa: 'Alfalfa' }
-const SOIL_LABELS = {
-    sand:            'Arena',
-    loamy_sand:      'Arena franca',
-    sandy_loam:      'Franco arenoso',
-    sandy_clay_loam: 'Franco arcillo arenoso',
-    loam:            'Franco',
-    silt_loam:       'Franco limoso',
-    silt:            'Limoso',
-    clay_loam:       'Franco arcilloso',
-    silty_clay_loam: 'Arcillo limoso franco',
-    sandy_clay:      'Arcillo arenoso',
-    silty_clay:      'Arcillo limoso',
-    clay:            'Arcilloso',
-}
-const IRRIGATION_LABELS = { drip: 'Goteo', sprinkler: 'Aspersión', flood: 'Surco' }
-const STATUS_LABELS = { pending: 'Pendiente de aprobación', active: 'Activo', inactive: 'Inactivo' }
 
 async function loadFields() {
     error.value = ''
@@ -43,110 +27,128 @@ const hasPending = computed(() => fields.value.some(f=> f.status === 'pending'))
 </script>
 
 <template>
-    <div class="fields-container">
-        <header class="fields-header">
-            <h1>Mis Campos</h1>
-            <RouterLink v-if="!hasPending" to="/fields/new" class="btn-primary">+ Registrar Campo</RouterLink>
-            <span v-else class="btn-disabled" title="Tenés un campo pendiente de aprobación">+ Registrar Campo</span>
-        </header>
-        
-        <p v-if="loading">Cargando...</p>
-        <p v-else-if="error" class="error">{{ error }}</p>
+    <div class="max-w-2xl lg:max-w-5xl mx-auto px-4 py-6">
 
-        <p v-else-if="fields.length === 0" class="empty">No tienes campos registrados.
-            <RouterLink to="/fields/new" >+ Registrá el primero</RouterLink>
-        </p>
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-5">
+            <h1 class="text-xl font-bold text-gray-900">Mis campos</h1>
+            <RouterLink
+                v-if="!hasPending"
+                to="/fields/new"
+                class="flex items-center gap-1.5 bg-green-800 hover:bg-green-700 text-white text-sm font-bold px-3 py-2 rounded-xl transition-colors"
+            >
+                <Plus class="w-4 h-4" />
+                Registrar Campo
+            </RouterLink>
+            <span
+                v-else
+                class="flex items-center gap-1.5 bg-gray-200 text-gray-400 text-sm font-bold px-3 py-2 rounded-xl cursor-not-allowed"
+                title="Tenes un campo pendiente de aprobacion"
+            >
+                <Plus class="w-4 h-4" />
+                Registrar Campo
+            </span>
+        </div>
 
-        <ul v-else class="field-list">
-            <li v-for="field in fields" :key="field.id" class="field-card">
-                <div class="field-head">
-                    <h2>{{ field.name }}</h2>
-                    <span :class="['status', `status-${field.status}`]">
-                        {{ STATUS_LABELS[field.status] }}
-                    </span>
+        <!-- Loading -->
+        <div v-if="loading" class="text-center py-12 text-gray-400 text-sm">
+            Cargando campos...
+        </div>
+
+        <!-- Error -->
+        <div v-else-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-4 py-3 rounded-xl">
+            {{ error }}
+        </div>
+
+        <!-- Empty -->
+        <div v-else-if="fields.length === 0" class="text-center py-12">
+            <p class="text-gray-500 text-sm mb-3">No tenés campos registrados.</p>
+            <RouterLink
+                to="/fields/new"
+                class="inline-flex items-center gap-1.5 bg-green-800 hover:bg-green-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors"
+            >
+                <Plus class="w-4 h-4" />
+                Registrá el primero
+            </RouterLink>
+        </div>
+
+        <!-- Lista de campos -->
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div v-for="field in fields" :key="field.id" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                
+                <!-- Banner de estado -->
+                <div 
+                    :class="[
+                        'px-4 py-2 flex items-center justify-between',
+                        field.status === 'active' ? 'bg-green-700' :
+                        field.status === 'pending' ? 'bg-amber-400' :
+                        'bg-gray-300'       
+                    ]"
+                >
+                    <div class="flex items-center gap-1.5">
+                        <Clock v-if="field.status === 'pending'" class="w-3.5 h-3.5 text-amber-900" />
+                        <span
+                            :class="[
+                                'text-xs font-bold uppercase tracking-wide',
+                                field.status === 'active' ? 'text-white':
+                                field.status === 'pending' ? 'text-amber-900':
+                                'text-gray-600'
+                            ]"
+                        >
+                            {{ STATUS_LABELS[field.status] }}
+                        </span>
+                    </div>
                 </div>
-                <dl class="field-info">
-                    <div><dt>Cultivo:</dt><dd>{{ CROP_LABELS[field.crop_type] }}</dd></div>
-                    <div><dt>Suelo:</dt><dd>{{ SOIL_LABELS[field.soil_type] }}</dd></div>
-                    <div><dt>Riego:</dt><dd>{{ IRRIGATION_LABELS[field.irrigation_type] }}</dd></div>
-                    <div><dt>Superficie</dt><dd>{{ field.area_ha != null ? `${field.area_ha} ha` : '—' }}</dd></div>
-                    <div><dt>Siembra/brotación</dt><dd>{{ field.planting_date }}</dd></div>
-                    <div><dt>Malla antigranizo</dt><dd>{{ field.has_hail_net ? 'Sí' : 'No' }}</dd></div>
-                </dl>
-                <div class="field-actions" v-if="field.status === 'active'">
-                    <RouterLink :to="`/fields/${field.id}/recommendation`" class="btn-recommendation">
-                        Ver recomendación de hoy ->
-                    </RouterLink>
-                    <RouterLink :to="`/fields/${field.id}/edit`" class="btn-edit">
-                        Editar
-                    </RouterLink>
+
+                <!-- Contenido -->
+                <div class="p-4">
+                    <h2 class="text-base font-bold text-gray-900 mb-3">{{ field.name }}</h2>
+
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-4">
+                        <div>
+                            <p class="text-xs text-gray-400">Cultivos</p>
+                            <p class="text-sm font-semibold text-gray-800"> {{ CROP_LABELS[field.crop_type] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">Riego</p>
+                            <p class="text-sm font-semibold text-gray-800">{{ IRRIGATION_LABELS[field.irrigation_type] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">Superficie</p>
+                            <p class="text-sm font-semibold text-gray-800">
+                                {{ field.area_ha != null ? `${field.area_ha.toFixed(2)} ha` : '—' }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">Suelo</p>
+                            <p class="text-sm font-semibold text-gray-800">{{ SOIL_LABELS[field.soil_type] }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Acciones (solo activos) -->
+                    <div v-if="field.status === 'active'" class="flex gap-2">
+                        <RouterLink
+                            :to="`/fields/${field.id}/recommendation`"
+                            class="flex-1 flex items-center justify-center gap-1.5 bg-green-800 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                        >
+                            Ver Recomendación
+                            <ChevronRight class="w-4 h-4" />
+                        </RouterLink>
+                        <RouterLink
+                            :to="`/fields/${field.id}/edit`"
+                            class="border-2 border-gray-200 hover:border-gray-300 text-gray-600 font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors"
+                        >
+                            Editar
+                        </RouterLink>
+                    </div>
+
+                    <!-- Pendiente: mensaje -->
+                    <p v-else-if="field.status === 'pending'" class="text-xs text-gray-400">
+                        El administrador revisará tu campo en las próximas 24 h.
+                    </p>
                 </div>
-            </li>
-        </ul>
+            </div>
+        </div>
+
     </div>
 </template>
-
-<style scoped>
-.fields-container { max-width: 800px; margin: 0 auto; }
-.fields-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 1.5rem;
-}
-.btn-primary {
-  padding: 0.5rem 1rem; background: #2e7d32; color: white;
-  text-decoration: none; border-radius: 4px;
-}
-.btn-primary:hover { background: #1b5e20; }
-.empty { color: #666; }
-.error { color: #c00; }
-.field-list { list-style: none; padding: 0; display: grid; gap: 1rem; }
-.field-card {
-  border: 1px solid #ddd; border-radius: 8px; padding: 1rem;
-  background: white;
-}
-.field-head {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 0.75rem; 
-}
-.field-head h2 { margin: 0; font-size: 1.2rem; color:#383d41}
-.status {
-  font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 12px;
-}
-.status-pending { background: #fff3cd; color: #856404; }
-.status-active { background: #d4edda; color: #155724; }
-.status-inactive { background: #e2e3e5; color: #383d41; }
-.field-info {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem 1rem;
-  margin: 0;
-}
-.field-info > div { display: flex; flex-direction: column; }
-.field-info dt { font-size: 0.8rem; color: #666; }
-.field-info dd { margin: 0; font-weight: 500; }
-
-.field-actions { margin-top: 0.75rem; }
-.btn-recommendation {
-    display: inline-block;
-    padding: 0.4rem 0.9rem;
-    background: #2e7d32;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
-.btn-recommendation:hover { background: #1b5e20; }
-.btn-edit {
-    display: inline-block;
-    padding: 0.4rem 0.9rem;
-    background: none;
-    color: #2e7d32;
-    border: 1px solid #2e7d32;
-    text-decoration: none;
-    border-radius: 4px;
-    font-size: 0.9rem;
-}
-.btn-edit:hover { background: #f1f8f1; }
-.btn-disabled {
-    padding: 0.5rem 1rem; background: #bdbdbd; color: white;
-    border-radius: 4px; cursor: not-allowed; font-size: 1rem;
-}
-</style>

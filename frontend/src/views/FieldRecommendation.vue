@@ -4,6 +4,8 @@ import { useRoute, useRouter} from 'vue-router'
 import { getRecommendation, getFieldAlerts, getFieldSatelliteImage, getFieldById } from '../services/fields'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { ArrowLeft, Clock, AlertTriangle, Droplets, Leaf, Satellite } from 'lucide-vue-next'
+import { ALERT_LABELS, URGENCY_LABELS, STAGE_LABELS, KC_SOURCE_LABELS, CONFIDENCE_LABELS } from '../utils/labels'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,37 +17,25 @@ const error = ref('')
 const alerts = ref([])
 const dismissedAlerts = JSON.parse(localStorage.getItem('dismissedAlerts') || '[]')
 
-const ALERT_LABELS = {
-    frost: 'Alerta de helada',
-    heat_wave: 'Alerta de ola de calor',
-}
+const urgencyCardClass = computed(() => {
+  const map = {
+    low:      'bg-green-700',
+    medium:   'bg-amber-500',
+    high:     'bg-orange-600',
+    critical: 'bg-red-600',
+  }
+  return map[rec.value?.urgency_level] ?? 'bg-green-700'
+})
 
-const URGENCY_LABELS = {
-    low: 'Sin urgencia',
-    medium: 'Urgencia moderada',
-    high: 'Urgencia alta',
-    critical: 'CRÍTICO — Riegue hoy',
-}
-
-const STAGE_LABELS = {
-    initial: 'Etapa inicial',
-    development: 'Desarrollo',
-    mid: 'Etapa media',
-    late: 'Etapa tardía',
-}
-
-const KC_SOURCE_LABELS = {
-    s2_dynamic: 'Satelital (Sentinel-2)',
-    tabular: 'Tabular (FAO-56)',
-}
-
-const CONFIDENCE_LABELS = {
-    high: 'Alta',
-    medium: 'Media',
-    low: 'Baja',
-}
-
-const urgencyClass = computed(() => `urgency-${rec.value.urgency_level}`)
+const urgencyBarClass = computed(() => {
+  const map = {
+    low:      'bg-green-400',
+    medium:   'bg-amber-300',
+    high:     'bg-orange-400',
+    critical: 'bg-red-400',
+  }
+  return map[rec.value?.urgency_level] ?? 'bg-green-400'
+})
 
 const ndviAge = computed(() => {
     if (!rec.value?.ndvi_date) return null
@@ -152,358 +142,176 @@ onMounted(() => { load(); fetchAlerts(); loadSatelliteImage(); loadFieldData() }
 </script>
 
 <template>
-    <div class="rec-page">
-        <header class="rec-header">
-            <button class="btn-back" @click="router.push('/fields')"><- Mis campos</button>
-            <RouterLink :to="`/fields/${route.params.id}/history`" class="btn-history">Historial</RouterLink>
-            <span class="rec-date" v-if="rec">{{ rec.date }}</span>
-        </header>
+    <div class="max-w-2xl lg:max-w-3xl mx-auto px-4 py-6 space-y-4">
 
-        <div v-if="loading" class="center">Calculando recomendacion...</div>
-        <div v-else-if="error" class="error">{{ error }}</div>
+        <div class="flex items-center justify-between">
+            <button
+                @click="router.push('/fields')"
+                class="flex items-center gap-1 text-green-800 font-semibold text-sm hover:underline"
+            >
+                <ArrowLeft class="w-4 h-4" />
+                Mis campos
+            </button>
+            <span v-if="rec" class="text-xs text-gray-400">{{ rec.date }}</span>
+            <RouterLink
+                :to="`/fields/${route.params.id}/history`"
+                class="flex items-center gap-1 text-sm font-semibold text-green-800 border-2 border-green-800 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
+            >
+                <Clock class="w-3.5 h-3.5" />
+                Historial
+            </RouterLink>
+        </div>
+
+        <div v-if="loading" class="text-center py-12 text-gray-400 text-sm">Calculando recomendación...</div>
+        <div v-else-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
 
         <template v-else-if="rec">
-            <!-- Tarjeta principal de urgencia -->
-             <div :class="['urgency-card', urgencyClass]">
-                <div class="urgency-label">{{ URGENCY_LABELS[rec.urgency_level] }}</div>
-                <div class="irrigation-mm" v-if="rec.recommended_irrigation_mm > 0">
-                    Regar <strong>{{ rec.recommended_irrigation_mm }} mm</strong>
+
+            <!-- Tarjeta de urgencia -->
+            <div :class="['rounded-2xl p-5 text-center shadow-sm', urgencyCardClass]">
+                <p class="text-white text-xs font-bold uppercase tracking-widest opacity-80 mb-1">
+                    {{ URGENCY_LABELS[rec.urgency_level] }}
+                </p>
+                <p class="text-white font-black mb-1" style="font-size: 3.5rem; line-height: 1.1">
+                    {{ rec.recommended_irrigation_mm > 0 ? `${rec.recommended_irrigation_mm} mm` : '0 mm' }}
+                </p>
+                <p class="text-white font-bold text-base mb-2">
+                    {{ rec.recommended_irrigation_mm > 0 ? 'Regar hoy' : 'No se requiere riego hoy' }}
+                </p>
+                <p class="text-white text-sm opacity-90 leading-snug mb-3">{{ rec.reason }}</p>
+                <div class="inline-flex items-center gap-1.5 bg-black bg-opacity-20 rounded-full px-3 py-1">
+                    <span class="text-white text-xs opacity-75">Confianza:</span>
+                    <span class="text-white text-xs font-bold">{{ CONFIDENCE_LABELS[rec.confidence] }}</span>
                 </div>
-                <div class="irrigation-mm" v-else>
-                    No se requiere riego hoy
-                </div>
-                <p class="reason">{{ rec.reason }}</p>
-                <span class="confidence">
-                    Confianza: {{ CONFIDENCE_LABELS[rec.confidence] }}
-                    <span class="dt-hint">Calidad del cálculo</span>
-                </span>
-             </div>
+            </div>
 
-             <!-- Alertas climaticas -->
-              <section v-if="alerts.length > 0" class="section alerts-section">
-                <h2>Alertas climaticas</h2>
-                <div v-for="alert in alerts" :key="alert.id" :class="['alert-item', `alert-${alert.type}`]">
-                    <span class="alert-icon">{{ ALERT_LABELS[alert.type] }}</span>
-                    <span class="alert-date">{{ formatAlertDate(alert.date) }}</span>
-                    <button class="alert-dismiss" @click="dismissAlert(alert.id)">X</button>
-                </div>
-              </section>
-
-             <!-- Balance hidrico-->
-              <section class="section">
-                <h2>Balance hidrico</h2>
-                <div class="deficit-bar-wrap">
-                    <div class="deficit-bar">
-                        <div class="deficit-fill" :style="{ width: deficitPct + '%'}"
-                            :class="urgencyClass"></div>
-                    </div>
-                    <span class="deficit-pct">{{ deficitPct }}% del TAW</span>
-                </div>
-                <dl class="data-grid">
-                    <div>
-                        <dt>Deficit actual</dt>
-                        <dd>{{ rec.water_deficit_mm?.toFixed(1) }} mm</dd>
-                    </div>
-                    <div>
-                        <dt>TAW<span class="dt-hint">Agua total en el suelo</span></dt>
-                        <dd>{{ rec.taw_mm?.toFixed(1) }} mm</dd>
-                    </div>
-                    <div>
-                        <dt>RAW<span class="dt-hint">Déficit máximo sin estrés</span></dt>
-                        <dd>{{ rec.raw_mm?.toFixed(1) }} mm</dd>
-                    </div>
-                    <div>
-                        <dt>Estres hidrico (Ks)<span class="dt-hint">1.0 = sin estrés · 0 = crítico</span></dt>
-                        <dd>{{ rec.ks?.toFixed(2) }}</dd>
-                    </div>
-                </dl>
-              </section>
-
-              <!-- Cultivo y Kc -->
-               <section class="section">
-                <h2>Cultivo</h2>
-                <dl class="data-grid">
-                    <div>
-                        <dt>Etapa fenológica</dt>
-                        <dd>{{ STAGE_LABELS[rec.phenological_stage] }}</dd>
-                    </div>
-                    <div>
-                        <dt>Kc<span class="dt-hint">Factor de demanda del cultivo</span></dt>
-                        <dd>{{ rec.kc?.toFixed(3) }}</dd>
-                    </div>
-                    <div>
-                        <dt>Fuente Kc<span class="dt-hint">Cómo se calculó el Kc</span></dt>
-                        <dd>{{ KC_SOURCE_LABELS[rec.kc_source] }}</dd>
-                    </div>
-                    <div>
-                        <dt>ETo ayer<span class="dt-hint">Evaporación de referencia</span></dt>
-                        <dd>{{ rec.eto_mm?.toFixed(2) }} mm/día</dd>
-                    </div>
-                </dl>
-               </section>
-
-                <!-- Imagen satelital -->
-                 <section class="section" v-if="rec.ndvi !== null || satelliteImageUrl">
-                    <h2>Imagen satelital</h2>
-
-                    <div v-if="satelliteImageUrl">
-                        <div ref="mapRef" class="ndvi-map"></div>
-                        <div class="legend">
-                            <span class="legend-label">Estrés 0.0</span>
-                            <div class="legend-bar"></div>
-                            <span class="legend-label">1.0 Vigor</span>
-                        </div>
-                    </div>
-
-                    <div v-if="satelliteImageUrl" class="opacity-row">
-                        <span class="opacity-label">Opacidad</span>
-                        <input type="range" min="0" max="1" step="0.05"
-                            v-model.number="overlayOpacity" class="opacity-slider" />
-                        <span class="opacity-val">{{ Math.round(overlayOpacity * 100) }}%</span>
-                    </div>
-
-                    <dl class="data-grid sat-meta" v-if="rec.ndvi !== null">
+            <!-- Alertas climáticas -->
+            <div v-if="alerts.length > 0" class="space-y-2">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400 px-1">Alertas climáticas</p>
+                <div
+                    v-for="alert in alerts" :key="alert.id"
+                    :class="[
+                        'flex items-center justify-between px-4 py-3 rounded-2xl border-2',
+                        alert.type === 'frost' ? 'bg-blue-50 border-blue-300' : 'bg-orange-50 border-orange-300'
+                    ]"
+                >
+                    <div class="flex items-center gap-2">
+                        <AlertTriangle :class="['w-4 h-4', alert.type === 'frost' ? 'text-blue-600' : 'text-orange-600']" />
                         <div>
-                            <dt>NDVI<span class="dt-hint">Índice de verdor satelital</span></dt>
-                            <dd>{{ rec.ndvi?.toFixed(4) }}</dd>
+                            <p :class="['text-sm font-bold', alert.type === 'frost' ? 'text-blue-900' : 'text-orange-900']">
+                                {{ ALERT_LABELS[alert.type] }}
+                            </p>
+                            <p :class="['text-xs', alert.type === 'frost' ? 'text-blue-600' : 'text-orange-600']">
+                                {{ formatAlertDate(alert.date) }}
+                            </p>
                         </div>
-                        <div>
-                            <dt>Fecha imagen</dt>
-                            <dd :class="{ 'text-warning': ndviAge > 15 }">
-                                {{ rec.ndvi_date }}
-                                <span v-if="ndviAge !== null"></span>
-                            </dd>
-                        </div>
-                        <div v-if="rec.cloud_cover_pct != null">
-                            <dt>Nubosidad<span class="dt-hint">En la imagen utilizada</span></dt>
-                            <dd>{{ rec.cloud_cover_pct?.toFixed(0) }}%</dd>
-                        </div>
-                    </dl>
+                    </div>
+                    <button @click="dismissAlert(alert.id)" class="text-gray-400 hover:text-gray-600 text-lg leading-none px-1">✕</button>
+                </div>
+            </div>
 
-                    <p v-if="ndviAge > 15" class="warning-text">
-                        La imagen tiene más de 15 días. El Kc puede no reflejar el estado actual del cultivo.
-                    </p>
+            <!-- Balance hídrico -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <Droplets class="w-4 h-4 text-green-700" />
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Balance hídrico</p>
+                </div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                        <div :class="['h-full rounded-full transition-all', urgencyBarClass]" :style="{ width: deficitPct + '%' }" />
+                    </div>
+                    <span class="text-sm font-bold text-gray-700 w-12 text-right">{{ deficitPct }}%</span>
+                </div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                    <div>
+                        <p class="text-xs text-gray-400">Déficit actual</p>
+                        <p class="text-base font-bold text-gray-900">{{ rec.water_deficit_mm?.toFixed(1) }} mm</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400">TAW <span class="font-normal">(agua total)</span></p>
+                        <p class="text-base font-bold text-gray-900">{{ rec.taw_mm?.toFixed(1) }} mm</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400">RAW <span class="font-normal">(límite sin estrés)</span></p>
+                        <p class="text-base font-bold text-gray-900">{{ rec.raw_mm?.toFixed(1) }} mm</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400">Estrés hídrico (Ks)</p>
+                        <p class="text-base font-bold text-gray-900">{{ rec.ks?.toFixed(2) }}</p>
+                    </div>
+                </div>
+            </div>
 
-                    <p v-if="rec.ndvi === null && !satelliteImageUrl" class="muted">
-                        No hay imagen reciente disponible. Se usó Kc tabular FAO-56.
-                    </p>
-                </section>
+            <!-- Cultivo y Kc -->
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <Leaf class="w-4 h-4 text-green-700" />
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Cultivo · Kc</p>
+                </div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                    <div>
+                        <p class="text-xs text-gray-400">Etapa fenológica</p>
+                        <p class="text-sm font-bold text-gray-900">{{ STAGE_LABELS[rec.phenological_stage] }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400">Kc</p>
+                        <p class="text-sm font-bold text-gray-900">{{ rec.kc?.toFixed(3) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400">Fuente Kc</p>
+                        <p class="text-sm font-bold text-gray-900">{{ KC_SOURCE_LABELS[rec.kc_source] }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400">ETo ayer</p>
+                        <p class="text-sm font-bold text-gray-900">{{ rec.eto_mm?.toFixed(2) }} mm/día</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Imagen satelital -->
+            <div v-if="rec.ndvi !== null || satelliteImageUrl" class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <Satellite class="w-4 h-4 text-green-700" />
+                    <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Imagen satelital</p>
+                </div>
+
+                <div v-if="satelliteImageUrl">
+                    <div ref="mapRef" class="w-full h-56 rounded-xl overflow-hidden mb-3" />
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-xs text-gray-400">Estrés</span>
+                        <div class="flex-1 h-2 rounded-full" style="background: linear-gradient(to right, #d73027, #fc8d59, #fee08b, #a6d96a, #1a9850)" />
+                        <span class="text-xs text-gray-400">Vigor</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500 w-16">Opacidad</span>
+                        <input type="range" min="0" max="1" step="0.05" v-model.number="overlayOpacity" class="flex-1 accent-green-700" />
+                        <span class="text-xs text-gray-500 w-8 text-right">{{ Math.round(overlayOpacity * 100) }}%</span>
+                    </div>
+                </div>
+
+                <div v-if="rec.ndvi !== null" class="grid grid-cols-3 gap-3 mt-3">
+                    <div>
+                        <p class="text-xs text-gray-400">NDVI</p>
+                        <p class="text-sm font-bold text-gray-900">{{ rec.ndvi?.toFixed(4) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-400">Fecha imagen</p>
+                        <p :class="['text-sm font-bold', ndviAge > 15 ? 'text-orange-600' : 'text-gray-900']">{{ rec.ndvi_date }}</p>
+                    </div>
+                    <div v-if="rec.cloud_cover_pct != null">
+                        <p class="text-xs text-gray-400">Nubosidad</p>
+                        <p class="text-sm font-bold text-gray-900">{{ rec.cloud_cover_pct?.toFixed(0) }}%</p>
+                    </div>
+                </div>
+
+                <p v-if="ndviAge > 15" class="text-xs text-orange-600 mt-3">
+                    La imagen tiene más de 15 días. El Kc puede no reflejar el estado actual del cultivo.
+                </p>
+                <p v-if="rec.ndvi === null && !satelliteImageUrl" class="text-xs text-gray-400">
+                    No hay imagen reciente disponible. Se usó Kc tabular FAO-56.
+                </p>
+            </div>
+
         </template>
     </div>
 </template>
-
-
-<style scoped>
-.rec-page {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 1rem;
-    font-family: sans-serif;
-}
-
-.rec-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.btn-back {
-    background: none;
-    border: none;
-    color: #2e7d32;
-    font-size: 1rem;
-    cursor: pointer;
-    padding: 0;
-}
-
-.rec-date {
-    font-size: 0.9rem;
-    color: #666;
-}
-
-/* Tarjeta de urgencia */
-.urgency-card {
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    text-align: center;
-}
-
-.urgency-low    { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.urgency-medium { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-.urgency-high   { background: #ffe0b2; color: #e65100; border: 1px solid #ffcc80; }
-.urgency-critical { background: #ffcdd2; color: #c62828; border: 1px solid #ef9a9a; }
-
-.urgency-label {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.irrigation-mm {
-    font-size: 1.8rem;
-    font-weight: 700;
-    margin: 0.5rem 0;
-}
-
-.reason {
-    font-size: 0.95rem;
-    margin: 0.75rem 0 0.5rem;
-    line-height: 1.4;
-}
-
-.confidence {
-    font-size: 0.8rem;
-    opacity: 0.8;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Secciones */
-.section {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.section h2 {
-    font-size: 1rem;
-    color: #444;
-    margin: 0 0 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-/* Barra de déficit */
-.deficit-bar-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-
-.deficit-bar {
-    flex: 1;
-    height: 10px;
-    background: #eee;
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-.deficit-fill {
-    height: 100%;
-    border-radius: 5px;
-    transition: width 0.4s;
-}
-
-.urgency-low    .deficit-fill,
-.deficit-fill.urgency-low    { background: #2e7d32; }
-.deficit-fill.urgency-medium { background: #f9a825; }
-.deficit-fill.urgency-high   { background: #e65100; }
-.deficit-fill.urgency-critical { background: #c62828; }
-
-.deficit-pct {
-    font-size: 0.85rem;
-    color: #555;
-    white-space: nowrap;
-}
-
-/* Grilla de datos */
-.data-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    margin: 0;
-}
-
-.data-grid > div { display: flex; flex-direction: column; }
-.data-grid dt { font-size: 0.78rem; color: #888; }
-.data-grid dd { margin: 0; font-weight: 600; font-size: 0.95rem; }
-
-/* Utilidades */
-.center { text-align: center; padding: 2rem; color: #666; }
-.error  { color: #c00; padding: 1rem; text-align: center; }
-.muted  { color: #888; font-size: 0.9rem; margin: 0; }
-.text-warning { color: #e65100; }
-.warning-text {
-    font-size: 0.85rem;
-    color: #e65100;
-    margin-top: 0.5rem;
-    margin-bottom: 0;
-}
-.alerts-section h2 { color: #b71c1c; }
-.alert-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.6rem 0.75rem;
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-.alert-frost     { background: #e3f2fd; color: #0d47a1; }
-.alert-heat_wave { background: #fff3e0; color: #e65100; }
-.alert-date { font-size: 0.85rem; opacity: 0.8; }
-.alert-dismiss {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 0.85rem;
-    opacity: 0.5;
-    padding: 0 0.25rem;
-    line-height: 1;
-}
-.alert-dismiss:hover { opacity: 1; }
-.btn-history {
-    font-size: 0.85rem;
-    color: #2e7d32;
-    text-decoration: none;
-    border: 1px solid #2e7d32;
-    padding: 0.25rem 0.6rem;
-    border-radius: 4px;
-}
-.dt-hint {
-    display: block;
-    font-size: 0.68rem;
-    color: #bbb;
-    font-weight: 400;
-    margin-top: 1px;
-    line-height: 1.2;
-}
-.ndvi-map {
-    width: 100%;
-    height: 250px;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 0.75rem;
-}
-.legend {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.legend-bar {
-    flex: 1;
-    height: 8px;
-    border-radius: 4px;
-    background: linear-gradient(to right, #d73027, #fc8d59, #fee08b, #a6d96a, #1a9850);
-}
-.legend-label { font-size: 0.7rem; color: #888; }
-.sat-meta { margin-top: 0.75rem; grid-template-columns: repeat(3, 1fr); }
-.opacity-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-}
-.opacity-label { font-size: 0.8rem; color: #666; white-space: nowrap; }
-.opacity-slider { flex: 1; accent-color: #2e7d32; }
-.opacity-val { font-size: 0.8rem; color: #555; width: 3rem; text-align: right; }
-</style>

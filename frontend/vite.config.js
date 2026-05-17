@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
@@ -9,6 +10,7 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    tailwindcss(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
@@ -18,7 +20,7 @@ export default defineConfig({
         name: 'Irrigation Advisor',
         short_name: 'Irrigation',
         description: 'Sistema de recomendación de riego inteligente',
-        theme_color: '#2e7d32',
+        theme_color: '#166534',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

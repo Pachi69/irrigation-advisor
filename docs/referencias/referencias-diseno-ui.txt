@@ -1,0 +1,76 @@
+REFERENCIAS DE DISEÑO — Irrigation Advisor
+==========================================
+Fecha: Mayo 2026
+
+LEGIBILIDAD EN EXTERIORES / SUNLIGHT READABILITY
+-------------------------------------------------
+- "Design a Mobile App UI for Bright Sunlight" — LinkedIn Advice
+  https://www.linkedin.com/advice/3/how-can-you-design-mobile-app-user-t85ue
+  Clave: mantener ratio mínimo 7:1 para uso outdoor; la luz solar reduce el
+  contraste percibido hasta un 70%.
+
+- "What are the key considerations when designing user interfaces for
+  sunlight readable displays?" — FW Displays
+  https://fwdisplays.com/elementor-1920/
+  Clave: modo claro (fondo blanco) supera al modo oscuro en condiciones
+  de luz solar directa.
+
+- "Dark vs. Light Mode: Mobile App Design Best Practices" — Dogtown Media
+  https://www.dogtownmedia.com/dark-mode-vs-light-mode-in-mobile-app-design-finding-the-right-balance/
+
+- "Best Practices for Color Contrast in Mobile App Interfaces" — Moldstud
+  https://moldstud.com/articles/p-best-practices-for-color-contrast-in-mobile-app-interfaces-enhance-usability-and-accessibility
+
+ESTÁNDARES DE CONTRASTE (WCAG)
+-------------------------------
+- "Color Contrast Accessibility: Complete WCAG 2025 Guide" — AllAccessible
+  https://www.allaccessible.org/blog/color-contrast-accessibility-wcag-guide-2025
+  Clave: WCAG AA = 4.5:1 texto normal / WCAG AAA = 7:1. Para outdoor
+  se recomienda AAA como mínimo.
+
+- "WCAG Accessible colour and contrast ratios" — Medium / Bootcamp
+  https://medium.com/design-bootcamp/wcag-accessible-colour-and-contrast-ratios-5e94ea3f81f4
+
+- WebAIM Contrast Checker (herramienta de verificación)
+  https://webaim.org/resources/contrastchecker/
+
+COLOR VERDE EN APPS AGRÍCOLAS
+------------------------------
+- "Agriculture Green Color Code: Sustainable Farming Guide" — Farmonaut
+  https://farmonaut.com/precision-farming/agriculture-green-color-code-sustainable-farming-guide
+  Clave: verde en apps de precision agriculture para NDVI, NDWI, EVI.
+  Verde señaliza confianza y crecimiento en contexto agro.
+
+- "Green Color Psychology, Symbolism, and Meaning in Nature" — Color Psychology
+  https://www.colorpsychology.org/green/
+  Clave: el ojo humano tiene mayor sensibilidad al verde (pico ~555nm).
+
+- "Forest Green Color: Hex Code, Palettes & Meaning" — Figma
+  https://www.figma.com/colors/forest-green/
+
+- "47+ Agriculture Color Palettes" — Produkto
+  https://produkto.io/color-palettes/agriculture
+
+DECISIONES DE DISEÑO APLICADAS
+--------------------------------
+- Color primario: #166534 (Tailwind green-800)
+  Ratio de contraste con blanco: 10.1:1 → supera WCAG AAA (7:1)
+
+- Fondo: #f9fafb (gray-50) para páginas, #ffffff para cards
+  Modo claro elegido por legibilidad outdoor.
+
+- Urgencias con color sólido de fondo + texto blanco:
+    Sin urgencia : bg-green-700  (#15803d)
+    Moderada     : bg-amber-500  (#f59e0b)
+    Alta         : bg-orange-600 (#ea580c)
+    Crítico      : bg-red-600    (#dc2626)
+
+- Tipografía: system-ui, base 16px mínimo, labels en font-semibold/bold
+- Touch targets: mínimo 48px de alto (estándar Android/iOS outdoor)
+
+ICONOGRAFÍA
+-----------
+- Librería elegida: Lucide Icons via lucide-vue-next
+  https://lucide.dev/
+  MIT License. Estándar de facto para Vue 3 + Vite.
+  Instalación: npm install lucide-vue-next

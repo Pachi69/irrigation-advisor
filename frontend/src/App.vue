@@ -2,6 +2,7 @@
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useAuth } from './stores/auth'
 import { onMounted } from 'vue'
+import { Leaf, Route, Router } from 'lucide-vue-next'
 
 const router = useRouter()
 const { isAuthenticated, isAdmin, logout, fetchMe, user } = useAuth()
@@ -23,59 +24,64 @@ function handleLogout() {
 </script>
 
 <template>
-  <nav>
-    <template v-if="isAuthenticated">
-      <RouterLink to="/">Home</RouterLink>
-      <RouterLink to="/fields">Mis Campos</RouterLink>
-      <RouterLink v-if="isAdmin" to="/admin/fields" class="admin-link">
-        Panel admin
-      </RouterLink>
-      <button class="link-btn btn-logout" @click="handleLogout">Cerrar sesión</button>
-    </template>
-    <template v-else>
-      <RouterLink to="/login">Login</RouterLink>
-      <span class="separator">|</span>
-      <RouterLink to="/register">Registro</RouterLink>
-    </template>
-  </nav>
-  <main>
-    <RouterView />
-  </main>
-</template>
+  <div class="min-h-svh flex flex-col">
+    <nav class="bg-green-800 sticky top-0 z-40 shadow-md">
+      <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <RouterLink to="/" class="flex items-center gap-2 text-white font-bold text-base tracking-tight">
+          <Leaf class="w-5 h-5 text-green-300" :stroke-width="2.5" />
+          Irrigation Advisor
+        </RouterLink>
 
-<style scoped>
-nav {
-  padding: 1rem;
-  border-bottom: 1px solid #ccc;
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-.separator {
-  color: #999;
-}
-.link-btn {
-  background: none;
-  border: none;
-  color: #1976d2;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0;
-  text-decoration: underline;
-}
-.btn-logout {
-    background: none;
-    border: 1px solid #ccc;
-    padding: 0.3rem 0.8rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-main {
-  padding: 1rem;
-}
-.admin-link {
-    color: #d84315;
-    font-weight: 500;
-}
-</style>
+        <template v-if="isAuthenticated">
+          <div class="flex items-center gap-1">
+            <RouterLink 
+              to="/fields" 
+              class="px-3 py-1.5 rounded-lg text-sm font-medium text-green-100 hover:bg-green-700
+              hover:text-white transition-colors"
+              active-class="bg-green-700 text-white"
+            >
+              Mis Campos
+            </RouterLink>
+            <RouterLink
+              v-if="isAdmin"
+              to="/admin/fields"
+              class="px-3 py-1.5 rounded-lg text-sm font-semibold text-yellow-300 hover:bg-green-700
+              transition-colors"
+              active-class="bg-green-700"
+            >
+              Admin
+            </RouterLink>
+            <button
+              @click="handleLogout"
+              class="ml-1 px-3 py-1.5 rounded-lg text-sm font-medium text-green-100 border border-green-600
+              hover:bg-green-700 hover:text-white transition-colors"
+            >
+              Salir
+            </button>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="flex items-center gap-2">
+            <RouterLink 
+              to="/login"
+              class="px-3 py-1.5 rounded-lg text-sm font-medium text-green-100 hover:bg-green-700 transition-colors"
+            >
+              Ingresar
+            </RouterLink>
+            <RouterLink
+              to="/register"
+              class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-white text-green-800 hover:bg-green-50 transition-colors"
+            >
+              Registrarse
+            </RouterLink>
+          </div>
+        </template>
+      </div>
+    </nav>
+
+    <main class="flex-1 bg-gray-50">
+      <RouterView />
+    </main>
+  </div>
+</template>

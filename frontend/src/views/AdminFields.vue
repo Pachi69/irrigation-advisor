@@ -2,6 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { listPendingFields, approveField } from '../services/admin'
 import FieldMapEditor from '../components/FieldMapEditor.vue'
+import { RefreshCw } from 'lucide-vue-next'
+import { CROP_LABELS, SOIL_LABELS, IRRIGATION_LABELS } from '../utils/labels'
 
 
 const fields = ref([])
@@ -12,10 +14,6 @@ const approvingField = ref(null)
 const polygonGeoJSON = ref(null)
 const approving = ref(false)
 const approveError = ref('')
-
-const CROP_LABELS = { vine: 'Vid', peach: 'Durazno', alfalfa: 'Alfalfa' }
-const SOIL_LABELS = { sandy: 'Arenoso', clay: 'Arcilloso', loamy: 'Franco' }
-const IRRIGATION_LABELS = { drip: 'Goteo', sprinkler: 'Aspersión', flood: 'Surco' }
 
 async function loadPending() {
     error.value = ''
@@ -59,160 +57,110 @@ onMounted(loadPending)
 </script>
 
 <template>
-    <div class="admin-container">
-        <header class="admin-header">
-            <h1>Panel admin | Campos pendientes</h1>
-            <button @click="loadPending" class="btn-secondary">Recargar</button>
-        </header>
+    <div class="max-w-2xl lg:max-w-5xl mx-auto px-4 py-6">
 
-        <p v-if="loading">Cargando...</p>
-        <p v-else-if="error" class="error">{{ error }}</p>
-        <p v-else-if="fields.length === 0" class="empty">No hay campos pendientes.</p>
+        <div class="flex items-center justify-between mb-5">
+            <h1 class="text-xl font-bold text-gray-900">Campos pendientes</h1>
+            <button
+                @click="loadPending"
+                class="flex items-center gap-1.5 border-2 border-gray-200 text-gray-600 font-semibold text-sm px-3 py-2 rounded-xl hover:border-gray-300 transition-colors"
+            >
+                <RefreshCw class="w-3.5 h-3.5" />
+                Recargar
+            </button>
+        </div>
 
-        <ul v-else class="field-list">
-            <li v-for="field in fields" :key="field.id" class="field-card">
-                <div class="field-head">
-                    <h2>{{ field.name }}</h2>
-                    <span class="status status-pending">Pendiente</span>
+        <div v-if="loading" class="text-center py-12 text-gray-400 text-sm">Cargando...</div>
+        <div v-else-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
+        <div v-else-if="fields.length === 0" class="text-center py-12 text-gray-400 text-sm">No hay campos pendientes.</div>
+
+        <div v-else class="space-y-4">
+            <div
+                v-for="field in fields"
+                :key="field.id"
+                class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"
+            >
+                <div class="bg-amber-400 px-4 py-2">
+                    <span class="text-xs font-bold uppercase tracking-wide text-amber-900">Pendiente de aprobación</span>
                 </div>
 
-                <p class="owner">
-                    Dueño: <strong>{{ field.user.email }}</strong>
-                    &lt;{{ field.user.name }}&gt;
-                </p>
+                <div class="p-4">
+                    <h2 class="text-base font-bold text-gray-900 mb-0.5">{{ field.name }}</h2>
+                    <p class="text-xs text-gray-400 mb-3">
+                        {{ field.user.name }} · {{ field.user.email }}
+                    </p>
 
-                <dl class="field-info">
-                    <div><dt>Cultivo:</dt><dd>{{ CROP_LABELS[field.crop_type] }}</dd></div>
-                    <div><dt>Suelo:</dt><dd>{{ SOIL_LABELS[field.soil_type] }}</dd></div>
-                    <div><dt>Riego:</dt><dd>{{ IRRIGATION_LABELS[field.irrigation_type] }}</dd></div>
-                    <div><dt>Superficie:</dt><dd>{{ field.area_ha != null ? `${field.area_ha} ha` : '—'  }}</dd></div>
-                    <div><dt>Siembra/brotación:</dt><dd>{{ field.planting_date }}</dd></div>
-                    <div><dt>Malla antigranizo:</dt><dd>{{ field.has_hail_net ? 'Sí' : 'No' }}</dd></div>
-                </dl>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2.5 mb-4">
+                        <div>
+                            <p class="text-xs text-gray-400">Cultivo</p>
+                            <p class="text-sm font-semibold text-gray-800">{{ CROP_LABELS[field.crop_type] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">Riego</p>
+                            <p class="text-sm font-semibold text-gray-800">{{ IRRIGATION_LABELS[field.irrigation_type] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">Superficie</p>
+                            <p class="text-sm font-semibold text-gray-800">
+                                {{ field.area_ha != null ? `${field.area_ha.toFixed(2)} ha` : '—' }}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">Siembra / brotación</p>
+                            <p class="text-sm font-semibold text-gray-800">{{ field.planting_date }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">Malla antigranizo</p>
+                            <p class="text-sm font-semibold text-gray-800">{{ field.has_hail_net ? 'Sí' : 'No' }}</p>
+                        </div>
+                    </div>
 
-                <div class="actions">
-                    <button class="btn-primary" @click="openApproveModal(field)">Aprobar</button>
+                    <button
+                        @click="openApproveModal(field)"
+                        class="w-full bg-green-800 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                    >
+                        Aprobar campo
+                    </button>
                 </div>
-            </li>
-        </ul>
+            </div>
+        </div>
 
         <!-- Modal de aprobación -->
-         <div v-if="approvingField" class="modal-backdrop" @click.self="closeApproveModal">
-            <div class="modal">
-                <header class="modal-header">
-                    <h2>Aprobar "{{ approvingField.name }}"</h2>
-                    <button class="btn-close" @click="closeApproveModal" aria-label="Cerrar">X</button>
-                </header>
+        <div v-if="approvingField" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" @click.self="closeApproveModal">
+            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
 
-                <div class="modal-body">
-                    <p class="map-hint">
-                        Dibujá el perímetro del campo. Usá el ícono de polígono
-                        o rectángulo en el panel izquierdo del mapa.
-                    </p>
-                    <FieldMapEditor v-model="polygonGeoJSON" height="380px" />
-                    <p v-if="approveError" class="error">{{ approveError }}</p>
+                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-bold text-gray-900">Aprobar "{{ approvingField.name }}"</h2>
+                    <button @click="closeApproveModal" class="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
                 </div>
 
-                <footer class="modal-footer">
-                    <button class="btn-secondary" @click="closeApproveModal" :disabled="approving">Cancelar</button>
-                    <button 
-                        class="btn-primary" 
-                        @click="confirmApproval" 
-                        :disabled="!polygonGeoJSON || approving"
-                    > 
-                        {{ approving ? 'Aprobando...' : 'Confirmar aprobacion' }}
+                <div class="p-4 flex-1 space-y-3">
+                    <p class="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+                        Dibujá el perímetro del campo usando el ícono de polígono en el panel izquierdo del mapa.
+                    </p>
+                    <FieldMapEditor v-model="polygonGeoJSON" height="380px" />
+                    <div v-if="approveError" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">
+                        {{ approveError }}
+                    </div>
+                </div>
+
+                <div class="flex gap-3 px-5 py-4 border-t border-gray-100">
+                    <button
+                        @click="closeApproveModal" :disabled="approving"
+                        class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50"
+                    >
+                        Cancelar
                     </button>
-                </footer>
+                    <button
+                        @click="confirmApproval" :disabled="!polygonGeoJSON || approving"
+                        class="flex-1 bg-green-800 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {{ approving ? 'Aprobando...' : 'Confirmar aprobación' }}
+                    </button>
+                </div>
+
             </div>
-         </div>
+        </div>
+
     </div>
 </template>
-
-<style scoped>
-.admin-container { max-width: 900px; margin: 0 auto; }
-.admin-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 1.5rem;
-}
-.btn-secondary {
-    padding: 0.5rem 1rem; background: #fff; color: #2e7d32;
-    border: 1px solid #2e7d32; border-radius: 4px; cursor: pointer;
-}
-.btn-primary {
-    padding: 0.5rem 1rem; background: #2e7d32; color: white;
-    border: 0; border-radius: 4px; cursor: pointer;
-}
-.btn-primary:disabled { background: #9e9e9e; cursor: not-allowed; }
-.empty { color: #666; }
-.error { color: #c00; }
-.field-list { list-style: none; padding: 0; display: grid; gap: 1rem; }
-.field-card {
-    border: 1px solid #ddd; border-radius: 8px; padding: 1rem; background: white;
-}
-.field-head {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 0.5rem;
-}
-.field-head h2 { margin: 0; font-size: 1.2rem; }
-.owner { margin: 0 0 0.75rem; color: #555; font-size: 0.9rem; }
-.status { font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 12px; }
-.status-pending { background: #fff3cd; color: #856404; }
-.field-info {
-    display: grid; grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem 1rem; margin: 0 0 1rem;
-}
-.field-info > div { display: flex; flex-direction: column; }
-.field-info dt { font-size: 0.8rem; color: #666; }
-.field-info dd { margin: 0; font-weight: 500; }
-.actions { display: flex; justify-content: flex-end; }
-
-.modal-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
-}
-.modal {
-    background: white; border-radius: 8px;
-    width: min(750px, 96vw);
-    max-height: 90vh; overflow-y: auto;
-    display: flex; flex-direction: column;
-}
-.modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 1rem 1.25rem; border-bottom: 1px solid #eee;
-}
-.modal-header h2 { margin: 0; font-size: 1.1rem; }
-.btn-close {
-    background: transparent; border: 0; font-size: 1.2rem;
-    cursor: pointer; color: #666;
-}
-.modal-body {
-    padding: 1rem 1.25rem;
-    display: flex; flex-direction: column; gap: 0.75rem;
-}
-.modal-body label { font-weight: 500; font-size: 0.9rem; }
-.modal-body textarea {
-    width: 100%; font-family: monospace; font-size: 0.85rem;
-    padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;
-    resize: vertical;
-}
-.preview {
-    padding: 0.5rem 0.75rem; border-radius: 4px; font-size: 0.9rem;
-}
-.preview-ok { background: #d4edda; color: #155724; }
-.preview-error { background: #f8d7da; color: #721c24; }
-.preview-hint { background: #f0f0f0; color: #666; font-style: italic; }
-.modal-footer {
-    display: flex; justify-content: flex-end; gap: 0.5rem;
-    padding: 1rem 1.25rem; border-top: 1px solid #eee;
-}
-.map-hint {
-    font-size: 0.875rem;
-    color: #555;
-    margin: 0;
-    background: #f5f5f5;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-}
-</style>

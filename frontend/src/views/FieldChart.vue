@@ -14,6 +14,7 @@ import {
     Filler
 } from 'chart.js'
 import { getFieldChartData } from '../services/fields';
+import { ArrowLeft } from 'lucide-vue-next'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
@@ -110,65 +111,33 @@ const ndviOptions = {
 </script>
 
 <template>
-    <div class="chart-page">
-        <header class="chart-header">
-            <button class="btn-back" @click="router.push(`/fields/${route.params.id}/history`)"> <- Historial</button>
-            <h1>Evolucion del cultivo</h1>
-        </header>
+    <div class="max-w-2xl lg:max-w-3xl mx-auto px-4 py-6">
 
-        <div v-if="loading" class="center">Cargando gráfico...</div>
-        <div v-else-if="error" class="error">{{ error }}</div>
-        <div v-else-if="!hasData" class="center">Sin datos suficientes para mostrar el grafico.</div>
+        <div class="flex items-center gap-3 mb-5">
+            <button
+                @click="router.push(`/fields/${route.params.id}/history`)"
+                class="flex items-center gap-1 text-green-800 font-semibold text-sm hover:underline"
+            >
+                <ArrowLeft class="w-4 h-4" />
+                Historial
+            </button>
+            <h1 class="text-base font-bold text-gray-900">Evolución del cultivo</h1>
+        </div>
 
-        <div v-else>
-            <div class="chart-wrap">
-                <h2 class="chart-title">Déficit hídrico</h2>
+        <div v-if="loading" class="text-center py-12 text-gray-400 text-sm">Cargando gráfico...</div>
+        <div v-else-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
+        <div v-else-if="!hasData" class="text-center py-12 text-gray-400 text-sm">Sin datos suficientes para mostrar el gráfico.</div>
+
+        <div v-else class="space-y-4">
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Déficit hídrico</p>
                 <Line :data="deficitChartData" :options="deficitOptions" />
             </div>
-            <div class="chart-wrap">
-                <h2 class="chart-title">NDVI (vigor del cultivo)</h2>
+            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">NDVI — Vigor del cultivo</p>
                 <Line :data="ndviChartData" :options="ndviOptions" />
             </div>
         </div>
+
     </div>
 </template>
-
-<style scoped>
-.chart-page {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 1rem;
-    font-family: sans-serif;
-}
-.chart-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-.chart-header h1 { font-size: 1.2rem; margin: 0; color: #2e7d32; }
-.btn-back {
-    background: none;
-    border: none;
-    color: #2e7d32;
-    font-size: 0.95rem;
-    cursor: pointer;
-    padding: 0;
-}
-.chart-wrap {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1rem;
-}
-.center { text-align: center; padding: 2rem; color: #666; }
-.error { color: #c00; text-align: center; padding: 1rem; }
-.chart-wrap { margin-bottom: 1rem; }
-.chart-title {
-    font-size: 0.95rem;
-    color: #444;
-    margin: 0 0 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-</style>

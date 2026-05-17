@@ -77,90 +77,100 @@ async function handleSubmit() {
 </script>
 
 <template>
-    <div class="form-container">
-        <h1>Editar Campo</h1>
+    <div class="max-w-2xl mx-auto px-4 py-6">
+        <h1 class="text-xl font-bold text-gray-900 mb-5">Editar campo</h1>
 
-        <div v-if="loading" class="center">Cargando...</div>
-        <div v-else-if="error && !form" class="error">{{ error }}</div>
+        <div v-if="loading" class="text-center py-12 text-gray-400 text-sm">Cargando...</div>
+        <div v-else-if="error && !form" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
 
-        <form v-else-if="form" @submit.prevent="handleSubmit">
-            <label>
-                Nombre del campo
-                <input v-model="form.name" type="text" required minlength="2" maxlength="255" :disabled="saving" />
-            </label>
+        <form v-else-if="form" @submit.prevent="handleSubmit" class="space-y-4">
 
-            <label>
-                Cultivo
-                <select v-model="form.crop_type" required :disabled="saving">
-                    <option v-for="o in CROP_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                </select>
-            </label>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del campo</label>
+            <input
+                v-model="form.name"
+                type="text" required minlength="2" maxlength="255" :disabled="saving"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
+            />
+        </div>
 
-            <label>
-                Tipo de suelo
-                <select v-model="form.soil_type" required :disabled="saving">
-                    <option v-for="o in SOIL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                </select>
-            </label>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Cultivo</label>
+            <select
+                v-model="form.crop_type" required :disabled="saving"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+            >
+                <option v-for="o in CROP_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+        </div>
 
-            <label>
-                Tipo de riego
-                <select v-model="form.irrigation_type" required :disabled="saving">
-                    <option v-for="o in IRRIGATION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-                </select>
-            </label>
-            
-            <label>
-                Fecha de siembra o brotación
-                <input v-model="form.planting_date" type="date" required :disabled="saving">
-            </label>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de suelo</label>
+            <select
+                v-model="form.soil_type" required :disabled="saving"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+            >
+                <option v-for="o in SOIL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+        </div>
 
-            <label>
-                Último riego completo o lluvia abundante
-                <input v-model="form.last_saturation_date" type="date" :max="todayStr" :disabled="saving">
-                <small class="input-hint">
-                    Actualizá esta fecha tras un riego completo o lluvia abundante para recalibrar el balance hídrico.
-                </small>
-            </label>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de riego</label>
+            <select
+                v-model="form.irrigation_type" required :disabled="saving"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+            >
+                <option v-for="o in IRRIGATION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+            </select>
+        </div>
 
-            <label class="checkbox">
-                <input v-model="form.has_hail_net" type="checkbox" :disabled="saving">
-                El campo tiene malla antigranizo
-            </label>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de siembra o brotación</label>
+            <input
+                v-model="form.planting_date"
+                type="date" required :disabled="saving"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
+            />
+        </div>
 
-            <p v-if="error" class="error">{{ error }}</p>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Último riego completo o lluvia abundante</label>
+            <input
+                v-model="form.last_saturation_date"
+                type="date" :max="todayStr" :disabled="saving"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
+            />
+            <p class="text-xs text-gray-400 mt-1.5">Actualizá esta fecha tras un riego completo para recalibrar el balance hídrico.</p>
+        </div>
 
-            <div class="actions">
-                <button type="button" @click="router.push('/fields')" :disabled="saving" class="btn-secondary">
-                    Cancelar
-                </button>
-                <button type="submit" :disabled="saving" class="btn-primary">
-                    {{ saving ? 'Guardando...' : 'Guardar cambios' }}
-                </button>
-            </div>
+        <label class="flex items-center gap-3 bg-white border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer hover:border-gray-300 transition-colors">
+            <input
+                v-model="form.has_hail_net"
+                type="checkbox" :disabled="saving"
+                class="w-4 h-4 accent-green-700"
+            />
+            <span class="text-sm font-semibold text-gray-700">El campo tiene malla antigranizo</span>
+        </label>
+
+        <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">
+            {{ error }}
+        </div>
+
+        <div class="flex gap-3 pt-1">
+            <button
+                type="button" @click="router.push('/fields')" :disabled="saving"
+                class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50"
+            >
+                Cancelar
+            </button>
+            <button
+                type="submit" :disabled="saving"
+                class="flex-1 bg-green-800 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {{ saving ? 'Guardando...' : 'Guardar cambios' }}
+            </button>
+        </div>
+
         </form>
     </div>
 </template>
-
-<style scoped>
-.form-container { max-width: 500px; margin: 0 auto; }
-form { display: flex; flex-direction: column; gap: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.25rem; }
-label.checkbox { flex-direction: row; align-items: center; gap: 0.5rem; }
-input, select {
-    padding: 0.5rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px;
-}
-.actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
-.btn-primary, .btn-secondary {
-    padding: 0.75rem 1.25rem; font-size: 1rem; cursor: pointer;
-    border-radius: 4px; border: none; flex: 1;
-}
-.btn-primary { background: #2e7d32; color: white; }
-.btn-primary:hover:not(:disabled) { background: #1b5e20; }
-.btn-secondary { background: #e0e0e0; color: #333; }
-.btn-secondary:hover:not(:disabled) { background: #bdbdbd; }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-.error { color: #c00; margin: 0; }
-.center { text-align: center; padding: 2rem; color: #666; }
-.input-hint { color: #666; font-size: 0.8rem; }
-</style>

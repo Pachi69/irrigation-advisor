@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { createField } from '../services/fields'
 import FieldMapEditor from '../components/FieldMapEditor.vue'
+import { MapPin } from 'lucide-vue-next'
+
 
 const router = useRouter()
 
@@ -20,6 +22,7 @@ const loading = ref(false)
 const error = ref('')
 const showMapModal = ref(false)
 const showSaturationTip = ref(true)
+const saturationTipAccepted = ref(false)
 
 async function handleSubmit() {
     error.value = ''
@@ -48,235 +51,170 @@ const todayStr = new Date().toISOString().slice(0, 10)
 </script>
 
 <template>
-    <div class="form-container">
-        <h1>Registrar Nuevo Campo</h1>
-        <p class="hint">
+    <div class="max-w-2xl mx-auto px-4 py-6">
+        <h1 class="text-xl font-bold text-gray-900 mb-1">Registrar nuevo campo</h1>
+        <p class="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 mb-5">
             Dibujá el perímetro de tu campo en el mapa para agilizar la aprobación.
-            El administrador revisará el polígono antes de activar el procesamiento satelital.
         </p>
 
-        <form @submit.prevent="handleSubmit">
-            <label>
-                Nombre del campo
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del campo</label>
                 <input
                     v-model="form.name"
-                    type="text"
-                    required
-                    minlength="2"
-                    maxlength="255"
-                    placeholder="Ej: Finca los Álamos"
+                    type="text" required minlength="2" maxlength="255"
+                    placeholder="Ej: Finca Los Álamos"
                     :disabled="loading"
+                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
                 />
-            </label>
+            </div>
 
-            <label>
-                Cultivo
-                <select v-model="form.crop_type" required :disabled="loading">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Cultivo</label>
+                <select
+                    v-model="form.crop_type" required :disabled="loading"
+                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+                >
                     <option value="vine">Vid</option>
                     <option value="peach">Durazno</option>
                     <option value="alfalfa">Alfalfa</option>
                 </select>
-            </label>
+            </div>
 
-            <label>
-                Tipo de riego
-                <select v-model="form.irrigation_type" required :disabled="loading">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de riego</label>
+                <select
+                    v-model="form.irrigation_type" required :disabled="loading"
+                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+                >
                     <option value="drip">Goteo</option>
                     <option value="sprinkler">Aspersión</option>
                     <option value="flood">Surco</option>
                 </select>
-            </label>
-
-            <div class="map-field">
-                <span class="map-label">Ubicación del campo</span>
-                <span class="field-hint">Marcá el perímetro de tu campo para agilizar la aprobación.</span>
-                <button type="button" class="btn-map" @click="showMapModal = true">
-                    Abrir mapa y marcar campo
-                </button>
-                <span v-if="form.polygon_geojson" class="map-ok">Campo marcado correctamente</span>
-                <span v-else class="map-empty">Sin marcar aún</span>
             </div>
 
-            <label>
-                Fecha de siembra o brotación
+            <!-- Mapa -->
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Ubicación del campo</label>
+                <button
+                    type="button"
+                    @click="showMapModal = true"
+                    class="w-full flex items-center justify-between border-2 border-dashed border-gray-300 hover:border-green-600 rounded-xl px-4 py-3 transition-colors bg-white"
+                >
+                    <div class="flex items-center gap-2">
+                        <MapPin class="w-4 h-4 text-gray-400" />
+                        <span class="text-sm font-medium text-gray-600">Abrir mapa y marcar campo</span>
+                    </div>
+                    <span v-if="form.polygon_geojson" class="text-xs font-bold text-green-700">Marcado ✓</span>
+                    <span v-else class="text-xs text-gray-400">Sin marcar</span>
+                </button>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de siembra o brotación</label>
                 <input
                     v-model="form.planting_date"
-                    type="date"
-                    required
-                    :disabled="loading"
+                    type="date" required :disabled="loading"
+                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
                 />
-            </label>
+            </div>
 
-            <label>
-                Ultimo riego completo o lluvia abundante
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Último riego completo o lluvia abundante</label>
                 <input
                     v-model="form.last_saturation_date"
-                    type="date"
-                    :max="todayStr"
-                    required
-                    :disabled="loading"
+                    type="date" :max="todayStr" required :disabled="loading"
+                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
                 />
-                <small class="input-hint">
-                    Ultima fecha en que el suelo quedo bien empapado (riego completo o lluvia abundante).
-                    Si no sabe o el campo esta recien regado, deje la fecha de hoy.
-                </small>
-            </label>
+                <p class="text-xs text-gray-400 mt-1.5">Última fecha en que el suelo quedó bien empapado.</p>
+            </div>
 
-            <label class="checkbox">
+            <label class="flex items-center gap-3 bg-white border-2 border-gray-200 rounded-xl px-4 py-3 cursor-pointer hover:border-gray-300 transition-colors">
                 <input
                     v-model="form.has_hail_net"
-                    type="checkbox"
-                    :disabled="loading"
+                    type="checkbox" :disabled="loading"
+                    class="w-4 h-4 accent-green-700"
                 />
-                El campo tiene malla antigranizo
+                <span class="text-sm font-semibold text-gray-700">El campo tiene malla antigranizo</span>
             </label>
 
-            <div class="actions">
-                <button type="button" @click="cancel" :disabled="loading" class="btn-secondary">
+            <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">
+                {{ error }}
+            </div>
+
+            <div class="flex gap-3 pt-1">
+                <button
+                    type="button" @click="cancel" :disabled="loading"
+                    class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50"
+                >
                     Cancelar
                 </button>
-                <button type="submit" :disabled="loading" class="btn-primary">
+                <button
+                    type="submit" :disabled="loading"
+                    class="flex-1 bg-green-800 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     {{ loading ? 'Guardando...' : 'Registrar campo' }}
                 </button>
             </div>
 
-            <p v-if="error" class="error">{{ error }}</p>
         </form>
 
-        <div v-if="showMapModal" class="map-backdrop" @click.self="showMapModal = false">
-            <div class="map-modal">
-                <header class="map-modal-header">
-                    <h2>Marcá el perímetro de tu campo</h2>
-                    <button type="button" class="btn-close" @click="showMapModal = false">X</button>
-                </header>
-                <p class="map-modal-hint">
-                    Tocá el ícono de polígono en el panel izquierdo del mapa, luego hacé clic
-                    en cada esquina de tu campo y cerrá el contorno al final.
+        <!-- Modal mapa -->
+        <div v-if="showMapModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" @click.self="showMapModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto flex flex-col">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-bold text-gray-900">Marcá el perímetro de tu campo</h2>
+                    <button @click="showMapModal = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
+                </div>
+                <p class="text-xs text-gray-500 px-5 py-3 bg-gray-50 border-b border-gray-100">
+                    Tocá el ícono de polígono en el panel izquierdo, hacé clic en cada esquina y cerrá el contorno al final.
                 </p>
-                <FieldMapEditor v-model="form.polygon_geojson" height="500px" />
-                <footer class="map-modal-footer">
+                <div class="p-4 flex-1">
+                    <FieldMapEditor v-model="form.polygon_geojson" height="500px" />
+                </div>
+                <div class="px-5 py-4 border-t border-gray-100 flex justify-end">
                     <button
                         type="button"
-                        class="btn-primary btn-confirm-map"
                         :disabled="!form.polygon_geojson"
                         @click="showMapModal = false"
+                        class="bg-green-800 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {{ form.polygon_geojson ? 'Confirmar ubicación' : 'Dibujá el campo primero' }}
                     </button>
-                </footer>
-            </div>
-        </div>
-        <div v-if="showSaturationTip" class="map-backdrop">
-            <div class="tip-modal">
-                <header class="map-modal-header">
-                    <h2>Antes de registrar tu campo</h2>
-                </header>
-                <div class="tip-modal-body">
-                    <p>
-                        Para que la primera recomendación de riego sea lo más precisa
-                        posible, te sugerimos hacer un <strong>riego abundante</strong>
-                        el día antes de registrar el campo: regá hasta que el suelo
-                        quede bien empapado, casi barro.
-                    </p>
-                    <p>
-                        Después, en el formulario, indicá esa fecha en
-                        <em>"Último riego completo o lluvia abundante"</em>. Eso le da
-                        al sistema un punto de partida confiable para calcular el
-                        balance de agua del campo.
-                    </p>
                 </div>
-                <footer class="map-modal-footer">
-                    <button type="button" class="btn-primary" @click="showSaturationTip = false">
-                        Entendido
-                    </button>
-                </footer>
             </div>
         </div>
+
+        <!-- Modal tip saturación -->
+        <div v-if="showSaturationTip" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl w-full max-w-sm flex flex-col">
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-bold text-gray-900">Antes de registrar tu campo</h2>
+                </div>
+                <div class="px-5 py-4 text-sm text-gray-700 leading-relaxed">
+                    <p>
+                        Para una primera recomendación precisa,
+                        <strong>regá el campo hoy o ayer hasta saturar el suelo</strong>
+                        (que quede bien empapado). Luego indicá esa fecha en el formulario como "Último riego completo".
+                    </p>
+                    <label class="flex items-center gap-2.5 mt-4 cursor-pointer">
+                        <input type="checkbox" v-model="saturationTipAccepted" class="w-4 h-4 accent-green-700" />
+                        <span class="text-sm font-semibold text-gray-700">Entendido, lo haré antes de registrar</span>
+                    </label>
+                </div>
+                <div class="px-5 py-4 border-t border-gray-100 flex justify-end">
+                    <button
+                        type="button"
+                        :disabled="!saturationTipAccepted"
+                        @click="showSaturationTip = false"
+                        class="bg-green-800 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Continuar
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
-
-<style scoped>
-.form-container { max-width: 500px; margin: 0 auto; }
-.hint {
-  background: #e3f2fd; padding: 0.75rem; border-radius: 4px;
-  font-size: 0.9rem; color: #0d47a1; margin-bottom: 1.5rem;
-}
-.field-hint {
-    font-size: 0.82rem; color: #666; margin-bottom: 0.35rem;
-}
-form { display: flex; flex-direction: column; gap: 1rem; }
-label { display: flex; flex-direction: column; gap: 0.25rem; }
-label.checkbox {
-  flex-direction: row; align-items: center; gap: 0.5rem;
-}
-input, select {
-  padding: 0.5rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px;
-}
-.actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
-.btn-primary, .btn-secondary {
-  padding: 0.75rem 1.25rem; font-size: 1rem; cursor: pointer;
-  border-radius: 4px; border: none; flex: 1;
-}
-.btn-primary { background: #2e7d32; color: white; }
-.btn-primary:hover:not(:disabled) { background: #1b5e20; }
-.btn-secondary { background: #e0e0e0; color: #333; }
-.btn-secondary:hover:not(:disabled) { background: #bdbdbd; }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-.error { color: #c00; margin: 0; }
-.map-field { display: flex; flex-direction: column; gap: 0.25rem; }
-.map-label { font-size: 1rem; }
-.btn-map {
-    padding: 0.6rem 1rem; background: #e8f5e9; color: #2e7d32;
-    border: 1px solid #2e7d32; border-radius: 4px; cursor: pointer;
-    font-size: 0.95rem; text-align: left;
-}
-.btn-map:hover { background: #c8e6c9; }
-.map-ok { font-size: 0.85rem; color: #2e7d32; font-weight: 500; }
-.map-empty { font-size: 0.85rem; color: #999; }
-
-.map-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.55);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
-}
-.map-modal {
-    background: white; border-radius: 8px;
-    width: min(820px, 96vw);
-    max-height: 92vh; overflow-y: auto;
-    display: flex; flex-direction: column;
-}
-.map-modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 1rem 1.25rem; border-bottom: 1px solid #eee;
-}
-.map-modal-header h2 { margin: 0; font-size: 1.1rem; color: #2e7d32; }
-.btn-close {
-    background: none; border: none; font-size: 1.2rem;
-    cursor: pointer; color: #666;
-}
-.map-modal-hint {
-    font-size: 0.88rem; color: #555; margin: 0;
-    padding: 0.75rem 1.25rem; background: #f9f9f9;
-    border-bottom: 1px solid #eee;
-}
-.map-modal-footer {
-    padding: 1rem 1.25rem; border-top: 1px solid #eee;
-    display: flex; justify-content: flex-end;
-}
-.btn-confirm-map {
-    padding: 0.7rem 1.5rem; font-size: 1rem;
-}
-.input-hint { color: #666; font-size: 0.8rem; }
-.tip-modal {
-    background: white; border-radius: 8px;
-    width: min(440px, 94vw);
-    display: flex; flex-direction: column;
-}
-.tip-modal-body {
-    padding: 1rem 1.25rem;
-    font-size: 0.92rem; color: #444; line-height: 1.5;
-}
-.tip-modal-body p { margin: 0 0 0.75rem; }
-.tip-modal-body p:last-child { margin-bottom: 0; }
-</style>
