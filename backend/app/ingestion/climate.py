@@ -6,7 +6,7 @@ se alineen con el calendario local.
 """
 
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 import httpx
 import requests
@@ -57,6 +57,33 @@ def _fetch_daily(params: dict) -> dict:
         raise RuntimeError("Open-Meteo devolvio respuesta vacia o sin seccion daily")
     return daily
 
+def _climate_data_from_daily(daily: dict, idx: int, target_date: date) -> ClimateData:
+    """Construye un ClimateData desde la fila `idx` del payload 'daily' de Open-Meteo.
+
+    Args:
+        daily:       seccion 'daily' del payload (la que devuelve _fetch_daily).
+        idx:         indice de la fila a extraer dentro de las listas de `daily`.
+        target_date: fecha que corresponde a esa fila.
+
+    Returns:
+        ClimateData validado para esa fecha.
+    """
+    pressure_hpa = daily["surface_pressure_mean"][idx]
+    pressure_kpa = pressure_hpa / 10.0 if pressure_hpa is not None else None
+
+    row = validate_climate_row({
+        "temp_max_c":         daily["temperature_2m_max"][idx],
+        "temp_min_c":         daily["temperature_2m_min"][idx],
+        "temp_mean_c":        daily["temperature_2m_mean"][idx],
+        "humidity_pct":       daily["relative_humidity_2m_mean"][idx],
+        "wind_speed_10m":     daily["wind_speed_10m_mean"][idx],
+        "solar_radiation_mj": daily["shortwave_radiation_sum"][idx],
+        "precipitation_mm":   daily["precipitation_sum"][idx],
+        "pressure_kpa":       pressure_kpa,
+        "eto_reference_mm":   daily["et0_fao_evapotranspiration"][idx],
+    })
+    return ClimateData(date=target_date, **row)
+
 def get_climate_data(latitude: float, longitude: float, target_date: date) -> ClimateData:
     """Obtiene los datos climaticos diarios para una fecha pasada o actual.
     Args: 
@@ -102,21 +129,7 @@ def get_climate_data(latitude: float, longitude: float, target_date: date) -> Cl
                 f"Open-Meteo no devolvio datos para la fecha {target_date} (fechas recibidas: {dates})"
             ) from e
 
-        pressure_hpa = daily["surface_pressure_mean"][idx]
-        pressure_kpa = pressure_hpa / 10.0 if pressure_hpa is not None else None
-
-        row = validate_climate_row({
-            "temp_max_c":         daily["temperature_2m_max"][idx],
-            "temp_min_c":         daily["temperature_2m_min"][idx],
-            "temp_mean_c":        daily["temperature_2m_mean"][idx],
-            "humidity_pct":       daily["relative_humidity_2m_mean"][idx],
-            "wind_speed_10m":     daily["wind_speed_10m_mean"][idx],
-            "solar_radiation_mj": daily["shortwave_radiation_sum"][idx],
-            "precipitation_mm":   daily["precipitation_sum"][idx],
-            "pressure_kpa":       pressure_kpa,
-            "eto_reference_mm":   daily["et0_fao_evapotranspiration"][idx],
-        })
-        return ClimateData(date=target_date, **row)
+        return _climate_data_from_daily(daily, idx, target_date)
 
     except RuntimeError as open_meteo_error:
         logger.warning(
@@ -128,6 +141,82 @@ def get_climate_data(latitude: float, longitude: float, target_date: date) -> Cl
             raise RuntimeError(
                 f"Ambas fuentes fallaron. Open-Meteo: {open_meteo_error}. NASA POWER: {nasa_error}"
             ) from nasa_error
+        
+def get_climate_data_for_range(
+        latitude: float, longitude: float, start_date: date, end_date: date
+) -> dict[date, ClimateData]:
+    """Obtiene datos climaticos diarios para un rango de fechas.
+    
+    Reemplaza N llamadas dia-por-dia de get_climate_data por una unica request,
+    pensado para el backfill.
+
+    Args:
+        latitude:   latitud en grados decimales.
+        longitude:  longitud en grados decimales.
+        start_date: primer dia del rango (inclusive). No futuro, no > 92 dias.
+        end_date:   ultimo dia del rango (inclusive). No futuro.
+
+    Returns:
+        dict {fecha: ClimateData}, una entrada por cada dia con datos validos.
+
+    Raises:
+        ValueError:   si las fechas son invalidas (futuras, mal ordenadas o
+                      start_date supera los 92 dias de past_days).
+        RuntimeError: si Open-Meteo falla y NASA POWER tampoco devuelve nada.
+    """
+    today = date.today()
+
+    if start_date > end_date:
+        raise ValueError(f"start_date {start_date} es posterior a end_date {end_date}")
+    if end_date > today:
+        raise ValueError(f"end_date {end_date} es futura; usar get_forecast para el pronóstico.")
+    
+    delta_days = (today - start_date).days
+    if delta_days > 92:
+        raise ValueError(f"start_date {start_date} supera los 92 dias de past_days soportados")
+    
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": ",".join(DAILY_VARS_FULL),
+        "timezone": TIMEZONE,
+        "wind_speed_unit": "ms", # FAO-56 requiere m/s, no km/h
+        "past_days": delta_days,
+        "forecast_days": 1,
+    }
+
+    try:
+        daily = _fetch_daily(params)
+    except RuntimeError as open_meteo_error:
+        logger.warning("Open-Meteo fallo para el rango %s..%s (%s); usando NASA POWER dia por dia.", start_date, end_date, open_meteo_error)
+        fallback: dict[date, ClimateData] = {}
+        current = start_date
+        while current <= end_date:
+            try:
+                fallback[current] = nasa_power.get_climate_data(latitude, longitude, current)
+            except RuntimeError as nasa_error:
+                logger.warning("NASA POWER fallo para %s: %s; dia omitido.", current, nasa_error)
+            current += timedelta(days=1)
+        if not fallback:
+            raise RuntimeError(
+                f"Ambas fuentes fallaron para el rango {start_date}..{end_date}. "
+                f"Open-Meteo: {open_meteo_error}") from open_meteo_error
+        
+        return fallback
+    
+    result: dict[date, ClimateData] = {}
+    for idx, iso_date in enumerate(daily["time"]):
+        current = date.fromisoformat(iso_date)
+        if current < start_date or current > end_date:
+            continue
+        try:
+            result[current] = _climate_data_from_daily(daily, idx, current)
+        except Exception as e:
+            logger.warning("Fila climatica invalida para %s: %s; dia omitido", current, e)
+            continue
+
+    return result
+
 
 def get_forecast(latitude: float, longitude: float, days: int = 5) -> list[ForecastDay]:
     """Obtiene el pronóstico de los próximos N días (incluyendo hoy).
@@ -181,4 +270,3 @@ def get_elevation(lat: float, lon: float) -> float | None:
     except Exception as e:
         logger.warning("No se pudo obtener elevacion: %s", e)
         return None
-    

@@ -10,10 +10,10 @@ from app.models.daily_water_balance import DailyWaterBalance
 from app.models.recommendation import Recommendation
 from app.models.enums import UrgencyLevel, ConfidenceLevel
 from app.schemas.recommendation import RecommendationResponse
-from app.ingestion.climate import get_forecast
+from app.ingestion.climate import get_forecast, get_climate_data_for_range
 from app.calculation.urgency import calculate_urgency
-from app.services.satellite import fetch_latest_s2
-from app.services.water_balance import compute_balance_for_day, save_water_balance
+from app.services.satellite import fetch_latest_s2, prefetch_s2_for_range, get_satellite_data_for_range
+from app.services.water_balance import compute_balance_for_day, save_water_balance, compute_balance_from_data
 
 
 logger = logging.getLogger(__name__)
@@ -71,29 +71,74 @@ def build_recommendation_response(
         cloud_cover_pct=cloud_cover_pct,
     )
 
-def save_retroactive_day(field: FieldModel, target_date: DateType, db: Session) -> None:
-    """Calcula balance hidrico para una fecha pasada y guarda Recommendation retroactiva.
-
-    Usado para rellenar dias faltantes entre la ultima recomendacion guardada y ayer,
-    manteniendo la continuidad del deficit acumulado.
+def run_backfill(
+    field: FieldModel, start_date: DateType, end_date: DateType, db: Session
+) -> None:
+    """Rellena los DailyWaterBalance + Recommendation faltantes entre start y end.
+    
+    Trae clima y satelite en batch y luego calcula dia por dia de forma secuencial,
+    encadenando el deficit en memoria.
+    
+    Las recomendaciones retroactivas se guardan con urgencia 'low': el calculo
+    de urgencia real solo aplica al dia en vivo.
     """
-    climate, eto, satellite_data, ndvi_date, kc_result, balance = compute_balance_for_day(
-        field, target_date, db
-    )
-    wb = save_water_balance(
-        field, target_date, db,
-        climate=climate, eto=eto, kc_result=kc_result, balance=balance,
-        satellite_data=satellite_data, ndvi_date=ndvi_date,
-    )
-    save_recommendation(
-        wb, db,
-        urgency_level=UrgencyLevel.low,
-        recommended_irrigation_mm=0.0,
-        reason="Recalculado retroactivamente (backfill)",
-        confidence=ConfidenceLevel.low,
-    )
-    db.flush()
-    logger.info("Backfill: dia %s, deficit %.2f mm", target_date, balance.water_deficit_mm)
+    if start_date > end_date:
+        return
+    
+    # Prefetch satelital: asegura que las imagenes del periodo esten en la DB
+    prefetch_s2_for_range(field, start_date, end_date, db)
+    
+    try:
+        climate_by_date = get_climate_data_for_range(field.latitude, field.longitude, start_date, end_date)
+    except (ValueError, RuntimeError) as e:
+        logger.error("Backfill campo %d: no se pudo traer clima %s..%s: %s", field.id, start_date, end_date, e)
+        return
+    satellite_by_date = get_satellite_data_for_range(field, start_date, end_date, db)
+
+    # Deficit inicial: el ultimo conocido del campo
+    previous_deficit = field.last_deficit_mm or 0.0
+
+    current = start_date
+    while current <= end_date:
+        climate = climate_by_date.get(current)
+        if climate is None:
+            logger.warning("Backfill campo %d: sin datos de clima para %s; dia omitido.", field.id, current,)
+            current += timedelta(days=1)
+            continue
+
+        satellite_data, ndvi_date = satellite_by_date.get(current, (None, None))
+
+        try: 
+            climate, eto, satellite_data, ndvi_date, kc_result, balance = compute_balance_from_data(
+                field, current,
+                climate=climate,
+                satellite_data=satellite_data,
+                ndvi_date=ndvi_date,
+                previous_deficit_mm=previous_deficit,
+            )
+            wb = save_water_balance(
+                field, current, db,
+                climate=climate, eto=eto, kc_result=kc_result, balance=balance,
+                satellite_data=satellite_data, ndvi_date=ndvi_date,
+            )
+            save_recommendation(
+                wb, db,
+                urgency_level=UrgencyLevel.low,
+                recommended_irrigation_mm=0.0,
+                reason="Recalculado retroactivamente (backfill)",
+                confidence=ConfidenceLevel.low,
+            )
+            db.flush()
+            previous_deficit = balance.water_deficit_mm
+            logger.info(
+                "Backfill campo %d: dia %s, deficit %.2f mm",
+                field.id, current, balance.water_deficit_mm,
+            )
+        except Exception as e:
+            logger.error("Error en backfill dia %s campo %d: %s", current, field.id, e)
+            # no break: el deficit no avanza, seguimos con el dia siguiente
+
+        current += timedelta(days=1)
 
 def run_recommendation_pipeline(field: FieldModel, db: Session) -> RecommendationResponse:
     """Ejecuta el pipeline completo de recomendacion para un campo activo.
@@ -107,14 +152,12 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
 
     # Backfill: rellenar dias faltantes entre last_deficit_date y ayer
     if field.last_deficit_date is not None:
-        gap_date = field.last_deficit_date + timedelta(days=1)
-        while gap_date < yesterday:
-            try:
-                save_retroactive_day(field, gap_date, db)
-            except Exception as e:
-                logger.error("Error en backfill dia %s campo %d: %s", gap_date, field.id, e)
-                break
-            gap_date += timedelta(days=1)
+        run_backfill(
+            field,
+            field.last_deficit_date + timedelta(days=1),
+            yesterday - timedelta(days=1),
+            db,
+        )
 
     # Obtener imagen S2 mas reciente
     fetch_latest_s2(field, today, db)

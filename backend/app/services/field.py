@@ -5,8 +5,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.models.field import Field as FieldModel
-from app.services.satellite import prefetch_s2_for_range
-from app.services.recommendation import save_retroactive_day, run_recommendation_pipeline
+from app.services.recommendation import run_backfill, run_recommendation_pipeline
 
 
 logger = logging.getLogger(__name__)
@@ -31,24 +30,12 @@ def initialize_water_balance(field: FieldModel, db: Session) -> None:
         logger.info("Init balance campo %d: sin backfill (Dr=0 hoy)", field.id)
         return
 
-    # Pre-traer imagenes S2 del periodo para que el backfill use Kc dinamico
-    prefetch_s2_for_range(field, saturation, today, db)
-
     # Backfill desde el dia siguiente al evento de saturacion
     field.last_deficit_mm = 0.0
     field.last_deficit_date = saturation
     db.flush()
 
-    day = saturation + timedelta(days=1)
-    while day < today:
-        try:
-            save_retroactive_day(field, day, db)
-        except Exception as e:
-            logger.warning(
-                "Backfill init campo %d dia %s fallo: %s", field.id, day, e,
-            )
-            break
-        day += timedelta(days=1)
+    run_backfill(field, saturation + timedelta(days=1), today - timedelta(days=1), db)
     db.commit()
     logger.info(
         "Init balance campo %d: backfill desde %s (deficit final %.1f mm)",
