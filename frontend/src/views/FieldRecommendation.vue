@@ -50,6 +50,8 @@ const deficitPct = computed(() => {
     return Math.min(100, Math.round((rec.value.water_deficit_mm / rec.value.taw_mm) * 100))
 })
 
+const availableWaterPct = computed(() => 100 - deficitPct.value)
+
 async function load() {
     try {
         rec.value = await getRecommendation(route.params.id)
@@ -218,11 +220,12 @@ onMounted(() => { load(); fetchAlerts(); loadFieldData() })
                     <Droplets class="w-4 h-4 text-green-700" />
                     <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Balance hídrico</p>
                 </div>
+                <p class="text-xs text-gray-400 mb-1.5">Agua disponible en el suelo</p>
                 <div class="flex items-center gap-3 mb-4">
                     <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                        <div :class="['h-full rounded-full transition-all', urgencyBarClass]" :style="{ width: deficitPct + '%' }" />
+                        <div :class="['h-full rounded-full transition-all', urgencyBarClass]" :style="{ width: availableWaterPct + '%' }" />
                     </div>
-                    <span class="text-sm font-bold text-gray-700 w-12 text-right">{{ deficitPct }}%</span>
+                    <span class="text-sm font-bold text-gray-700 w-12 text-right">{{ availableWaterPct }}%</span>
                 </div>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-3">
                     <div>

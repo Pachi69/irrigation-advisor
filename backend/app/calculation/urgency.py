@@ -24,6 +24,10 @@ _THRESHOLDS = {
     "high_to_critical": 0.75,
 }
 
+# Umbral de lluvia esperada (cruda, ponderada por probabilidad) en 3 dias
+# para considerarla "significativa" en el texto de la recomendacion
+_SIGNIFICANT_RAIN_MM = 5.0
+
 # Ks minimo antes de declarar CRITICAL sin importar el pronostico
 _KS_CRITICAL_FLOOR = 0.5
 
@@ -120,6 +124,13 @@ def calculate_urgency(
         (day.precipitation_probability_pct for day in forecast[:3]), default=0.0
     )
 
+    # Lluvia esperada para el TEXTO: lluvia cruda ponderada SOLO por probabilidad.
+    # No usa precipitacion efectiva (ese descuento es para el balance hidrico).
+    expected_rain_3d = sum(
+        day.precipitation_mm * (day.precipitation_probability_pct / 100.0)
+        for day in forecast[:3]
+    )
+
     # Bajar urgencia solo si hay alta probabilidad de lluvia suficiente
     # Si Ks < piso critico, no bajamos aunque llueva: la planta ya esta sufriendo
     if urgency == UrgencyLevel.critical and ks >= _KS_CRITICAL_FLOOR:
@@ -143,7 +154,39 @@ def calculate_urgency(
     )
 
     # Razon legible
-    reason = _build_reason(deficit_ratio, ks, weighted_rain_3d, max_prob_3d, projected_ratio)
+    reason = _build_reason(deficit_ratio, ks, expected_rain_3d, max_prob_3d, projected_ratio)
+
+    return UrgencyResult(
+        urgency_level=urgency,
+        recommended_irrigation_mm=round(recommended_mm, 1),
+        reason=reason,
+        confidence=confidence
+    )
+
+
+def urgency_from_balance(water_balance: WaterBalanceResult, kc: KcResult) -> UrgencyResult:
+    """Urgencia de un dia sin pronóstico."""
+    deficit = water_balance.water_deficit_mm
+    taw = water_balance.taw_mm
+    ks = water_balance.ks
+
+    deficit_ratio = deficit / taw if taw > 0 else 0.0
+    urgency = _urgency_from_ratio(deficit_ratio)
+    if ks < _KS_CRITICAL_FLOOR:
+        urgency = UrgencyLevel.critical
+    
+    recommended_mm = deficit if urgency != UrgencyLevel.low else 0.0
+
+    confidence = (
+        ConfidenceLevel.high
+        if kc.source == KcSource.s2_dynamic
+        else ConfidenceLevel.medium
+    )
+
+    pct = round(deficit_ratio * 100)
+    reason = f"Deficit hidrico: {pct}% de la capacidad disponible."
+    if ks < 1.0:
+        reason += f" Estres hidrico en curso (Ks={ks:.2f})."
 
     return UrgencyResult(
         urgency_level=urgency,
@@ -156,7 +199,7 @@ def calculate_urgency(
 def _build_reason(
     deficit_ratio: float,
     ks: float,
-    weighted_rain_3d: float,
+    expected_rain_3d: float,
     max_prob_3d: float,
     projected_ratio: float,
 ) -> str:
@@ -169,9 +212,9 @@ def _build_reason(
     if ks < 1.0:
         parts.append(f"Estres hidrico en curso (Ks={ks:.2f}).")
 
-    if weighted_rain_3d > 5:
+    if expected_rain_3d > _SIGNIFICANT_RAIN_MM:
         parts.append(
-            f"Lluvia esperada próximos 3 dias: {weighted_rain_3d:.1f}mm ponderados"
+            f"Lluvia esperada próximos 3 días: {expected_rain_3d:.1f} mm "
             f"(probabilidad máx. {max_prob_3d:.0f}%)."
         )
     else:

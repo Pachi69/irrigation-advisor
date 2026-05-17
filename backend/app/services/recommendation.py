@@ -11,7 +11,7 @@ from app.models.recommendation import Recommendation
 from app.models.enums import UrgencyLevel, ConfidenceLevel
 from app.schemas.recommendation import RecommendationResponse
 from app.ingestion.climate import get_forecast, get_climate_data_for_range
-from app.calculation.urgency import calculate_urgency
+from app.calculation.urgency import calculate_urgency, urgency_from_balance
 from app.services.satellite import fetch_latest_s2, prefetch_s2_for_range, get_satellite_data_for_range
 from app.services.water_balance import compute_balance_for_day, save_water_balance, compute_balance_from_data
 
@@ -121,12 +121,13 @@ def run_backfill(
                 climate=climate, eto=eto, kc_result=kc_result, balance=balance,
                 satellite_data=satellite_data, ndvi_date=ndvi_date,
             )
+            urgency = urgency_from_balance(balance, kc_result)
             save_recommendation(
                 wb, db,
-                urgency_level=UrgencyLevel.low,
-                recommended_irrigation_mm=0.0,
-                reason="Recalculado retroactivamente (backfill)",
-                confidence=ConfidenceLevel.low,
+                urgency_level=urgency.urgency_level,
+                recommended_irrigation_mm=urgency.recommended_irrigation_mm,
+                reason=urgency.reason,
+                confidence=urgency.confidence,
             )
             db.flush()
             previous_deficit = balance.water_deficit_mm
