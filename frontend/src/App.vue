@@ -2,7 +2,7 @@
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useAuth } from './stores/auth'
 import { onMounted } from 'vue'
-import { Leaf, Route, Router } from 'lucide-vue-next'
+import { Leaf } from 'lucide-vue-next'
 
 const router = useRouter()
 const { isAuthenticated, isAdmin, logout, fetchMe, user } = useAuth()

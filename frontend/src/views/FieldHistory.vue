@@ -64,7 +64,7 @@ onMounted(async () => {
                 item.urgency === 'high'     ? 'bg-orange-100 text-orange-800' :
                                                 'bg-red-100 text-red-700'
                 ]">
-                {{ URGENCY_LABEL[item.urgency] }}
+                {{ URGENCY_LABELS[item.urgency] }}
                 </span>
 
                 <span class="text-xs text-gray-400 w-16 text-center">
