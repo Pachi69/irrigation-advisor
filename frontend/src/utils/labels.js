@@ -25,7 +25,7 @@ export const STATUS_LABELS = {
     pending: 'Pendiente de aprobación', active: 'Activo', inactive: 'Inactivo',
 }
 
-export const URGENCY_LABELS = {
+export const URGENCY_LABEL = {
     low: 'Sin urgencia', medium: 'Urgencia moderada',
     high: 'Urgencia alta', critical: 'CRÍTICO — Riegue hoy',
 }

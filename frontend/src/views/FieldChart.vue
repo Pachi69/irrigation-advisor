@@ -67,9 +67,10 @@ const deficitChartData = computed(() => {
 
 const deficitOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: { legend: { position: 'top' } },
     scales: {
-        x: { ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
         y: {
             min: 0, max: 100,
             title: { display: true, text: 'Déficit (%)' },
@@ -98,9 +99,10 @@ const ndviChartData = computed(() => {
 
 const ndviOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: { legend: { position: 'top' } },
     scales: {
-        x: { ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
         y: {
             min: 0, max: 1,
             title: { display: true, text: 'NDVI' },
@@ -128,14 +130,19 @@ const ndviOptions = {
         <div v-else-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
         <div v-else-if="!hasData" class="text-center py-12 text-gray-400 text-sm">Sin datos suficientes para mostrar el gráfico.</div>
 
-        <div v-else class="space-y-4">
+        <div v-else class="space-y-6">
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                 <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Déficit hídrico</p>
-                <Line :data="deficitChartData" :options="deficitOptions" />
+                <div class="h-64 lg:h-96">
+                    <Line :data="deficitChartData" :options="deficitOptions" />
+                </div>
             </div>
             <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                 <p class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">NDVI — Vigor del cultivo</p>
-                <Line :data="ndviChartData" :options="ndviOptions" />
+                <div class="h-64 lg:h-96">
+                    <Line :data="ndviChartData" :options="ndviOptions" />
+                </div>
+                
             </div>
         </div>
 

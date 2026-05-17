@@ -5,7 +5,7 @@ import { getRecommendation, getFieldAlerts, getFieldSatelliteImage, getFieldById
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ArrowLeft, Clock, AlertTriangle, Droplets, Leaf, Satellite } from 'lucide-vue-next'
-import { ALERT_LABELS, URGENCY_LABELS, STAGE_LABELS, KC_SOURCE_LABELS, CONFIDENCE_LABELS } from '../utils/labels'
+import { ALERT_LABELS, URGENCY_LABEL, STAGE_LABELS, KC_SOURCE_LABELS, CONFIDENCE_LABELS } from '../utils/labels'
 
 const router = useRouter()
 const route = useRoute()
@@ -53,6 +53,7 @@ const deficitPct = computed(() => {
 async function load() {
     try {
         rec.value = await getRecommendation(route.params.id)
+        loadSatelliteImage()
     } catch (err) {
         error.value = err.response?.data?.detail || "No se pudo obtener la recomendacion"
     } finally {
@@ -105,6 +106,7 @@ const fieldData = ref(null)
 async function loadFieldData() {
     try {
         fieldData.value = await getFieldById(route.params.id)
+
     } catch {
     }
 }
@@ -138,7 +140,7 @@ watch(overlayOpacity, (val) => { overlayLayer?.setOpacity(val) })
 
 onBeforeUnmount(() => { map?.remove(); map = null; overlayLayer = null })
 
-onMounted(() => { load(); fetchAlerts(); loadSatelliteImage(); loadFieldData() })
+onMounted(() => { load(); fetchAlerts(); loadFieldData() })
 </script>
 
 <template>
@@ -170,7 +172,7 @@ onMounted(() => { load(); fetchAlerts(); loadSatelliteImage(); loadFieldData() }
             <!-- Tarjeta de urgencia -->
             <div :class="['rounded-2xl p-5 text-center shadow-sm', urgencyCardClass]">
                 <p class="text-white text-xs font-bold uppercase tracking-widest opacity-80 mb-1">
-                    {{ URGENCY_LABELS[rec.urgency_level] }}
+                    {{ URGENCY_LABEL[rec.urgency_level] }}
                 </p>
                 <p class="text-white font-black mb-1" style="font-size: 3.5rem; line-height: 1.1">
                     {{ rec.recommended_irrigation_mm > 0 ? `${rec.recommended_irrigation_mm} mm` : '0 mm' }}

@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getRecommendationHistory } from '../services/fields';
 import { ArrowLeft, BarChart2 } from 'lucide-vue-next'
-import { URGENCY_LABELS } from '../utils/labels'
+import { URGENCY_LABEL } from '../utils/labels'
 
 const route = useRoute()    
 const router = useRouter()
@@ -64,7 +64,7 @@ onMounted(async () => {
                 item.urgency === 'high'     ? 'bg-orange-100 text-orange-800' :
                                                 'bg-red-100 text-red-700'
                 ]">
-                {{ URGENCY_LABELS[item.urgency] }}
+                {{ URGENCY_LABEL[item.urgency] }}
                 </span>
 
                 <span class="text-xs text-gray-400 w-16 text-center">
