@@ -53,15 +53,35 @@ _KC_PARAMS: dict[CropType, _CropKcParams] = {
     ),
 }
 
+# Inicio tipico de temporada (mes, dia) por cultivo - brotacion en Mendoza
+_SEASON_START: dict[CropType, tuple[int, int]] = {
+    CropType.vine: (9, 1),
+    CropType.peach: (9, 1),
+}
+
+# Kc durante el reposo (FAO-56: tras caida de hoja, suelo desnudo)
+_DORMANT_KC = 0.20
+
+
+def _season_start(crop_type: CropType, current_date: date) -> date:
+    """Inicio de la temporada de crecimiento mas reciente anterior o igual a current_date."""
+    month, day = _SEASON_START[crop_type]
+    start = date(current_date.year, month, day)
+    if start > current_date:
+        start = date(current_date.year - 1, month, day)
+    return start
+
 def _stage_from_days(days: int, p: _CropKcParams) -> PhenologicalStage:
-    """Determina la etapa fenologica segun dias desde siembra/brotacion."""
+    """Determina la etapa fenologica segun dias desde la brotacion."""
     if days < p.l_ini:
         return PhenologicalStage.initial
     if days < p.l_ini + p.l_dev:
         return PhenologicalStage.development
     if days < p.l_ini + p.l_dev + p.l_mid:
         return PhenologicalStage.mid
-    return PhenologicalStage.late
+    if days < p.l_ini + p.l_dev + p.l_mid + p.l_late:
+        return PhenologicalStage.late
+    return PhenologicalStage.dormancy
 
 
 def _kc_tabular(days: int, p: _CropKcParams) -> tuple[float, PhenologicalStage]:
@@ -102,28 +122,25 @@ def _kc_from_ndvi(ndvi: float, days: int, p: _CropKcParams) -> tuple[float, Phen
 
 def calculate_kc(
     crop_type: CropType,
-    planting_date: date,
     current_date: date,
     satellite_data: SatelliteData | None,
 ) -> KcResult:
     """Calcula el coeficiente de cultivo (Kc) para la fecha indicada.
-    Prioriza NDVI satelital si esta disponible; si no, usa Kc tabular FAO-56.
-    Args:
-        crop_type:      Tipo de cultivo del campo.
-        planting_date:  Fecha de siembra o brotación.
-        current_date:   Fecha para la que se calcula el Kc.
-        satellite_data: Datos satelitales recientes (puede ser None).
 
-    Returns:
-        KcResult con kc, source y phenological_stage.
-
-    Raises:
-        ValueError: si el crop_type no tiene parámetros definidos."""
+    La temporada se ancla a una fecha tipica regional de brotacion por cultivo
+    y se reancla cada año. En reposo se usa Kc tabular bajo: el NDVI de una
+    planta sin hojas no representa al cultivo.
+    """
     params = _KC_PARAMS.get(crop_type)
     if params is None:
         raise ValueError(f"No hay parametros Kc definidos para el cultivo: {crop_type}")
     
-    days = max((current_date - planting_date).days, 0)
+    days = (current_date - _season_start(crop_type, current_date)).days
+    stage = _stage_from_days(days, params)
+
+    # Reposo: Kc tabular bajo, el NDVI no representa al cultivo
+    if stage is PhenologicalStage.dormancy:
+        return KcResult(kc=_DORMANT_KC, source=KcSource.tabular, phenological_stage=stage)
 
     # Estrategia 1: Kc dinamico desde NDVI Satelital
     if satellite_data is not None and satellite_data.ndvi is not None:

@@ -24,7 +24,6 @@ class Field(Base):
     last_deficit_mm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_deficit_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     has_hail_net: Mapped[bool] = mapped_column(Boolean, default=False)
-    planting_date: Mapped[date] = mapped_column(Date, nullable=False)
     last_saturation_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

@@ -18,7 +18,7 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 ### FAO-56 y métodos de cálculo
 - **FAO Paper 56 (online):** https://www.fao.org/4/x0490e/x0490e00.htm
 - **FAO — Precipitación efectiva:** https://www.fao.org/4/x5560e/x5560e03.htm
-- **FAO — Coeficientes de cultivo Kc:** Capítulo 6 del FAO Paper 56
+- **FAO — Coeficientes de cultivo Kc, Tabla 11 (duración de etapas de desarrollo) y Tabla 12 (valores de Kc por cultivo):** Capítulo 6 — https://www.fao.org/4/x0490e/x0490e0b.htm
 
 ### Planet Labs y procesamiento satelital
 - **Planet Labs — Documentación general API:** https://developers.planet.com/docs/
@@ -42,6 +42,14 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 - **Riego a manto en San Rafael (80%):** https://diariosanrafael.com.ar/el-80-de-las-hectareas-productivas-de-san-rafael-mantienen-el-sistema-de-riego-a-manto/
 - **Pequeños productores frutícolas San Rafael:** https://ri.unsam.edu.ar/bitstream/123456789/866/1/TMAG_IDAES_2016_CFN.pdf
 - **Cluster ciruela industria Mendoza:** https://www.argentina.gob.ar/agricultura/prosap/cluster-de-ciruela-industria-de-mendoza
+
+### Fenología de cultivos en Mendoza
+- **FAO-56 Cap. 6 — Tabla 11 (duración de etapas) y Tabla 12 (Kc):** https://www.fao.org/4/x0490e/x0490e0b.htm
+- **Caracterización fenológica de variedades de durazno para industria en Mendoza:** https://quatrebcn.es/caracterizacion-fenologica-de-variedades-de-durazno-para-industria-en-mendoza
+- **Durazno Don Carlos INTA (fechas de floración y brotación):** https://www.argentina.gob.ar/inta/relaciones-estrategicas-del-inta/durazno-don-carlos-inta
+- **Fenología de cultivares de vid — UNCuyo, Luján de Cuyo:** https://repositoriosdigitales.mincyt.gob.ar/vufind/Record/BDUNCU_49cf8f4b373ce570bc6ad1ec8c88cc15
+- **Manual de Fenología — Gobierno de Mendoza:** https://mza-dicaws-portal-uploads-media-prod.s3.amazonaws.com/informacion-oficial/uploads/sites/17/2025/09/manualdefenologia.pdf
+- **Fenología de Vid — IDR Mendoza:** https://www.idr.org.ar/fenologia-de-vid/
 
 ### Parámetros de suelo
 - **Soil Water Parameters — Cornell:** https://nrcca.cals.cornell.edu/soil/CA2/CA0212.1-3.php
@@ -77,3 +85,16 @@ Fuente de datos de textura del suelo (arena/limo/arcilla en g/kg a 250m de resol
 > Calera, A., Campos, I., Osann, A., D'Urso, G., Menenti, M. (2017). *Remote Sensing for Crop Water Management: From ET Modelling to Services for the End Users.* Sensors, 17(5), 1104. https://doi.org/10.3390/s17051104
 
 Establece el marco de trabajo de combinar datos de teledetección con el balance hídrico FAO-56 para scheduling operativo de riego — precisamente el enfoque de este sistema. Valida el uso de datos de suelo en grilla como entrada estándar para derivar θ_fc y θ_wp.
+
+---
+
+## Decisiones del modelo y su respaldo
+
+### Anclaje de la temporada de cultivo y etapas fenológicas
+
+El sistema no solicita al productor la fecha de brotación. Para cada cultivo perenne (vid, durazno) la temporada se ancla a una fecha típica regional de brotación y se reancla automáticamente cada año; al superar la duración total de las cuatro etapas, el cultivo entra en una etapa de reposo invernal.
+
+- **Duración de las etapas (FAO-56, Tabla 11):** vid según la fila "wine, Mid Latitudes" → 30 / 60 / 40 / 80 días (inicial / desarrollo / media / tardía); durazno según "stone fruit, Low Latitudes" → 20 / 70 / 120 / 60 días.
+- **Valores de Kc (FAO-56, Tabla 12):** vid wine → Kc 0,30 / 0,70 / 0,45.
+- **Inicio de temporada — 1 de septiembre para vid y durazno.** La floración del durazno para industria en Mendoza ocurre entre el 1 y el 15 de septiembre; la variedad Don Carlos INTA registra inicio de brotación el 30/08. La brotación de la vid en Mendoza ocurre en septiembre. FAO-56 indica "abril" para la vid, valor del Hemisferio Norte equivalente a octubre en el Sur; se adopta septiembre por corresponder a la fenología local y porque hace que el ciclo de 210 días cierre en marzo/abril, coincidente con la cosecha mendocina.
+- **Reposo — Kc = 0,20.** FAO-56 indica que tras la caída de hoja el Kc de un cultivo deciduo es ≈ 0,20 con suelo desnudo y seco (0,50–0,80 con cobertura activa).

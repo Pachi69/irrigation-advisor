@@ -40,7 +40,6 @@ def compute_balance_from_data(
 
     kc_result = calculate_kc(
         crop_type=field.crop_type,
-        planting_date=field.planting_date,
         current_date=target_date,
         satellite_data=satellite_data,
     )

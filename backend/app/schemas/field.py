@@ -10,7 +10,6 @@ class FieldCreate(BaseModel):
     crop_type: CropType
     soil_type: SoilType = SoilType.loam
     has_hail_net: bool = False
-    planting_date: date
     last_saturation_date: date | None = None
     polygon_geojson: dict | None = None
 
@@ -22,7 +21,6 @@ class FieldPublic(BaseModel):
     area_ha: float | None = None
     soil_type: SoilType
     has_hail_net: bool
-    planting_date: date
     last_saturation_date: date | None = None
     status: FieldStatus
     polygon_geojson: dict | None = None
@@ -41,7 +39,6 @@ class FieldUpdate(BaseModel):
     area_ha: float | None = Field(default=None, gt=0, le=10000)
     soil_type: SoilType | None = None
     has_hail_net: bool | None = None
-    planting_date: date | None = None
     last_saturation_date: date | None = None
 
 

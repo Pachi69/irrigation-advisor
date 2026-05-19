@@ -44,7 +44,6 @@ onMounted(async () => {
             crop_type: field.crop_type,
             soil_type: field.soil_type,
             has_hail_net: field.has_hail_net,
-            planting_date: field.planting_date,
             last_saturation_date: field.last_saturation_date,
         }
     } catch {
@@ -119,15 +118,6 @@ async function confirmDelete() {
             >
                 <option v-for="o in SOIL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
-        </div>
-
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de brotación</label>
-            <input
-                v-model="form.planting_date"
-                type="date" required :disabled="saving"
-                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
-            />
         </div>
 
         <div>

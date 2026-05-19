@@ -28,7 +28,7 @@ export const URGENCY_LABEL = {
 
 export const STAGE_LABELS = {
     initial: 'Etapa inicial', development: 'Desarrollo',
-    mid: 'Etapa media', late: 'Etapa tardía',
+    mid: 'Etapa media', late: 'Etapa tardía', dormancy: 'Reposo',
 }
 
 export const KC_SOURCE_LABELS = {

@@ -102,10 +102,6 @@ onMounted(loadPending)
                             </p>
                         </div>
                         <div>
-                            <p class="text-xs text-gray-400">Siembra / brotación</p>
-                            <p class="text-sm font-semibold text-gray-800">{{ field.planting_date }}</p>
-                        </div>
-                        <div>
                             <p class="text-xs text-gray-400">Malla antigranizo</p>
                             <p class="text-sm font-semibold text-gray-800">{{ field.has_hail_net ? 'Sí' : 'No' }}</p>
                         </div>

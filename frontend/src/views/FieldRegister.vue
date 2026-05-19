@@ -12,7 +12,6 @@ const form = ref({
     name: '',
     crop_type: 'vine',
     has_hail_net: false,
-    planting_date: '',
     last_saturation_date: new Date().toISOString().slice(0, 10),
     polygon_geojson: null,
 })
@@ -98,15 +97,6 @@ const todayStr = new Date().toISOString().slice(0, 10)
             </div>
 
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de siembra o brotación</label>
-                <input
-                    v-model="form.planting_date"
-                    type="date" required :disabled="loading"
-                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
-                />
-            </div>
-
-            <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1.5">Último riego completo o lluvia abundante</label>
                 <input
                     v-model="form.last_saturation_date"
@@ -181,8 +171,8 @@ const todayStr = new Date().toISOString().slice(0, 10)
                 <div class="px-5 py-4 text-sm text-gray-700 leading-relaxed">
                     <p>
                         Para una primera recomendación precisa,
-                        <strong>regá el campo hoy o ayer hasta saturar el suelo</strong>
-                        (que quede bien empapado). Luego indicá esa fecha en el formulario como "Último riego completo".
+                        <strong>regá el campo una vez hasta saturar el suelo</strong>
+                        (que quede bien empapado).
                     </p>
                     <label class="flex items-center gap-2.5 mt-4 cursor-pointer">
                         <input type="checkbox" v-model="saturationTipAccepted" class="w-4 h-4 accent-green-700" />

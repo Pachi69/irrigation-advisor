@@ -9,6 +9,7 @@ class PhenologicalStage(enum.Enum):
     development = "development"
     mid = "mid"
     late = "late"
+    dormancy = "dormancy"
 
 class UrgencyLevel(enum.Enum):
     low = "low"
