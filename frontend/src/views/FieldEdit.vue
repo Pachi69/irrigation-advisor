@@ -14,7 +14,6 @@ const saving = ref(false)
 const CROP_OPTIONS = [
     {value: 'vine', label: 'Vid'},
     {value: 'peach', label: 'Durazno'},
-    {value: 'alfalfa', label: 'Alfalfa'},
 ]
 
 const SOIL_OPTIONS = [
@@ -32,12 +31,6 @@ const SOIL_OPTIONS = [
     { value: 'clay',            label: 'Arcilloso' },
 ]
 
-const IRRIGATION_OPTIONS = [
-    {value: 'drip', label: 'Goteo'},
-    {value: 'sprinkler', label: 'Aspersión'},
-    {value: 'flood', label: 'Surco'},
-]
-
 const todayStr = new Date().toISOString().slice(0, 10)
 
 onMounted(async () => {
@@ -46,7 +39,6 @@ onMounted(async () => {
         form.value = {
             name: field.name,
             crop_type: field.crop_type,
-            irrigation_type: field.irrigation_type,
             soil_type: field.soil_type,
             has_hail_net: field.has_hail_net,
             planting_date: field.planting_date,
@@ -111,16 +103,6 @@ async function handleSubmit() {
                 class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
             >
                 <option v-for="o in SOIL_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
-            </select>
-        </div>
-
-        <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de riego</label>
-            <select
-                v-model="form.irrigation_type" required :disabled="saving"
-                class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
-            >
-                <option v-for="o in IRRIGATION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
         </div>
 

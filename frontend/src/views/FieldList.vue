@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { listMyFields } from '../services/fields'
 import { Plus, ChevronRight, Clock} from 'lucide-vue-next'
-import { CROP_LABELS, SOIL_LABELS, IRRIGATION_LABELS, STATUS_LABELS } from '../utils/labels'
+import { CROP_LABELS, SOIL_LABELS, STATUS_LABELS } from '../utils/labels'
 
 const fields = ref([])
 const loading = ref(true)
@@ -108,10 +108,6 @@ const hasPending = computed(() => fields.value.some(f=> f.status === 'pending'))
                         <div>
                             <p class="text-xs text-gray-400">Cultivos</p>
                             <p class="text-sm font-semibold text-gray-800"> {{ CROP_LABELS[field.crop_type] }}</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-400">Riego</p>
-                            <p class="text-sm font-semibold text-gray-800">{{ IRRIGATION_LABELS[field.irrigation_type] }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-400">Superficie</p>

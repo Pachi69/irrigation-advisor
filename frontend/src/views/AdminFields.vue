@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { listPendingFields, approveField } from '../services/admin'
 import FieldMapEditor from '../components/FieldMapEditor.vue'
 import { RefreshCw } from 'lucide-vue-next'
-import { CROP_LABELS, SOIL_LABELS, IRRIGATION_LABELS } from '../utils/labels'
+import { CROP_LABELS } from '../utils/labels'
 
 
 const fields = ref([])
@@ -94,10 +94,6 @@ onMounted(loadPending)
                         <div>
                             <p class="text-xs text-gray-400">Cultivo</p>
                             <p class="text-sm font-semibold text-gray-800">{{ CROP_LABELS[field.crop_type] }}</p>
-                        </div>
-                        <div>
-                            <p class="text-xs text-gray-400">Riego</p>
-                            <p class="text-sm font-semibold text-gray-800">{{ IRRIGATION_LABELS[field.irrigation_type] }}</p>
                         </div>
                         <div>
                             <p class="text-xs text-gray-400">Superficie</p>

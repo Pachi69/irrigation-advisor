@@ -24,13 +24,6 @@ class ConfidenceLevel(enum.Enum):
 class CropType(enum.Enum):
     vine = "vine"
     peach = "peach"
-    alfalfa = "alfalfa"
-
-
-class IrrigationType(enum.Enum):
-    drip = "drip"
-    sprinkler = "sprinkler"
-    flood = "flood"
 
 
 class SoilType(enum.Enum):

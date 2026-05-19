@@ -11,7 +11,6 @@ const router = useRouter()
 const form = ref({
     name: '',
     crop_type: 'vine',
-    irrigation_type: 'drip',
     has_hail_net: false,
     planting_date: '',
     last_saturation_date: new Date().toISOString().slice(0, 10),
@@ -78,19 +77,6 @@ const todayStr = new Date().toISOString().slice(0, 10)
                 >
                     <option value="vine">Vid</option>
                     <option value="peach">Durazno</option>
-                    <option value="alfalfa">Alfalfa</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de riego</label>
-                <select
-                    v-model="form.irrigation_type" required :disabled="loading"
-                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
-                >
-                    <option value="drip">Goteo</option>
-                    <option value="sprinkler">Aspersión</option>
-                    <option value="flood">Surco</option>
                 </select>
             </div>
 

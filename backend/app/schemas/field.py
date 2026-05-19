@@ -2,13 +2,12 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.enums import CropType, IrrigationType, SoilType, FieldStatus
+from app.models.enums import CropType, SoilType, FieldStatus
 
 class FieldCreate(BaseModel):
     """Lo que el productor envía al registrar un campo"""
     name: str = Field(min_length=2, max_length=255)
     crop_type: CropType
-    irrigation_type: IrrigationType
     soil_type: SoilType = SoilType.loam
     has_hail_net: bool = False
     planting_date: date
@@ -21,7 +20,6 @@ class FieldPublic(BaseModel):
     name: str
     crop_type: CropType
     area_ha: float | None = None
-    irrigation_type: IrrigationType
     soil_type: SoilType
     has_hail_net: bool
     planting_date: date

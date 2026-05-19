@@ -62,7 +62,6 @@ def create_field(
         name=data.name,
         crop_type=data.crop_type,
         area_ha=area_ha,
-        irrigation_type=data.irrigation_type,
         soil_type=soil_type,
         has_hail_net=data.has_hail_net,
         planting_date=data.planting_date,

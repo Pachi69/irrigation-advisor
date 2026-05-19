@@ -1,5 +1,5 @@
 from app.models.enums import (
-    CropType, IrrigationType, SoilType, FieldStatus,
+    CropType, SoilType, FieldStatus,
     KcSource, PhenologicalStage, UrgencyLevel, ConfidenceLevel,
 )
 from app.models.user import User, UserRole

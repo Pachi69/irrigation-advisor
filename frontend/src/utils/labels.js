@@ -1,5 +1,5 @@
 export const CROP_LABELS = {
-    vine: 'Vid', peach: 'Durazno', alfalfa: 'Alfalfa',
+    vine: 'Vid', peach: 'Durazno',
 }
 
 export const SOIL_LABELS = {
@@ -15,10 +15,6 @@ export const SOIL_LABELS = {
     sandy_clay:      'Arcillo arenoso',
     silty_clay:      'Arcillo limoso',
     clay:            'Arcilloso',
-}
-
-export const IRRIGATION_LABELS = {
-    drip: 'Goteo', sprinkler: 'Aspersión', flood: 'Surco',
 }
 
 export const STATUS_LABELS = {

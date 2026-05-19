@@ -18,9 +18,8 @@ erDiagram
         int id PK
         int usuario_id FK
         string nombre
-        enum cultivo "vid | durazno | alfalfa"
+        enum cultivo "vid | durazno"
         float superficie_ha
-        enum tipo_riego "goteo | aspersion | surco"
         enum tipo_suelo "arenoso | franco | arcilloso"
         enum estado "pendiente | activo | inactivo"
         json poligono_geojson

@@ -20,7 +20,6 @@ from app.models.enums import CropType
 CROP_WATER_PARAMS: dict[CropType, dict[str, float]] = {
     CropType.vine: {"root_depth_m": 1.5, "depletion_factor_p": 0.45},
     CropType.peach: {"root_depth_m": 1.5, "depletion_factor_p": 0.50},
-    CropType.alfalfa: {"root_depth_m": 1.5, "depletion_factor_p": 0.55},
 }
 
 def get_root_depth(crop_type: CropType) -> float:

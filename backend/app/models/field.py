@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, Date, DateTime, Enum, Float, ForeignKey, String,
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.enums import CropType, IrrigationType, SoilType, FieldStatus
+from app.models.enums import CropType, SoilType, FieldStatus
 
 class Field(Base):
     __tablename__ = "fields"
@@ -15,7 +15,6 @@ class Field(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     crop_type: Mapped[CropType] = mapped_column(Enum(CropType), nullable=False)
     area_ha: Mapped[Optional[float]] = mapped_column(Float, nullable=False)
-    irrigation_type: Mapped[IrrigationType] = mapped_column(Enum(IrrigationType), nullable=False)
     soil_type: Mapped[SoilType] = mapped_column(Enum(SoilType), nullable=False)
     status: Mapped[FieldStatus] = mapped_column(Enum(FieldStatus), nullable=False, default=FieldStatus.pending)
     polygon_geojson: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)

@@ -51,10 +51,6 @@ _KC_PARAMS: dict[CropType, _CropKcParams] = {
         kc_ini=0.45, kc_mid=1.15, kc_end=0.75,
         l_ini=20, l_dev=70, l_mid=120, l_late=60,
     ),
-    CropType.alfalfa: _CropKcParams(
-        kc_ini=0.40, kc_mid=1.05, kc_end=0.90,
-        l_ini=10, l_dev=30, l_mid=35, l_late=10,
-    ),
 }
 
 def _stage_from_days(days: int, p: _CropKcParams) -> PhenologicalStage:
