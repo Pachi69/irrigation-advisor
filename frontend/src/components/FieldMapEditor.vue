@@ -22,10 +22,28 @@ function emitCurrent() {
 onMounted(() => {
     map = L.map(mapRef.value).setView([-34.617, -68.330], 13)
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Imagery © <a href="https://www.esri.com/">Esri</a>',
+        maxZoom: 20,
+        maxNativeZoom: 17,
+    })
+    const terreno = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-    }).addTo(map)
+        maxZoom: 20,
+        maxNativeZoom: 19,
+    })
+    const rutas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 20,
+        maxNativeZoom: 16,
+    })
+
+    satelite.addTo(map)
+    rutas.addTo(map)
+
+    L.control.layers(
+        { 'Satélite': satelite, 'Terreno': terreno },
+        { 'Rutas y calles': rutas },
+    ).addTo(map)
 
     map.pm.addControls({
         position: 'topleft',
