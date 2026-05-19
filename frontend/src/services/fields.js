@@ -44,3 +44,7 @@ export async function getFieldSatelliteImage(fieldId) {
     const resp = await api.get(`/fields/${fieldId}/satellite-image`, { responseType: 'blob' })
     return resp.data
 }
+
+export async function deleteField(fieldId) {
+    await api.delete(`/fields/${fieldId}`)
+}

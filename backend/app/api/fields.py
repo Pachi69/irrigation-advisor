@@ -173,3 +173,10 @@ def get_field_chart_data(
     ]
 
     return FieldChartData(deficit=deficit_series, ndvi=ndvi_series, raw_threshold_pct=round(get_depletion_factor(field.crop_type) * 100, 1),)
+
+
+@router.delete("/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_field(field: FieldModel = Depends(owned_field), db: Session = Depends(get_db)):
+    """Elimina un campo del usuario autenticado y sus registros asociados (cascada)."""
+    db.delete(field)
+    db.commit()

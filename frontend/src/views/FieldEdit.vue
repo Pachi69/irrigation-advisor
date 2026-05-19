@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getFieldById, updateField } from '../services/fields'
+import { getFieldById, updateField, deleteField } from '../services/fields'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,6 +10,9 @@ const form = ref(null)
 const loading = ref(true)
 const error = ref('')
 const saving = ref(false)
+const showDeleteModal = ref(false)
+const deleting = ref(false)
+const deleteError = ref('')
 
 const CROP_OPTIONS = [
     {value: 'vine', label: 'Vid'},
@@ -66,6 +69,18 @@ async function handleSubmit() {
     }
 }
 
+async function confirmDelete() {
+    deleting.value = true
+    deleteError.value = ''
+    try {
+        await deleteField(route.params.id)
+        router.push('/fields')
+    } catch {
+        deleteError.value = 'No se pudo eliminar el campo, Intenta nuevamente'
+        deleting.value = false
+    }
+}
+
 </script>
 
 <template>
@@ -107,7 +122,7 @@ async function handleSubmit() {
         </div>
 
         <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de siembra o brotación</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fecha de brotación</label>
             <input
                 v-model="form.planting_date"
                 type="date" required :disabled="saving"
@@ -153,6 +168,43 @@ async function handleSubmit() {
             </button>
         </div>
 
+        <div class="pt-3 mt-3 border-t border-gray-200">
+            <button
+                type="button" @click="deleteError = ''; showDeleteModal = true" :disabled="saving"
+                class="text-sm font-semibold text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
+            >
+                Eliminar mi campo
+            </button>
+        </div>
+
         </form>
+
+        <div v-if="showDeleteModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" @click.self="showDeleteModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-sm flex flex-col">
+                <div class="px-5 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-bold text-gray-900">Eliminar campo</h2>
+                </div>
+                <div class="px-5 py-4 text-sm text-gray-700 leading-relaxed">
+                    ¿Seguro que querés eliminar <strong>{{ form.name }}</strong>? Se borrarán también su historial de recomendaciones y datos asociados. Esta acción no se puede deshacer.
+                    <div v-if="deleteError" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl mt-3">
+                        {{ deleteError }}
+                    </div>
+                </div>
+                <div class="px-5 py-4 border-t border-gray-100 flex gap-3 justify-end">
+                    <button
+                        type="button" @click="showDeleteModal = false" :disabled="deleting"
+                        class="border-2 border-gray-200 text-gray-600 font-bold py-2.5 px-4 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="button" @click="confirmDelete" :disabled="deleting"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
