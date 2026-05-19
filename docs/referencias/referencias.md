@@ -43,6 +43,11 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 - **Pequeños productores frutícolas San Rafael:** https://ri.unsam.edu.ar/bitstream/123456789/866/1/TMAG_IDAES_2016_CFN.pdf
 - **Cluster ciruela industria Mendoza:** https://www.argentina.gob.ar/agricultura/prosap/cluster-de-ciruela-industria-de-mendoza
 
+### Manejo del suelo en frutales y viñedos de Mendoza
+- **Manejo de suelo mediante coberturas vegetales establecidas — INTA EEA Mendoza:** https://www.researchgate.net/publication/327793143_MANEJO_DE_SUELO_MEDIANTE_DIFERENTES_COBERTURAS_VEGETALES_ESTABLECIDAS_SU_INFLUENCIA_EN_EL_MICROCLIMA_DE_VINEDOS_BAJO_RIEGO
+- **Evaluación y elección de especies de coberturas vegetales en viñedos bajo riego de Mendoza:** https://www.researchgate.net/publication/328146017_Evaluacion_y_eleccion_de_diferentes_especies_de_coberturas_vegetales_en_vinedos_bajo_riego_de_Mendoza
+- **Uso del agua en agricultura, sistemas de riego — Aquabook (Departamento General de Irrigación, Mendoza):** https://aquabook.irrigacion.gov.ar/296_0
+
 ### Fenología de cultivos en Mendoza
 - **FAO-56 Cap. 6 — Tabla 11 (duración de etapas) y Tabla 12 (Kc):** https://www.fao.org/4/x0490e/x0490e0b.htm
 - **Caracterización fenológica de variedades de durazno para industria en Mendoza:** https://quatrebcn.es/caracterizacion-fenologica-de-variedades-de-durazno-para-industria-en-mendoza
@@ -98,3 +103,10 @@ El sistema no solicita al productor la fecha de brotación. Para cada cultivo pe
 - **Valores de Kc (FAO-56, Tabla 12):** vid wine → Kc 0,30 / 0,70 / 0,45.
 - **Inicio de temporada — 1 de septiembre para vid y durazno.** La floración del durazno para industria en Mendoza ocurre entre el 1 y el 15 de septiembre; la variedad Don Carlos INTA registra inicio de brotación el 30/08. La brotación de la vid en Mendoza ocurre en septiembre. FAO-56 indica "abril" para la vid, valor del Hemisferio Norte equivalente a octubre en el Sur; se adopta septiembre por corresponder a la fenología local y porque hace que el ciclo de 210 días cierre en marzo/abril, coincidente con la cosecha mendocina.
 - **Reposo — Kc = 0,20.** FAO-56 indica que tras la caída de hoja el Kc de un cultivo deciduo es ≈ 0,20 con suelo desnudo y seco (0,50–0,80 con cobertura activa).
+
+### Kc del durazno
+
+Se adoptan los valores de FAO-56 Tabla 12 para la fila **"stone fruit, no ground cover, killing frost"**: Kc ini = 0,45, Kc mid = 0,90, Kc end = 0,65. Reemplaza la combinación previa (0,45 / 1,15 / 0,75) que mezclaba valores de filas distintas de la misma tabla.
+
+- **Killing frost:** Mendoza tiene heladas fuertes en invierno, por lo que la columna "with killing frost" de la Tabla 12 aplica directamente.
+- **No ground cover:** el manejo tradicional del suelo en frutales y viñedos de Mendoza es por **labranza** (rotocultivado, arada, rastreada), con el interfilar de tierra desnuda. Las coberturas vegetales activas aparecen en la bibliografía regional como una alternativa estudiada y promovida por INTA, no como la práctica predominante. Además, el riego por manto que predomina en el sur de Mendoza es consistente con suelo desnudo: una cobertura activa compite con el agua del riego a manto. Fuentes en "Manejo del suelo en frutales y viñedos de Mendoza" más arriba.

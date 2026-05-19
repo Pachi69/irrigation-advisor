@@ -48,7 +48,7 @@ _KC_PARAMS: dict[CropType, _CropKcParams] = {
         l_ini=30, l_dev=60, l_mid=40, l_late=80,
     ),
     CropType.peach: _CropKcParams(
-        kc_ini=0.45, kc_mid=1.15, kc_end=0.75,
+        kc_ini=0.45, kc_mid=0.90, kc_end=0.65,
         l_ini=20, l_dev=70, l_mid=120, l_late=60,
     ),
 }
