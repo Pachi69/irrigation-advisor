@@ -16,6 +16,7 @@ from __future__ import annotations
 from app.models.enums import ConfidenceLevel, KcSource, UrgencyLevel
 from app.schemas.calculation import KcResult, WaterBalanceResult, UrgencyResult
 from app.schemas.climate import ForecastDay
+from app.calculation.water_balance import effective_precipitation
 
 # Umbrales de deficit relativo (Dr / TAW) para urgencia base
 _THRESHOLDS = {
@@ -52,13 +53,6 @@ def _urgency_from_ratio(ratio: float) -> UrgencyLevel:
     return UrgencyLevel.critical
 
 
-def _effective_precipitation(precipitation_mm: float) -> float:
-    """Fraccion de lluvia que infiltra (FAO: P<5mm → 0; P≥5mm → 0.8P − 2)"""
-    if precipitation_mm < 5.0:
-        return 0.0
-    return 0.8 * precipitation_mm - 2.0
-
-
 def _project_deficit(
     current_deficit_mm: float,
     taw_mm: float,
@@ -72,7 +66,7 @@ def _project_deficit(
     for day in forecast[:days]:
         etc = kc_value * day.eto_reference_mm
         pe_weighted = (
-            _effective_precipitation(day.precipitation_mm)
+            effective_precipitation(day.precipitation_mm)
             * (day.precipitation_probability_pct / 100.0)
         )
         projected = max(0.0, min(projected - pe_weighted + etc, taw_mm))
@@ -117,7 +111,7 @@ def calculate_urgency(
 
     # Ajuste por lluvia esperada ponderada por probabilidad
     weighted_rain_3d = sum(
-        _effective_precipitation(day.precipitation_mm) * (day.precipitation_probability_pct / 100.0)
+        effective_precipitation(day.precipitation_mm) * (day.precipitation_probability_pct / 100.0)
         for day in forecast[:3]
     )
     max_prob_3d = max(

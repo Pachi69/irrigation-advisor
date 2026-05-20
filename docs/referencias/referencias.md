@@ -17,7 +17,8 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 
 ### FAO-56 y métodos de cálculo
 - **FAO Paper 56 (online):** https://www.fao.org/4/x0490e/x0490e00.htm
-- **FAO — Precipitación efectiva:** https://www.fao.org/4/x5560e/x5560e03.htm
+- **FAO — Precipitación efectiva (Brouwer & Heibloem, 1986):** https://www.fao.org/4/x5560e/x5560e03.htm
+- **Effective Rainfall Calculation Methods for Field Crops — overview comparativo (Ali, 2017):** https://www.researchgate.net/publication/321363262_Effective_Rainfall_Calculation_Methods_for_Field_Crops_An_Overview_Analysis_and_New_Formulation
 - **FAO — Coeficientes de cultivo Kc, Tabla 11 (duración de etapas de desarrollo) y Tabla 12 (valores de Kc por cultivo):** Capítulo 6 — https://www.fao.org/4/x0490e/x0490e0b.htm
 
 ### Planet Labs y procesamiento satelital
@@ -110,3 +111,16 @@ Se adoptan los valores de FAO-56 Tabla 12 para la fila **"stone fruit, no ground
 
 - **Killing frost:** Mendoza tiene heladas fuertes en invierno, por lo que la columna "with killing frost" de la Tabla 12 aplica directamente.
 - **No ground cover:** el manejo tradicional del suelo en frutales y viñedos de Mendoza es por **labranza** (rotocultivado, arada, rastreada), con el interfilar de tierra desnuda. Las coberturas vegetales activas aparecen en la bibliografía regional como una alternativa estudiada y promovida por INTA, no como la práctica predominante. Además, el riego por manto que predomina en el sur de Mendoza es consistente con suelo desnudo: una cobertura activa compite con el agua del riego a manto. Fuentes en "Manejo del suelo en frutales y viñedos de Mendoza" más arriba.
+
+### Precipitación efectiva
+
+El sistema estima la fracción de lluvia que efectivamente infiltra el suelo con la siguiente regla:
+
+- Lluvias menores a 2 mm se asumen completamente evaporadas (suelo árido, superficie caliente).
+- Lluvias mayores o iguales a 2 mm aportan al balance el 80 % de su valor; el 20 % restante representa pérdidas por evaporación superficial y escurrimiento.
+
+**Por qué este criterio.** FAO (Brouwer & Heibloem, 1986) describe varios métodos para estimar la precipitación efectiva (Stamm, USDA-SCS, ratio India, métodos basados en humedad del suelo) y aclara que **no existe una fórmula universal**: la elección depende del clima y del régimen de lluvias. Estudios comparativos modernos muestran que los métodos clásicos tipo USDA-SCS tienden a **subestimar la precipitación efectiva en climas áridos** (Ali, 2017).
+
+El sistema opera en San Rafael, Mendoza —clima árido con ~300 mm anuales—, donde los eventos de lluvia chicos a moderados (2 a 10 mm) son habituales y aportan al balance hídrico aunque sea parcialmente. Un umbral mínimo más alto descartaría una fracción significativa de la lluvia anual real. La combinación umbral 2 mm + coeficiente 0,8 es una calibración coherente con la práctica documentada en modelos diarios de balance hídrico para clima árido.
+
+El valor del umbral y del coeficiente es ajustable: la calibración fina debería hacerse contra datos locales (lisímetro o sensores de humedad de suelo) si están disponibles.

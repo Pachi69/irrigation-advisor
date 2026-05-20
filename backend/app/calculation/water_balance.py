@@ -49,16 +49,17 @@ _SOIL_PROPS: dict[SoilType, dict[str, float]] = {
     SoilType.clay:            {"theta_fc": 0.40, "theta_wp": 0.27},
 }
 
-def _effective_precipitation(precipitation_mm: float) -> float:
-    """Precipitacion efectiva (mm) - fraccion de la lluvia que infiltra el suelo.
-    
-    Regla FAO:
-      P < 5 mm   → Pe = 0  (se evapora antes de infiltrar)
-      P ≥ 5 mm   → Pe = 0.8·P − 2
+def effective_precipitation(precipitation_mm: float) -> float:
+    """Fraccion de lluvia que infiltra el suelo (mm).
+
+    Lluvias < 2 mm se asumen completamente evaporadas (suelo arido,
+    superficie caliente). Por encima, se aplica un coeficiente de 0.8
+    que representa la fraccion que infiltra (el resto se pierde por
+    evaporacion superficial y escurrimiento).
     """
-    if precipitation_mm < 5.0:
+    if precipitation_mm < 2.0:
         return 0.0
-    return 0.8 * precipitation_mm - 2
+    return 0.8 * precipitation_mm
 
 def calculate_water_balance(
     eto: EToResult,
@@ -99,7 +100,7 @@ def calculate_water_balance(
     etc_mm = kc.kc * eto.eto_mm
 
     # Precipitacion efectiva
-    pe_mm = _effective_precipitation(precipitation_mm)
+    pe_mm = effective_precipitation(precipitation_mm)
 
     # Balance del dia
     # Dr_i = Dr_{i-1} − (Pe + I) + ETc
