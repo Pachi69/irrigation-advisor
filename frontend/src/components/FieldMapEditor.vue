@@ -68,16 +68,22 @@ onMounted(() => {
         if (activeLayer) {
             activeLayer.addTo(map)
             map.fitBounds(activeLayer.getBounds(), { padding: [30, 30]})
+            attachLayerListeners(activeLayer)
         }
+    }
+
+    function attachLayerListeners(layer) {
+        layer.on('pm:markerdragend', emitCurrent)
+        layer.on('pm:vertexadded', emitCurrent)
+        layer.on('pm:vertexremoved', emitCurrent)
     }
 
     map.on('pm:create', ({ layer }) => {
         if (activeLayer) map.removeLayer(activeLayer)
         activeLayer = layer
+        attachLayerListeners(layer)
         emitCurrent()
     })
-
-    map.on('pm:edit', () => emitCurrent())
 
     map.on('pm:remove', ({ layer }) => {
         if (activeLayer === layer) activeLayer = null
