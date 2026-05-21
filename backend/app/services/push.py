@@ -42,10 +42,18 @@ def send_push_notification(endpoint: str, p256dh: str, auth: str, title: str, bo
         return True
     except WebPushException as e:
         status = e.response.status_code if e.response is not None else None
+        body = e.response.text[:200] if e.response is not None else "(sin response)"
+        endpoint_tail = endpoint[-40:]
         if status in _DEAD_SUBSCRIPTION_CODES:
-            logger.info("Suscripcion expirada (HTTP %s), se eliminara", status)
+            logger.info(
+                "PUSH_DEAD endpoint=...%s status=%s body=%s",
+                endpoint_tail, status, body,
+            )
             return False
-        logger.warning("Error transitorio al enviar push (HTTP %s): %s", status, e)
+        logger.warning(
+            "PUSH_TRANSIENT endpoint=...%s status=%s body=%s err=%s",
+            endpoint_tail, status, body, e,
+        )
         return None
 
 
@@ -67,9 +75,17 @@ def send_push_to_user(user_id: int, title: str, body: str, db) -> int:
         if result is True:
             sent += 1
         elif result is False:
+            logger.info(
+                "PUSH_DELETE user_id=%s sub_id=%s endpoint=...%s created_at=%s",
+                sub.user_id, sub.id, sub.endpoint[-40:], sub.created_at,
+            )
             db.delete(sub)
             removed += 1
-        # result is None -> transitorio: se mantiene la suscripcion
+        # result is None -> transitorio: se mantiene
+    logger.info(
+        "PUSH_BATCH user_id=%s total=%s sent=%s removed=%s",
+        user_id, len(subscriptions), sent, removed,
+    )
     if sent > 0 or removed > 0:
         db.commit()
     return sent
