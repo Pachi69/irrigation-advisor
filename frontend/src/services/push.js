@@ -49,3 +49,8 @@ export async function unsubscribeFromPush() {
     })
     await sub.unsubscribe()
 }
+
+export async function sendTestPush() {
+    const { data } = await api.post('/push/test')
+    return data
+}

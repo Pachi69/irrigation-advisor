@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.push_subscription import PushSubscription
 from app.auth.dependencies import get_current_user
+from app.services.push import send_push_to_user
 
 router = APIRouter(prefix="/push", tags=["push"])
 
@@ -94,3 +95,19 @@ def unsubscribe(
     if sub:
         db.delete(sub)
         db.commit()
+
+
+@router.post("/test", status_code=status.HTTP_200_OK)
+def test_push(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Envia una notificacion de prueba a todas las suscripciones del usuario actual.
+
+    Devuelve cuantas la recibieron con exito. Util para diagnosticar si el
+    problema es de entrega (sent=0 o no llega al device) o de longevidad
+    (la suscripcion muere despues, entre el subscribe y el job de las 8am)."""
+    sent = send_push_to_user(
+        current_user.id,
+        title="Prueba de notificacion",
+        body="Si ves esto, las notificaciones funcionan correctamente.",
+        db=db,
+    )
+    return {"sent": sent}

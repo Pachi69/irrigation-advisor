@@ -4,12 +4,27 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '../stores/auth'
 import { requestPushPermission, subscribeToPush } from '../services/push'
 import { Bell, BellOff, ArrowRight, AlertCircle} from 'lucide-vue-next'
+import { sendTestPush } from '../services/push'
 
 
 const router = useRouter()
 const { user, logout } = useAuth()
 
 const pushStatus = ref('idle') // idle | requesting | granted | denied | unsupported | error
+
+const testResult = ref('')
+
+async function handleTestPush() {
+    testResult.value = 'Enviando...'
+    try {
+      const { sent } = await sendTestPush()
+      testResult.value = sent > 0
+        ? `Enviada a ${sent} dispositivo(s). Revisá si llegó.`
+        : 'No hay suscripciones activas. Volvé a activar las notificaciones.'
+    } catch (e) {
+        testResult.value = 'Error al enviar la prueba.'
+    }
+}
 
 async function syncSubscription() {
     // Solo marca 'granted' si la suscripcion se sincronizo de verdad con el backend.
@@ -92,6 +107,27 @@ onMounted(setupPushNotifications)
     >
       <Bell class="w-5 h-5 text-amber-500 shrink-0" />
       <p class="text-amber-800 text-sm font-medium">Esperando permiso...</p>
+    </div>
+
+    <!-- Banner push: granted -->
+    <div
+      v-else-if="pushStatus === 'granted'"
+      class="bg-green-50 border-2 border-green-300 rounded-2xl p-4"
+    >
+      <div class="flex items-start gap-3 mb-3">
+        <Bell class="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+        <div>
+          <p class="font-bold text-green-900 text-sm">Notificaciones activas</p>
+          <p class="text-green-800 text-xs mt-0.5">Vas a recibir las recomendaciones de riego.</p>
+        </div>
+      </div>
+      <button
+        @click="handleTestPush"
+        class="w-full border-2 border-green-700 text-green-800 font-bold py-2.5 rounded-xl text-sm hover:bg-green-100 transition-colors"
+      >
+        Probar notificación
+      </button>
+      <p v-if="testResult" class="text-xs text-gray-600 mt-2">{{ testResult }}</p>
     </div>
 
     <!-- Banner push: denied -->
