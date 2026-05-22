@@ -1,5 +1,10 @@
 import { precacheAndRoute } from 'workbox-precaching';
+import { clientsClaim } from 'workbox-core';
 import { urlBase64ToUint8Array, idbGet, idbSet, ENDPOINT_KEY } from './services/push-shared';
+
+
+self.skipWaiting();
+clientsClaim();
 
 precacheAndRoute(self.__WB_MANIFEST);
 

@@ -2,6 +2,7 @@
 import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useAuth } from './stores/auth'
 import { onMounted } from 'vue'
+import { subscribeToPush } from './services/push'
 import { Leaf } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -14,6 +15,14 @@ onMounted(async () => {
     } catch {
       logout()
     }
+  }
+
+  if (
+    isAuthenticated.value &&
+    'Notification' in window &&
+    Notification.permission === 'granted'
+  ) {
+    subscribeToPush().catch(() => {})
   }
 })
 
