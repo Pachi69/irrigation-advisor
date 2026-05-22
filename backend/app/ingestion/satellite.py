@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 S2_COLLECTION = "COPERNICUS/S2_SR_HARMONIZED"
 
 # Buffer negativo en metros para evitar pixeles mixtos en los bordes
-BUFFER_METERS = -20
+BUFFER_METERS = -1
 
 # Dias hacia atras a buscar una imagen clara (sin nubes)
 LOOKBACK_DAYS = 30
