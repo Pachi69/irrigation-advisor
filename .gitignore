@@ -18,3 +18,7 @@ Thumbs.db
 
 # Claude
 .claude 
+
+# SSH keys
+*.pem
+*.key
