@@ -38,6 +38,8 @@ def send_push_notification(endpoint: str, p256dh: str, auth: str, title: str, bo
             data=json.dumps({"title": title, "body": body}),
             vapid_private_key=_vapid,  # objeto Vapid01, NO string
             vapid_claims={"sub": settings.vapid_subject},
+            ttl=86400,  # 1 dia
+            headers={"Urgency": "high"},
         )
         return True
     except WebPushException as e:

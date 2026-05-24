@@ -7,6 +7,7 @@ se alineen con el calendario local.
 
 import logging
 from datetime import date, timedelta
+import time
 
 import httpx
 import requests
@@ -43,19 +44,23 @@ DAILY_VARS_FORECAST = [
     "et0_fao_evapotranspiration",
 ]
 
-def _fetch_daily(params: dict) -> dict:
+def _fetch_daily(params: dict, retries: int = 3, backoff: float = 2.0) -> dict:
     """Helper: Hace GET a Open-Meteo y devuelve la seccion 'daily' del payload"""
-    try:
-        response = httpx.get(OPEN_METEO_FORECAST_URL, params=params, timeout=TIMEOUT_SECONDS)
-        response.raise_for_status()
-        payload = response.json()
-    except httpx.HTTPError as e:
-        raise RuntimeError(f"Error al obtener datos climáticos: {e}") from e
-    
-    daily = payload.get("daily")
-    if not daily or not daily.get("time"):
-        raise RuntimeError("Open-Meteo devolvio respuesta vacia o sin seccion daily")
-    return daily
+    last_err = None
+    for attempt in range(retries):
+        try:
+            response = httpx.get(OPEN_METEO_FORECAST_URL, params=params, timeout=TIMEOUT_SECONDS)
+            response.raise_for_status()
+            payload = response.json()
+            daily = payload.get("daily")
+            if not daily or not daily.get("time"):
+                raise RuntimeError("Open-Meteo devolvio respuesta vacia o sin seccion daily")
+            return daily
+        except (httpx.HTTPError, RuntimeError) as e:
+            last_err = e
+            if attempt < retries - 1:
+                time.sleep(backoff * (attempt + 1))
+    raise RuntimeError(f'Error al obtener datos climaticos tras {retries} intentos: {last_err}')
 
 def _climate_data_from_daily(daily: dict, idx: int, target_date: date) -> ClimateData:
     """Construye un ClimateData desde la fila `idx` del payload 'daily' de Open-Meteo.
