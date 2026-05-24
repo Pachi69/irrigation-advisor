@@ -4,6 +4,7 @@ import { useAuth } from './stores/auth'
 import { onMounted } from 'vue'
 import { subscribeToPush } from './services/push'
 import { Leaf } from 'lucide-vue-next'
+import InstallPrompt from './components/InstallPrompt.vue'
 
 const router = useRouter()
 const { isAuthenticated, isAdmin, logout, fetchMe, user } = useAuth()
@@ -92,5 +93,7 @@ function handleLogout() {
     <main class="flex-1 bg-gray-50">
       <RouterView />
     </main>
+
+    <InstallPrompt />
   </div>
 </template>
