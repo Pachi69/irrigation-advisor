@@ -54,6 +54,7 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 ### Parámetros de suelo
 - **Soil Water Parameters — Cornell:** https://nrcca.cals.cornell.edu/soil/CA2/CA0212.1-3.php
 - **Water Balance Approach — Colorado State:** https://extension.colostate.edu/resource/irrigation-scheduling-the-water-balance-approach/
+- **Saxton & Rawls (2006) — propiedades hídricas por textura USDA (θ_fc, θ_wp):** https://acsess.onlinelibrary.wiley.com/doi/10.2136/sssaj2005.0117
 
 ### SoilGrids — tipo de suelo por coordenadas
 - **SoilGrids 2.0 REST API (ISRIC):** https://rest.isric.org/soilgrids/v2.0/properties/query
@@ -94,6 +95,10 @@ Fuente de datos de textura del suelo (arena/limo/arcilla en g/kg a 250m de resol
 
 Establece el marco de trabajo de combinar datos de teledetección con el balance hídrico FAO-56 para scheduling operativo de riego — precisamente el enfoque de este sistema. Valida el uso de datos de suelo en grilla como entrada estándar para derivar θ_fc y θ_wp.
 
+> Saxton, K.E., Rawls, W.J. (2006). *Soil Water Characteristic Estimates by Texture and Organic Matter for Hydrologic Solutions.* Soil Science Society of America Journal, 70(5), 1569–1578. https://doi.org/10.2136/sssaj2005.0117
+
+Fuente de las propiedades hidráulicas del suelo (θ_fc a −33 kPa y θ_wp a −1500 kPa) por clase textural. Provee estimaciones para las 12 clases del triángulo textural USDA, consistentes con la clasificación derivada de SoilGrids 2.0, y alimentan el cálculo de TAW y RAW en el balance hídrico.
+
 ---
 
 ## Decisiones del modelo y su respaldo
@@ -126,6 +131,31 @@ El sistema estima la fracción de lluvia que efectivamente infiltra el suelo con
 El sistema opera en San Rafael, Mendoza —clima árido con ~300 mm anuales—, donde los eventos de lluvia chicos a moderados (2 a 10 mm) son habituales y aportan al balance hídrico aunque sea parcialmente. Un umbral mínimo más alto descartaría una fracción significativa de la lluvia anual real. La combinación umbral 2 mm + coeficiente 0,8 es una calibración coherente con la práctica documentada en modelos diarios de balance hídrico para clima árido.
 
 El valor del umbral y del coeficiente es ajustable: la calibración fina debería hacerse contra datos locales (lisímetro o sensores de humedad de suelo) si están disponibles.
+
+### Propiedades hidráulicas del suelo (θ_fc y θ_wp)
+
+El balance hídrico requiere, para cada campo, el contenido volumétrico de agua a capacidad de campo (θ_fc, −33 kPa) y en punto de marchitez permanente (θ_wp, −1500 kPa). De su diferencia surge el agua total disponible en la zona radicular: **TAW = 1000 · (θ_fc − θ_wp) · Zr** [FAO-56, Ec. 82].
+
+El tipo de suelo se determina automáticamente clasificando las fracciones de arena/limo/arcilla de SoilGrids 2.0 según el **triángulo textural USDA**, que define **12 clases**. Las propiedades hidráulicas se toman de **Saxton & Rawls (2006)**, que cubre las 12 clases USDA de forma consistente con esa clasificación. FAO-56 Tabla 19 tabula solo 9 de las 12 texturas USDA —no incluye *franco arcillo arenoso*, *franco arcilloso* ni *arcillo arenoso*—, por lo que no es suficiente para un clasificador USDA completo; se reserva como referencia de validación cruzada.
+
+Valores adoptados (θ volumétrico, suelo con ~2,5 % de materia orgánica):
+
+| Clase USDA | θ_fc | θ_wp | AWC = θ_fc − θ_wp |
+|---|---|---|---|
+| sand (arena) | 0,10 | 0,05 | 0,05 |
+| loamy sand (arena franca) | 0,12 | 0,05 | 0,07 |
+| sandy loam (franco arenoso) | 0,18 | 0,08 | 0,10 |
+| sandy clay loam (franco arcillo arenoso) | 0,27 | 0,17 | 0,10 |
+| loam (franco) | 0,28 | 0,14 | 0,14 |
+| clay loam (franco arcilloso) | 0,36 | 0,22 | 0,14 |
+| silt loam (franco limoso) | 0,31 | 0,11 | 0,20 |
+| silt (limoso) | 0,30 | 0,06 | 0,24 |
+| silty clay loam (franco arcillo limoso) | 0,38 | 0,22 | 0,16 |
+| sandy clay (arcillo arenoso) | 0,36 | 0,25 | 0,11 |
+| silty clay (arcillo limoso) | 0,41 | 0,27 | 0,14 |
+| clay (arcilloso) | 0,42 | 0,30 | 0,12 |
+
+La columna AWC (θ_fc − θ_wp) es la que efectivamente entra en el TAW. Los valores son ajustables: la calibración fina debería hacerse contra datos locales (lisímetro o sensores de humedad de suelo) si están disponibles.
 
 ### Fuente satelital: Sentinel-2 (descarte de Planet Labs)
 

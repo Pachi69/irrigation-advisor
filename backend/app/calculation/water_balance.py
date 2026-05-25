@@ -31,22 +31,22 @@ from __future__ import annotations
 from app.models.enums import SoilType
 from app.schemas.calculation import EToResult, KcResult, WaterBalanceResult
 
-# Propiedades hidraulicas del suelo (FAOP-56 Tabla 19)
+# Propiedades hidraulicas del suelo por textura USDA (Saxton & Rawls, 2006)
 # theta_fc = contenido volumetrico a capacidad de campo (m3/m3)
 # theta_wp = contenido volumetrico en punto de marchitez permanente (m3/m3)
 _SOIL_PROPS: dict[SoilType, dict[str, float]] = {
-    SoilType.sand:            {"theta_fc": 0.10, "theta_wp": 0.04},
+    SoilType.sand:            {"theta_fc": 0.10, "theta_wp": 0.05},
     SoilType.loamy_sand:      {"theta_fc": 0.12, "theta_wp": 0.05},
     SoilType.sandy_loam:      {"theta_fc": 0.18, "theta_wp": 0.08},
-    SoilType.sandy_clay_loam: {"theta_fc": 0.23, "theta_wp": 0.13},
-    SoilType.loam:            {"theta_fc": 0.27, "theta_wp": 0.12},
-    SoilType.silt_loam:       {"theta_fc": 0.30, "theta_wp": 0.13},
-    SoilType.silt:            {"theta_fc": 0.32, "theta_wp": 0.15},
-    SoilType.clay_loam:       {"theta_fc": 0.32, "theta_wp": 0.20},
-    SoilType.silty_clay_loam: {"theta_fc": 0.34, "theta_wp": 0.21},
-    SoilType.sandy_clay:      {"theta_fc": 0.36, "theta_wp": 0.24},
-    SoilType.silty_clay:      {"theta_fc": 0.38, "theta_wp": 0.25},
-    SoilType.clay:            {"theta_fc": 0.40, "theta_wp": 0.27},
+    SoilType.sandy_clay_loam: {"theta_fc": 0.27, "theta_wp": 0.17},
+    SoilType.loam:            {"theta_fc": 0.28, "theta_wp": 0.14},
+    SoilType.silt_loam:       {"theta_fc": 0.31, "theta_wp": 0.11},
+    SoilType.silt:            {"theta_fc": 0.30, "theta_wp": 0.06},
+    SoilType.clay_loam:       {"theta_fc": 0.36, "theta_wp": 0.22},
+    SoilType.silty_clay_loam: {"theta_fc": 0.38, "theta_wp": 0.22},
+    SoilType.sandy_clay:      {"theta_fc": 0.36, "theta_wp": 0.25},
+    SoilType.silty_clay:      {"theta_fc": 0.41, "theta_wp": 0.27},
+    SoilType.clay:            {"theta_fc": 0.42, "theta_wp": 0.30},
 }
 
 def effective_precipitation(precipitation_mm: float) -> float:
