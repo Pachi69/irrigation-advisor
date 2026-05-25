@@ -34,7 +34,7 @@ def _elevation_from_pressure(pressure_kpa: float) -> float:
 
 def _saturation_vapor_pressure(temp_c: float) -> float:
     """Presion de vapor de saturacion e°(T) en kPa."""
-    return 0.6108 * math.exp(17.27 * temp_c / (temp_c + 273.3))
+    return 0.6108 * math.exp(17.27 * temp_c / (temp_c + 237.3))
 
 def _slope_vapor_pressure_curve(temp_c: float) -> float:
     """Pendiente de la curva de presion de vapor (kPa/°C)."""
@@ -51,7 +51,7 @@ def _wind_speed_2m(u10: float) -> float:
 def _extraterrestrial_radiation(latitude_rad: float, j: int) -> float:
     """Radiacion extraterrestre Ra (MJ m⁻² día⁻¹)"""
     dr = 1 + 0.033 * math.cos(2 * math.pi * j / 365)
-    delta = 0.409 * math.sin(2 * math.pi * j / 365)
+    delta = 0.409 * math.sin(2 * math.pi * j / 365 - 1.39)
     omega_s = math.acos(-math.tan(latitude_rad) * math.tan(delta))
     return (
         (24 * 60 / math.pi)
