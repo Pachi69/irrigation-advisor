@@ -31,9 +31,9 @@ async function install() {
     <button
         v-if="visible"
         @click="install"
+        aria-label="Instalar app"
         class="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-green-800 hover:bg-green-700 text-white font-bold px-4 py-3 rounded-2xl shadow-lg transition-colors"
     >
         <Download class="w-5 h-5" />
-        Instalar app
     </button>
 </template>
