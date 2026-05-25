@@ -48,3 +48,13 @@ export async function getFieldSatelliteImage(fieldId) {
 export async function deleteField(fieldId) {
     await api.delete(`/fields/${fieldId}`)
 }
+
+export async function getPendingConfirmations(fieldId) {
+    const { data } = await api.get(`/fields/${fieldId}/pending-confirmations`)
+    return data
+}
+
+export async function confirmIrrigation(fieldId, recommendationId, payload) {
+    const { data } = await api.post(`/fields/${fieldId}/recommendations/${recommendationId}/confirm`, payload,)
+    return data
+}

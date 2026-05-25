@@ -10,6 +10,7 @@ import FieldRecommendation from '../views/FieldRecommendation.vue'
 import FieldHistory from '../views/FieldHistory.vue'
 import FieldEdit from '../views/FieldEdit.vue'
 import FieldChart from '../views/FieldChart.vue'
+import FieldConfirmations from '../views/FieldConfirmations.vue'
 
 const routes = [
   {
@@ -52,6 +53,12 @@ const routes = [
     path: '/fields/:id/chart',
     name: 'field-chart',
     component: FieldChart,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/fields/:id/confirmations',
+    name: 'field-confirmations',
+    component: FieldConfirmations,
     meta: { requiresAuth: true },
   },
   {

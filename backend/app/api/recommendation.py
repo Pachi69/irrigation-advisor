@@ -1,4 +1,5 @@
 from typing import List
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session, joinedload
@@ -7,8 +8,12 @@ from app.database import get_db
 from app.models.field import Field as FieldModel
 from app.models.satellite_record import SatelliteRecord
 from app.models.daily_water_balance import DailyWaterBalance
+from app.models.recommendation import Recommendation
+from app.models.irrigation_confirmation import IrrigationConfirmation
+from app.schemas.irrigation_confirmation import PendingConfirmationItem, IrrigationConfirmationCreate, IrrigationConfirmationResponse
 from app.schemas.recommendation import RecommendationResponse, RecommendationHistoryItem
 from app.services.recommendation import run_recommendation_pipeline, build_recommendation_response
+from app.services.irrigation import confirm_irrigation
 from app.api._helpers import owned_field, active_field
 
 
@@ -111,3 +116,58 @@ def get_satellite_image(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen satelital no encontrada")
     
     return Response(content=record.thumbnail_png, media_type="image/png")
+
+
+@router.get("/{field_id}/pending-confirmations", response_model=List[PendingConfirmationItem])
+def get_pending_confirmations(field: FieldModel = Depends(owned_field), db: Session = Depends(get_db)):
+    """Recomendaciones accionables (mm > 0) que aun no fueron confirmadas."""
+    rows = (
+        db.query(DailyWaterBalance, Recommendation)
+        .join(Recommendation, Recommendation.water_balance_id == DailyWaterBalance.id)
+        .outerjoin(
+            IrrigationConfirmation,
+            IrrigationConfirmation.recommendation_id == Recommendation.id
+        )
+        .filter(
+            DailyWaterBalance.field_id == field.id,
+            Recommendation.recommended_irrigation_mm > 0,
+            IrrigationConfirmation.id.is_(None),
+        )
+        .order_by(DailyWaterBalance.date.desc())
+        .all()
+    )
+    return [
+        PendingConfirmationItem(
+            recommendation_id=rec.id,
+            date=wb.date,
+            recommended_irrigation_mm=rec.recommended_irrigation_mm,
+            urgency=rec.urgency,
+            water_deficit_mm=wb.water_deficit_mm,
+        )
+        for wb, rec in rows
+    ]
+
+@router.post("/{field_id}/recommendations/{rec_id}/confirm", response_model=IrrigationConfirmationResponse, status_code=status.HTTP_201_CREATED)
+def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationCreate, field: FieldModel = Depends(owned_field), db: Session = Depends(get_db)):
+    """Registra el riego aplicado para una recomendacion y recalcula el balance."""
+    rec = (
+        db.query(Recommendation)
+        .join(DailyWaterBalance, Recommendation.water_balance_id == DailyWaterBalance.id)
+        .filter(Recommendation.id == rec_id, DailyWaterBalance.field_id == field.id)
+        .first()
+    )
+    if rec is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recomendacion no encontrada")
+    
+    already = (
+        db.query(IrrigationConfirmation)
+        .filter(IrrigationConfirmation.recommendation_id == rec_id)
+        .first()
+    )
+    if already:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recomendacion ya confirmada")
+    
+    if data.irrigation_date > date.today():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La fecha de riego no puede ser futura")
+    
+    return confirm_irrigation(field, rec, data.irrigation_date, data.applied_irrigation_mm, db)

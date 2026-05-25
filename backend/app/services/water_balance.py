@@ -3,10 +3,12 @@ from datetime import date as DateType
 
 import logging
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.field import Field as FieldModel
 from app.models.daily_water_balance import DailyWaterBalance
+from app.models.irrigation_confirmation import IrrigationConfirmation
 from app.schemas.calculation import EToResult, KcResult, WaterBalanceResult
 from app.schemas.climate import ClimateData
 from app.schemas.satellite import SatelliteData
@@ -20,6 +22,35 @@ from app.services.satellite import get_satellite_data_for_date
 logger = logging.getLogger(__name__)
 
 
+def confirmed_irrigation_mm(field_id: int, target_date: DateType, db: Session) -> float:
+    """Suma del riego confirmado por el productor para un campo en una fecha (mm)"""
+    total = (
+        db.query(func.coalesce(func.sum(IrrigationConfirmation.applied_irrigation_mm), 0.0))
+        .filter(
+            IrrigationConfirmation.field_id == field_id,
+            IrrigationConfirmation.irrigation_date == target_date
+        )
+        .scalar()
+    )
+    return float(total or 0.0)
+
+def confirmed_irrigation_by_range(field_id: int, start: DateType, end: DateType, db: Session) -> dict[DateType, float]:
+    """Riego confirmado por fecha en un rango (para el backfill, evita n+1)"""
+    rows = (
+        db.query(
+            IrrigationConfirmation.irrigation_date,
+            func.sum(IrrigationConfirmation.applied_irrigation_mm),
+        )
+        .filter(
+            IrrigationConfirmation.field_id == field_id,
+            IrrigationConfirmation.irrigation_date >= start,
+            IrrigationConfirmation.irrigation_date <= end,
+        )
+        .group_by(IrrigationConfirmation.irrigation_date)
+        .all()
+    )
+    return {d: float(s) for d,s in rows}
+
 def compute_balance_from_data(
     field: FieldModel,
     target_date: DateType,
@@ -28,6 +59,7 @@ def compute_balance_from_data(
     satellite_data: SatelliteData | None,
     ndvi_date: DateType | None,
     previous_deficit_mm: float,
+    irrigation_mm: float = 0.0,
 ) -> tuple[ClimateData, EToResult, SatelliteData | None, DateType | None, KcResult, WaterBalanceResult]:
     """Calcula ETo, Kc y balance hidrico para un dia a partir de datos ya traidos.
 
@@ -52,6 +84,7 @@ def compute_balance_from_data(
         soil_type=field.soil_type,
         root_depth_m=get_root_depth(field.crop_type),
         depletion_factor_p=get_depletion_factor(field.crop_type),
+        irrigation_mm=irrigation_mm,
     )
 
     field.last_deficit_mm = balance.water_deficit_mm
@@ -82,12 +115,15 @@ def compute_balance_for_day(
     )
     previous_deficit = last_wb.water_deficit_mm if last_wb else (field.last_deficit_mm or 0.0)
 
+    irrigation_mm = confirmed_irrigation_mm(field.id, target_date, db)
+
     return compute_balance_from_data(
         field, target_date,
         climate=climate,
         satellite_data=satellite_data,
         ndvi_date=ndvi_date,
         previous_deficit_mm=previous_deficit,
+        irrigation_mm=irrigation_mm,
     )
 
 

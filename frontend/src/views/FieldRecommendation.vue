@@ -4,7 +4,7 @@ import { useRoute, useRouter} from 'vue-router'
 import { getRecommendation, getFieldAlerts, getFieldSatelliteImage, getFieldById } from '../services/fields'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { ArrowLeft, Clock, AlertTriangle, Droplets, Leaf, Satellite } from 'lucide-vue-next'
+import { ArrowLeft, Clock, AlertTriangle, Droplets, Leaf, Satellite, Droplet } from 'lucide-vue-next'
 import { ALERT_LABELS, URGENCY_LABEL, STAGE_LABELS, KC_SOURCE_LABELS, CONFIDENCE_LABELS } from '../utils/labels'
 
 const router = useRouter()
@@ -148,7 +148,7 @@ onMounted(() => { load(); fetchAlerts(); loadFieldData() })
 <template>
     <div class="max-w-2xl lg:max-w-3xl mx-auto px-4 py-6 space-y-4">
 
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2">
             <button
                 @click="router.push('/fields')"
                 class="flex items-center gap-1 text-green-800 font-semibold text-sm hover:underline"
@@ -156,15 +156,27 @@ onMounted(() => { load(); fetchAlerts(); loadFieldData() })
                 <ArrowLeft class="w-4 h-4" />
                 Mis campos
             </button>
+
             <span v-if="rec" class="text-xs text-gray-400">{{ rec.date }}</span>
-            <RouterLink
-                :to="`/fields/${route.params.id}/history`"
-                class="flex items-center gap-1 text-sm font-semibold text-green-800 border-2 border-green-800 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
-            >
-                <Clock class="w-3.5 h-3.5" />
-                Historial
-            </RouterLink>
+
+            <div class="flex items-center gap-2">
+                <RouterLink
+                    :to="`/fields/${route.params.id}/history`"
+                    class="flex items-center gap-1 text-sm font-semibold text-green-800 border-2 border-green-800 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
+                >
+                    <Clock class="w-3.5 h-3.5" />
+                    Historial
+                </RouterLink>
+                <RouterLink
+                    :to="`/fields/${route.params.id}/confirmations`"
+                    class="flex items-center gap-1 text-sm font-semibold text-green-800 border-2 border-green-800 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
+                >
+                    <Droplet class="w-3.5 h-3.5" />
+                    Confirmar riego
+                </RouterLink>
+            </div>
         </div>
+
 
         <div v-if="loading" class="text-center py-12 text-gray-400 text-sm">Calculando recomendación...</div>
         <div v-else-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>

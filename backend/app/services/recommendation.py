@@ -13,7 +13,7 @@ from app.schemas.recommendation import RecommendationResponse
 from app.ingestion.climate import get_forecast, get_climate_data_for_range
 from app.calculation.urgency import calculate_urgency, urgency_from_balance
 from app.services.satellite import fetch_latest_s2, prefetch_s2_for_range, get_satellite_data_for_range
-from app.services.water_balance import compute_balance_for_day, save_water_balance, compute_balance_from_data
+from app.services.water_balance import compute_balance_for_day, save_water_balance, compute_balance_from_data, confirmed_irrigation_by_range
 
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,8 @@ def run_backfill(
         return
     satellite_by_date = get_satellite_data_for_range(field, start_date, end_date, db)
 
+    irrigation_by_date = confirmed_irrigation_by_range(field.id, start_date, end_date, db)
+
     # Deficit inicial: el ultimo conocido del campo
     previous_deficit = field.last_deficit_mm or 0.0
 
@@ -115,6 +117,7 @@ def run_backfill(
                 satellite_data=satellite_data,
                 ndvi_date=ndvi_date,
                 previous_deficit_mm=previous_deficit,
+                irrigation_mm=irrigation_by_date.get(current, 0.0),
             )
             wb = save_water_balance(
                 field, current, db,
@@ -196,3 +199,28 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
         wb, rec,
         cloud_cover_pct=satellite_data.cloud_cover_pct if satellite_data else None,
     )
+
+
+def recompute_balance_from(field: FieldModel, from_date: DateType, seed_deficit_mm: float, db: Session) -> None:
+    """Rebobina el puntero del deficit del campo a (from-date -1 ), siembra el
+    deficit inicial y recalcula el balance desde from_date hasta hoy.
+    
+    Unifica la inicializacion al aprobar un campo y el recalculo al confirmar 
+    un riego: ambos parten de una fecha pasada conocida con un Dr conocido y
+    ruedan hacia adelante. El backfill ya inyecta el riego confirmado por fecha.
+    """
+    today = DateType.today()
+    yesterday = today - timedelta(days=1)
+
+    field.last_deficit_mm = seed_deficit_mm
+    field.last_deficit_date = from_date - timedelta(days=1)
+    db.flush()
+
+    run_backfill(field, from_date, yesterday - timedelta(days=1), db)
+    db.commit()
+
+    # Re ejecuta el pipeline live para que "ayer" quede con urgencia/confianza reales.
+    try:
+        run_recommendation_pipeline(field, db)
+    except Exception as e:
+        logger.warning("Campo %d: no se pudo re-ejecutar pipeline live tras recalculo: %s", field.id, e)
