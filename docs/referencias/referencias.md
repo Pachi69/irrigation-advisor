@@ -21,14 +21,8 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 - **Effective Rainfall Calculation Methods for Field Crops — overview comparativo (Ali, 2017):** https://www.researchgate.net/publication/321363262_Effective_Rainfall_Calculation_Methods_for_Field_Crops_An_Overview_Analysis_and_New_Formulation
 - **FAO — Coeficientes de cultivo Kc, Tabla 11 (duración de etapas de desarrollo) y Tabla 12 (valores de Kc por cultivo):** Capítulo 6 — https://www.fao.org/4/x0490e/x0490e0b.htm
 
-### Planet Labs y procesamiento satelital
-- **Planet Labs — Documentación general API:** https://developers.planet.com/docs/
-- **Planet Labs — Data API (búsqueda de escenas):** https://developers.planet.com/docs/data/
-- **Planet Labs — Orders API (descarga de bandas):** https://developers.planet.com/docs/orders/
-- **Planet Labs — Python SDK:** https://planet-sdk-for-python-v2.readthedocs.io/
-- **Planet Labs — PlanetScope especificaciones técnicas:** https://docs.planet.com/data/imagery/planetscope/
-- **Planet Labs — Programa Education & Research:** https://www.planet.com/industries/education-and-research/
-- **Google Earth Engine — Sentinel-2 (fallback):** https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED
+### Sentinel-2 y procesamiento satelital
+- **Google Earth Engine — Sentinel-2 SR Harmonized (fuente satelital del sistema):** https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED
 - **NDVI a Kc — durum wheat semi-árido:** https://www.sciencedirect.com/science/article/abs/pii/S037837742030233X
 - **NDVI a Kcb — viñedo semi-árido (Campos et al. 2010):** https://www.sciencedirect.com/science/article/abs/pii/S0378377410002428
 - **Revisión VI → Kc (Glenn et al. 2011):** https://onlinelibrary.wiley.com/doi/10.1002/hyp.8392
@@ -64,6 +58,14 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 ### SoilGrids — tipo de suelo por coordenadas
 - **SoilGrids 2.0 REST API (ISRIC):** https://rest.isric.org/soilgrids/v2.0/properties/query
 - **Documentación WCS (fallback):** https://docs.isric.org/globaldata/soilgrids/wcs.html
+
+### Conversión de lámina de riego a tiempo (riego a manto, Mendoza)
+- **Aquabook — ¿Cuánta agua voy a recibir? (ejemplo de dotación L/s/ha por turno):** https://aquabook.agua.gob.ar/1011_0
+- **Aquabook — Modalidades de distribución del agua:** https://aquabook.agua.gob.ar/1010_0
+- **Ley de Aguas de Mendoza (dotación máxima 1,5 L/s/ha):** https://www.mendoza.gov.ar/wp-content/uploads/sites/15/2021/04/LEY-DE-AGUAS.pdf
+- **Cuadro de turno — DGI:** https://www.irrigacion.gov.ar/web/cuadro-de-turno/
+- **Cálculo de tiempo de riego T = Lámina / Intensidad de aplicación:** https://www.riego.elesteliano.com/ayuda/Fto2_Requerimientos_de_riego.htm
+- **Cómo estimar la tasa de aplicación del agua:** https://www.rcdsantacruz.org/images/brochures/pdf/Estimate_the_application_rate_Spanish_FINAL.pdf
 
 ### Integración de pronóstico climático
 - **Forecast integration in irrigation:** https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2023WR035810
@@ -124,3 +126,22 @@ El sistema estima la fracción de lluvia que efectivamente infiltra el suelo con
 El sistema opera en San Rafael, Mendoza —clima árido con ~300 mm anuales—, donde los eventos de lluvia chicos a moderados (2 a 10 mm) son habituales y aportan al balance hídrico aunque sea parcialmente. Un umbral mínimo más alto descartaría una fracción significativa de la lluvia anual real. La combinación umbral 2 mm + coeficiente 0,8 es una calibración coherente con la práctica documentada en modelos diarios de balance hídrico para clima árido.
 
 El valor del umbral y del coeficiente es ajustable: la calibración fina debería hacerse contra datos locales (lisímetro o sensores de humedad de suelo) si están disponibles.
+
+### Fuente satelital: Sentinel-2 (descarte de Planet Labs)
+
+El sistema usa exclusivamente **Sentinel-2 (10 m)** vía Google Earth Engine. Se evaluó **Planet Labs (PlanetScope, 3 m)** como alternativa de mayor resolución, pero se descartó: el acceso a las imágenes de alta resolución requiere suscripción paga, y los productos públicos gratuitos de la plataforma son los mismos Sentinel-2 ya disponibles gratis en GEE. La resolución de 10 m de Sentinel-2 es suficiente para promediar el NDVI sobre el polígono de un campo agrícola.
+
+### Conversión de lámina de riego a tiempo (enfoque identificado, pendiente de implementación)
+
+La recomendación se entrega en **lámina (mm)**. Para expresarla en **tiempo de riego**, toda fórmula requiere una tasa de aplicación; en el riego a manto de Mendoza esa tasa se deriva del **derecho de riego (dotación, L/s/ha)** asignado por el Departamento General de Irrigación, sin necesidad de medir el caudal en campo.
+
+Despejando volumen y caudal, **la superficie del campo se cancela**, quedando:
+
+```
+tiempo (s) = 10.000 × lámina (mm) / dotación (L/s/ha) / eficiencia
+```
+
+- La **dotación** es una constante del derecho de riego del campo (la Ley de Aguas de Mendoza fija un máximo de 1,5 L/s/ha).
+- La **eficiencia** corrige las pérdidas del riego a manto (escurrimiento, percolación profunda; típicamente 0,5–0,7).
+
+Pendiente: la **entrevista con el productor** debe confirmar si conoce su dotación, si riega por turno y qué eficiencia asumir. Hasta entonces el sistema mantiene la recomendación en mm.
