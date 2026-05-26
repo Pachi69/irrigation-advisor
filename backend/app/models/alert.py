@@ -8,9 +8,7 @@ from app.database import Base
 
 class AlertType(enum.Enum):
     frost = "frost"
-    hail = "hail"
     heat_wave = "heat_wave"
-    critical_deficit = "critical_deficit"
 
 class Alert(Base):
     __tablename__ = "alerts"
