@@ -29,7 +29,7 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 
 ### Open-Meteo
 - **Documentación API Open-Meteo:** https://open-meteo.com/en/docs
-- **Variables disponibles incluyen ETo precalculada:** variable `reference_evapotranspiration`
+- **Variables disponibles incluyen ETo precalculada:** variable `et0_fao_evapotranspiration`
 
 ### Agricultura en San Rafael, Mendoza
 - **Panorama económico-productivo de San Rafael:** https://www.scielo.org.ar/scielo.php?script=sci_arttext&pid=S2314-15492011000200003

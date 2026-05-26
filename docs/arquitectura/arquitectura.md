@@ -12,14 +12,14 @@
 | Jobs automáticos | APScheduler | Job recomendación (00:01hs) + job notificaciones push (08:00hs) + job alertas climáticas (cada 6hs) |
 | Frontend | Vue 3 + Vite (PWA) | Liviano, rápido de desarrollar, soporte PWA nativo |
 | Notificaciones | Web Push (VAPID) | Estándar PWA, sin costo, sin dependencia de terceros |
-| Deploy | Railway | Simple, económico, soporte de monorepo |
+| Deploy | UM-Cloud (Docker) | Contenerización de backend y frontend sobre infraestructura de la universidad |
 
 ---
 
 ## Componentes del sistema
 
 ### Fuentes de datos externas
-- **Google Earth Engine — Sentinel-2 (fuente primaria NDVI)**: extracción de NDVI promedio sobre el polígono del campo. Sentinel-2 SR Harmonizado, 10m/pixel, frecuencia 5–15 días según nubosidad. Se aplica buffer negativo de 20m para evitar píxeles mixtos. Fallback a Kc tabular FAO-56 cuando no hay imagen clara disponible en los últimos 30 días.
+- **Google Earth Engine — Sentinel-2 (fuente primaria NDVI)**: extracción de NDVI promedio sobre el polígono del campo. Sentinel-2 SR Harmonizado, 10m/pixel, frecuencia 5–15 días según nubosidad. Se aplica buffer negativo de ~1m para evitar píxeles mixtos. Fallback a Kc tabular FAO-56 cuando no hay imagen clara disponible en los últimos 30 días.
 - **SoilGrids 2.0 (ISRIC)**: consulta REST por coordenadas del campo para determinar tipo de suelo automáticamente. Retorna fracciones de arena, limo y arcilla (g/kg) que se clasifican según el triángulo USDA y se mapean al enum `SoilType` del sistema.
 - **Open-Meteo API**: datos climáticos actuales y pronóstico a 5 días (temperatura, humedad, viento, radiación, precipitación y probabilidad de precipitación). También disponible ETo calculada para validación cruzada.
 
@@ -32,7 +32,7 @@ Módulos internos:
 | `calculo/` | ETo Penman-Monteith (FAO-56), Kc dinámico desde NDVI, balance hídrico |
 | `decision/` | Índice de urgencia, ajuste por pronóstico, generación de alertas |
 | `api/` | Endpoints REST consumidos por la PWA |
-| `jobs/` | Job diario de recomendación (22hs) y job de alertas climáticas (cada 6hs) |
+| `jobs/` | Job de recomendación (00:01hs), notificaciones push (08:00hs) y alertas climáticas (cada 6hs) |
 | `auth/` | Registro, login, JWT, roles (productor / admin) |
 
 ### Base de datos (PostgreSQL)
@@ -49,7 +49,7 @@ Pantallas principales:
 ### Notificaciones push
 Implementadas con el estándar Web Push (VAPID). Se envían desde el backend en dos contextos:
 - **Recomendación diaria**: generada por el job nocturno.
-- **Alertas climáticas**: generadas por el job cada 6hs ante condiciones críticas (granizo, helada, ola de calor).
+- **Alertas climáticas**: generadas por el job cada 6hs ante condiciones críticas (helada, ola de calor).
 
 ---
 
@@ -90,15 +90,15 @@ irrigation-advisor/
 |---|---|
 | I. Codebase | Un único repositorio Git (monorepo) para backend y frontend |
 | II. Dependencies | `requirements.txt` (Python) y `package.json` (Node) declaran todas las dependencias explícitamente |
-| III. Config | Variables de entorno via `.env` (nunca en el código). Incluye claves Planet Labs, claves GEE, configuración de BD, claves VAPID |
+| III. Config | Variables de entorno via `.env` (nunca en el código). Incluye claves GEE, configuración de BD, claves VAPID |
 | IV. Backing services | PostgreSQL y Open-Meteo tratados como recursos adjuntos, configurables por variable de entorno |
-| V. Build, release, run | Pipeline separado: build de la PWA, build del backend, deploy en Railway |
+| V. Build, release, run | Pipeline separado: build de la PWA, build del backend, deploy en UM-Cloud (Docker) |
 | VI. Processes | Backend stateless. El estado persiste únicamente en PostgreSQL |
 | VII. Port binding | FastAPI expone el servicio vía puerto configurado por variable de entorno |
 | VIII. Concurrency | Jobs independientes del proceso web principal (APScheduler) |
 | IX. Disposability | Arranque rápido, shutdown graceful en FastAPI |
 | X. Dev/prod parity | Docker para mantener paridad entre entorno local y producción |
-| XI. Logs | Logs a stdout (sin archivos), Railway los captura y centraliza |
+| XI. Logs | Logs a stdout (sin archivos), capturados por el runtime de contenedores (Docker) |
 | XII. Admin processes | Scripts de administración (migraciones, carga inicial) como procesos independientes |
 
 ---
@@ -106,9 +106,9 @@ irrigation-advisor/
 ## Decisiones técnicas relevantes
 
 - **Kc dinámico con fallback**: el Kc se calcula desde NDVI cuando hay imagen disponible. Fuente única: GEE/Sentinel-2 (cada 5–15 días, 10m). Fallback: Kc tabular FAO-56 por etapa fenológica cuando no hay imagen disponible o la nubosidad supera el 20%.
-- **Tipo de suelo automático desde SoilGrids**: al crear un campo, se consulta la API SoilGrids con las coordenadas del centroide para determinar el tipo de suelo (arenoso/franco/arcilloso) sin intervención del productor. Si la API falla, el sistema solicita selección manual como fallback.
+- **Tipo de suelo automático desde SoilGrids**: al crear un campo, se consulta la API SoilGrids con las coordenadas del centroide para determinar el tipo de suelo (clasificación textural USDA, 12 clases) sin intervención del productor. Si la API falla, el sistema solicita selección manual como fallback.
 - **Polígono dibujado por el productor**: al registrar el campo, el productor dibuja el polígono de su parcela en un mapa interactivo (Leaflet + Geoman). El admin lo revisa y ajusta si es necesario antes de aprobar. Un productor no puede tener más de un campo pendiente a la vez.
-- **Buffer negativo en polígono**: al procesar en GEE se aplica un buffer negativo de ~20m para evitar píxeles mixtos en los bordes del campo.
+- **Buffer negativo en polígono**: al procesar en GEE se aplica un buffer negativo de ~1m para evitar píxeles mixtos en los bordes del campo.
 
 ---
 
@@ -128,7 +128,7 @@ Open-Meteo no genera datos meteorológicos propios. Actúa como servicio gratuit
 La validación empírica del producto recae sobre estos modelos subyacentes, ampliamente documentados en literatura peer-reviewed, no sobre el servicio Open-Meteo en sí.
 
 Ventajas operativas específicas para este proyecto:
-- Sin credenciales ni API key (compatible con deploy simple en Railway).
+- Sin credenciales ni API key (compatible con deploy simple en contenedor).
 - Cuota gratuita amplia (10 000 llamadas/día) más que suficiente para un MVP.
 - Pronóstico disponible hasta 16 días; se consumen 5 para alertas de riego.
 - Entrega directamente **ETo FAO-56 precalculada**, lo que permite validar cruzadamente el cálculo propio implementado en el módulo `calculo/`.
