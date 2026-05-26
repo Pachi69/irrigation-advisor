@@ -37,14 +37,13 @@ erDiagram
         int id PK
         int campo_id FK
         date fecha
-        enum fuente "sentinel2 | sentinel1"
         float ndvi
         float nubosidad_pct
-        bool evento_humedad_detectado
+        bytes thumbnail_png "overlay NDVI para el mapa"
         timestamp created_at
     }
 
-    recomendacion {
+    balance_hidrico_diario {
         int id PK
         int campo_id FK
         date fecha
@@ -54,15 +53,21 @@ erDiagram
         float etc_mm
         float deficit_hidrico_mm "Dr acumulado"
         float ks "coef. estres hidrico 0-1"
+        enum etapa_fenologica "inicial | desarrollo | media | tardia | reposo"
+        float precipitacion_mm
         float taw_mm "agua total disponible mm"
         float raw_mm "agua facilmente disponible mm"
         float ndvi "valor usado para calcular Kc"
         date fecha_ndvi "fecha de la imagen satelital usada"
-        enum etapa_fenologica "inicial | desarrollo | media | final"
+        timestamp created_at
+    }
+
+    recomendacion {
+        int id PK
+        int balance_id FK "1:1 con balance_hidrico_diario"
         float lamina_recomendada_mm
         enum urgencia "baja | media | alta | critica"
         text razon
-        float precipitacion_mm
         enum confianza "alta | media | baja"
         timestamp created_at
     }
@@ -95,12 +100,13 @@ erDiagram
         timestamp created_at
     }
 
-    usuario       ||--o{ campo              : "tiene"
-    campo         ||--o{ registro_satelital : "genera"
-    campo         ||--o{ recomendacion      : "recibe"
-    campo         ||--o{ alerta             : "genera"
-    recomendacion ||--o| confirmacion_riego : "confirma"
-    usuario       ||--o{ suscripcion_push   : "registra"
+    usuario                ||--o{ campo                  : "tiene"
+    campo                  ||--o{ registro_satelital     : "genera"
+    campo                  ||--o{ balance_hidrico_diario : "calcula"
+    balance_hidrico_diario ||--o| recomendacion          : "genera"
+    campo                  ||--o{ alerta                 : "genera"
+    recomendacion          ||--o| confirmacion_riego     : "confirma"
+    usuario                ||--o{ suscripcion_push       : "registra"
 ```
 
 ---
@@ -110,8 +116,9 @@ erDiagram
 ### Lo que va en la base de datos
 - Parámetros de suelo (FC, WP) se derivan del `tipo_suelo` del campo usando la tabla de Saxton & Rawls (2006) para las 12 clases texturales USDA.
 - El `ultimo_deficit_mm` y `ultima_fecha_deficit` del campo permiten el backfill retroactivo del balance hídrico ante días sin recomendación guardada.
-- `registro_satelital` unifica registros de distintas fuentes satelitales (Sentinel-2 óptico y Sentinel-1 radar) en una sola tabla, identificadas por el campo `fuente`.
-- `ndvi` y `fecha_ndvi` en `recomendacion` registran qué imagen satelital se usó para calcular el Kc de ese día.
+- `registro_satelital` guarda los registros de NDVI extraídos de Sentinel-2 (vía Google Earth Engine) para cada campo y fecha, junto con el thumbnail PNG que la PWA muestra como overlay sobre el mapa.
+- `balance_hidrico_diario` guarda el estado hídrico de cada día (ETo, Kc, Dr, Ks, etapa); `recomendacion` se relaciona 1:1 y guarda solo la salida para el productor (lámina, urgencia, razón, confianza).
+- `ndvi` y `fecha_ndvi` en `balance_hidrico_diario` registran qué imagen satelital se usó para calcular el Kc de ese día.
 
 ### Lo que NO va en la base de datos (configuración estática en código)
 - Kc por etapa fenológica para cada cultivo
@@ -126,4 +133,4 @@ erDiagram
 |---|---|---|
 | Sentinel-2 disponible, nubosidad baja | s2_dinamico | alta |
 | Imagen disponible pero campo con malla antigranizo | tabular | media |
-| Sin imagen óptica clara (Sentinel-1 verifica humedad) | tabular | media |
+| Sin imagen óptica reciente (nublado) | tabular | media |
