@@ -6,7 +6,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.models.field import Field as FieldModel
-from app.models.satellite_record import SatelliteRecord, SatelliteSource
+from app.models.satellite_record import SatelliteRecord
 from app.schemas.satellite import SatelliteData
 from app.ingestion.satellite import get_satellite_indices, get_satellite_indices_for_range
 
@@ -36,8 +36,7 @@ def get_satellite_data_for_date(
     return (
         SatelliteData(
             field_id=field.id, date=sat_record.date,
-            source=sat_record.source, ndvi=sat_record.ndvi,
-            cloud_cover_pct=sat_record.cloud_cover_pct,
+            ndvi=sat_record.ndvi, cloud_cover_pct=sat_record.cloud_cover_pct,
         ),
         sat_record.date,
     )
@@ -103,8 +102,7 @@ def get_satellite_data_for_range(
             result[current] = (
                 SatelliteData(
                     field_id=field.id, date=chosen.date,
-                    source=chosen.source, ndvi=chosen.ndvi,
-                    cloud_cover_pct=chosen.cloud_cover_pct,
+                    ndvi=chosen.ndvi, cloud_cover_pct=chosen.cloud_cover_pct,
                 ),
                 chosen.date
             )
@@ -139,10 +137,8 @@ def fetch_latest_s2(field: FieldModel, today: DateType, db: Session) -> None:
             db.add(SatelliteRecord(
                 field_id=field.id,
                 date=new_indices.image_date,
-                source=SatelliteSource.sentinel2,
                 ndvi=new_indices.ndvi,
                 cloud_cover_pct=new_indices.cloud_cover_pct,
-                moisture_event_detected=False,
                 thumbnail_png=new_indices.thumbnail_png,
             ))
             db.flush()
@@ -201,10 +197,8 @@ def prefetch_s2_for_range(
             db.add(SatelliteRecord(
                 field_id=field.id,
                 date=idx.image_date,
-                source=SatelliteSource.sentinel2,
                 ndvi=idx.ndvi,
                 cloud_cover_pct=idx.cloud_cover_pct,
-                moisture_event_detected=False,
                 thumbnail_png=None,
             ))
             persisted += 1

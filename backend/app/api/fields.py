@@ -13,8 +13,7 @@ from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate, FieldChartD
 from app.schemas.alert import AlertPublic
 from app.auth.dependencies import get_current_user
 from app.calculation.crop_params import get_depletion_factor
-from app.api._geo import validate_and_compute_centroid, compute_area_ha
-from app.ingestion.soil import get_soil_type_from_coords
+from app.api._geo import setup_field_geo
 from app.api._helpers import owned_field
 
 router = APIRouter(prefix="/fields", tags=["fields"])
@@ -45,15 +44,7 @@ def create_field(
     area_ha = None
     soil_type = data.soil_type
     if data.polygon_geojson:
-        try:
-            latitude, longitude = validate_and_compute_centroid(data.polygon_geojson)
-            area_ha = compute_area_ha(data.polygon_geojson)
-        except ValueError as e:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-                detail=f"GeoJSON invalido: {e}"
-            )
-        detected = get_soil_type_from_coords(latitude, longitude)
+        latitude, longitude, area_ha, detected = setup_field_geo(data.polygon_geojson)
         if detected is not None:
             soil_type = detected
 

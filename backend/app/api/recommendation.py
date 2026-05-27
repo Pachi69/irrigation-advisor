@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/fields", tags=["recommendation"])
 
-NDVI_MAX_AGE_DAYS = 30
-
 
 @router.get("/{field_id}/recommendation", response_model=RecommendationResponse)
 def get_recommendation(

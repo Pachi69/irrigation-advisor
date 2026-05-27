@@ -9,8 +9,7 @@ from app.models.field import Field as FieldModel
 from app.models.enums import FieldStatus
 from app.schemas.admin import FieldApproval, FieldAdminView
 from app.auth.dependencies import get_current_admin
-from app.api._geo import validate_and_compute_centroid, compute_area_ha
-from app.ingestion.soil import get_soil_type_from_coords
+from app.api._geo import setup_field_geo
 from app.ingestion.climate import get_elevation
 from app.services.field import initialize_water_balance
 
@@ -56,17 +55,9 @@ def approve_field(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"El campo ya fue procesado (estado actual: {field.status.value})",
         )
-    try:
-        latitude, longitude = validate_and_compute_centroid(data.polygon_geojson)
-        field.area_ha = compute_area_ha(data.polygon_geojson)
-        detected_soil = get_soil_type_from_coords(latitude, longitude)
-        if detected_soil is not None:
-            field.soil_type = detected_soil
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"GeoJSON invalido: {e}",
-        )
+    latitude, longitude, field.area_ha, detected_soil = setup_field_geo(data.polygon_geojson)
+    if detected_soil is not None:
+        field.soil_type = detected_soil
     
     field.polygon_geojson = data.polygon_geojson
     field.latitude = latitude

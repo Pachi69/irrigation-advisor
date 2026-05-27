@@ -1,6 +1,9 @@
 """Utilidades geometricas para procesamiento de poligonos GeoJSON"""
 from typing import Any
 import math
+from fastapi import HTTPException, status
+from app.ingestion.soil import get_soil_type_from_coords
+from app.models.enums import SoilType
 
 
 def validate_and_compute_centroid(geojson: dict[str, Any]) -> tuple[float, float]:
@@ -121,3 +124,22 @@ def compute_area_ha(geojson: dict[str, Any]) -> float:
                 total_m2 -= ring_area_m2(hole)
     
     return round(max(0.0, total_m2) / 10_000.0, 4)
+
+def setup_field_geo(
+    polygon_geojson: dict,
+) -> tuple[float, float, float, "SoilType | None"]:
+    """Valida el polígono, calcula centroide + área y detecta el tipo de suelo.
+
+    Raises HTTPException 422 si el GeoJSON es inválido.
+    Returns: (latitude, longitude, area_ha, detected_soil_type | None)
+    """
+    try:
+        latitude, longitude = validate_and_compute_centroid(polygon_geojson)
+        area_ha = compute_area_ha(polygon_geojson)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"GeoJSON invalido: {e}",
+        )
+    detected_soil = get_soil_type_from_coords(latitude, longitude)
+    return latitude, longitude, area_ha, detected_soil
