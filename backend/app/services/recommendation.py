@@ -27,22 +27,32 @@ def save_recommendation(
     reason: str,
     confidence: ConfidenceLevel,
 ) -> Recommendation:
-    """Crea o actualiza la recomendacion asociada a un DailyWaterBalance dado"""
+    """Crea la recomendacion asociada a un DailyWaterBalance (inmutable).
+
+    Si ya existe una recomendacion para ese balance (ese dia), NO se sobreescribe:
+    queda como registro de la decision generada ese dia. El balance se sigue
+    recalculando aparte. Guarda un snapshot del estado hidrico del momento.
+    """
     rec = (
         db.query(Recommendation)
         .filter(Recommendation.water_balance_id == wb.id)
         .first()
     )
 
-    if rec is None:
-        rec = Recommendation(water_balance_id=wb.id)
-        db.add(rec)
+    if rec is not None:
+        return rec
 
-    rec.recommended_irrigation_mm = recommended_irrigation_mm
-    rec.urgency = urgency_level
-    rec.reason = reason
-    rec.confidence = confidence
-
+    rec = Recommendation(
+        water_balance_id=wb.id,
+        recommended_irrigation_mm=recommended_irrigation_mm,
+        urgency=urgency_level,
+        reason=reason,
+        confidence=confidence,
+        water_deficit_mm=wb.water_deficit_mm,
+        ks=wb.ks,
+        taw_mm=wb.taw_mm,
+    )
+    db.add(rec)
     return rec
 
 def build_recommendation_response(
