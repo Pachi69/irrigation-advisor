@@ -74,6 +74,7 @@ def compute_balance_from_data(
         crop_type=field.crop_type,
         current_date=target_date,
         satellite_data=satellite_data,
+        has_hail_net=field.has_hail_net,
     )
 
     balance = calculate_water_balance(
