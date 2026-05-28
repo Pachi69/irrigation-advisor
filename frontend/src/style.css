@@ -1,11 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
-*, *::before, *::after { box-sizing: border-box; }
+@theme {
+  /* Surfaces */
+  --color-paper:        #F5F2EA;
+  --color-surface:      #FFFFFF;
+  --color-chip:         #EEEAE0;
 
-body {
-  margin: 0;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Text */
+  --color-ink:          #0C1410;
+  --color-muted:        #6B7268;
+  --color-soft:         #A8AC9F;
+  --color-line:         rgba(12, 20, 16, 0.10);
+
+  /* Brand */
+  --color-primary:      #1A4D2E;
+  --color-primary-ink:  #FFFFFF;
+  --color-primary-soft: #DDE8D5;
+
+  /* Semantic */
+  --color-water:        #1B5FBA;
+  --color-water-soft:   #D9E5F7;
+  --color-amber:        #D88416;
+  --color-amber-soft:   #FBE9CC;
+  --color-amber-ink:    #7A4D0C;
+  --color-rust:         #B5391D;
+  --color-rust-soft:    #F5D9D2;
+  --color-frost:        #0E3A5C;
+
+  /* Fonts */
+  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  /* Radius — softer + larger than default */
+  --radius-xl:  14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+
+  /* Tracking — for hero numbers and headlines */
+  --tracking-tightest: -0.04em;
+}
+
+/* ─── Base ────────────────────────────────────────────────────────────── */
+html, body {
+  font-family: var(--font-sans);
+  background: var(--color-paper);
+  color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
-  background-color: #f9fafb;
-  color: #111827;
+}
+
+/* ─── Utility classes ─────────────────────────────────────────────────── */
+@utility app-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@utility app-display {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tightest);
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility app-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* ─── Safe areas (Android PWA con gesture nav) ───────────────────────── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }

@@ -11,12 +11,19 @@ import FieldHistory from '../views/FieldHistory.vue'
 import FieldEdit from '../views/FieldEdit.vue'
 import FieldChart from '../views/FieldChart.vue'
 import FieldConfirmations from '../views/FieldConfirmations.vue'
+import Account from '../views/Account.vue'
 
 const routes = [
   {
     path: '/',
     name: 'home',
     component: Home,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/account',
+    name: 'account',
+    component: Account,
     meta: { requiresAuth: true },
   },
   {

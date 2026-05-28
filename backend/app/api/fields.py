@@ -9,7 +9,8 @@ from app.models.enums import FieldStatus
 from app.models.alert import Alert
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.satellite_record import SatelliteRecord
-from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate, FieldChartData, DeficitPoint, NdviPoint
+from app.models.recommendation import Recommendation
+from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate, FieldChartData, DeficitPoint, NdviPoint, LastRecommendationSummary
 from app.schemas.alert import AlertPublic
 from app.auth.dependencies import get_current_user
 from app.calculation.crop_params import get_depletion_factor
@@ -17,6 +18,46 @@ from app.api._geo import setup_field_geo
 from app.api._helpers import owned_field
 
 router = APIRouter(prefix="/fields", tags=["fields"])
+
+_HISTORY_POINTS = 10
+
+def _build_last_recommendation(db: Session, field_id: int) -> LastRecommendationSummary | None:
+    """Trae la ultima recomendacion del campo con su historial de deficit para sparklines"""
+    row = (
+        db.query(Recommendation, DailyWaterBalance)
+        .join(DailyWaterBalance, Recommendation.water_balance_id == DailyWaterBalance.id)
+        .filter(DailyWaterBalance.field_id == field_id)
+        .filter(Recommendation.taw_mm.is_not(None), Recommendation.taw_mm > 0)
+        .order_by(DailyWaterBalance.date.desc())
+        .first()
+    )
+    if row is None:
+        return None
+    rec, wb = row
+
+    history_rows = (
+        db.query(Recommendation, DailyWaterBalance)
+        .join(DailyWaterBalance, Recommendation.water_balance_id == DailyWaterBalance.id)
+        .filter(DailyWaterBalance.field_id == field_id)
+        .filter(Recommendation.taw_mm.isnot(None), Recommendation.taw_mm > 0)
+        .order_by(DailyWaterBalance.date.desc())
+        .limit(_HISTORY_POINTS)
+        .all()
+    )
+
+    deficit_history = [
+        round((r.water_deficit_mm / r.taw_mm) * 100, 1)
+        for r, _ in reversed(history_rows)
+    ]
+
+    return LastRecommendationSummary(
+        date=wb.date,
+        urgency=rec.urgency,
+        recommended_irrigation_mm=rec.recommended_irrigation_mm,
+        deficit_pct=round((wb.water_deficit_mm / wb.taw_mm) * 100, 1),
+        deficit_history=deficit_history
+    )
+
 
 @router.post("", response_model=FieldPublic, status_code=status.HTTP_201_CREATED)
 def create_field(
@@ -71,12 +112,18 @@ def list_my_fields(
     db: Session = Depends(get_db),
 ):
     """Lista los campos asociados al usuario autenticado."""
-    return (
+    fields = (
         db.query(FieldModel)
         .filter(FieldModel.user_id == current_user.id)
         .order_by(FieldModel.created_at.desc())
         .all()
     )
+    result = []
+    for f in fields:
+        public = FieldPublic.model_validate(f)
+        public.last_recommendation = _build_last_recommendation(db, f.id)
+        result.append(public)
+    return result
 
 @router.get("/{field_id}", response_model=FieldPublic)
 def get_my_field(field: FieldModel = Depends(owned_field)):

@@ -20,8 +20,8 @@ export default defineConfig({
         name: 'Irrigation Advisor',
         short_name: 'Irrigation',
         description: 'Sistema de recomendación de riego inteligente',
-        theme_color: '#166534',
-        background_color: '#ffffff',
+        theme_color: '#1A4D2E',
+        background_color: '#F5F2EA',
         display: 'standalone',
         start_url: '/',
         icons: [

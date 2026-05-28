@@ -2,7 +2,18 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.enums import CropType, SoilType, FieldStatus
+from app.models.enums import CropType, SoilType, FieldStatus, UrgencyLevel
+
+
+class LastRecommendationSummary(BaseModel):
+    """Snapshot embebido en FieldPublic para evitar N+1 desde el cliente."""
+    date: date
+    urgency: UrgencyLevel
+    recommended_irrigation_mm: float
+    deficit_pct: float
+    deficit_history: list[float]
+
+    model_config = ConfigDict(from_attributes=True)
 
 class FieldCreate(BaseModel):
     """Lo que el productor envía al registrar un campo"""
@@ -29,6 +40,8 @@ class FieldPublic(BaseModel):
     longitude: float | None = None
     created_at: datetime
 
+    last_recommendation: LastRecommendationSummary | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -54,3 +67,4 @@ class FieldChartData(BaseModel):
     deficit: list[DeficitPoint]
     ndvi: list[NdviPoint]
     raw_threshold_pct: float
+

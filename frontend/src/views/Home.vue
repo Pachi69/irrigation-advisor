@@ -1,172 +1,257 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+/**
+ * Home.vue — Dashboard del productor.
+ *
+ * Mobile: greeting + acción del día + lista compacta de campos.
+ * Desktop: header + grid 2-col (acción del día + resumen) + grid de campos.
+ *
+ * Usa los campos `last_recommendation` embebidos en FieldPublic.
+ */
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, RouterLink } from 'vue-router'
 import { useAuth } from '../stores/auth'
+import { listMyFields } from '../services/fields'
 import { requestPushPermission, subscribeToPush } from '../services/push'
-import { Bell, BellOff, ArrowRight, AlertCircle} from 'lucide-vue-next'
-import { sendTestPush } from '../services/push'
-
+import { ArrowRight, Plus, Bell, Satellite } from 'lucide-vue-next'
+import Sparkline from '../components/Sparkline.vue'
 
 const router = useRouter()
-const { user, logout } = useAuth()
+const { user } = useAuth()
 
-const pushStatus = ref('idle') // idle | requesting | granted | denied | unsupported | error
+const fields = ref([])
+const loading = ref(true)
+const pushStatus = ref('idle')
 
-const testResult = ref('')
+const todayLabel = computed(() => {
+  const d = new Date()
+  const day = d.toLocaleDateString('es-AR', { weekday: 'short' })
+  const date = d.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })
+  return `${day.replace('.', '')} · ${date} · San Rafael`
+})
 
-async function handleTestPush() {
-    testResult.value = 'Enviando...'
-    try {
-      const { sent } = await sendTestPush()
-      testResult.value = sent > 0
-        ? `Enviada a ${sent} dispositivo(s). Revisá si llegó.`
-        : 'No hay suscripciones activas. Volvé a activar las notificaciones.'
-    } catch (e) {
-        testResult.value = 'Error al enviar la prueba.'
-    }
-}
+const activeFields = computed(() => fields.value.filter(f => f.status === 'active'))
 
-async function syncSubscription() {
-    // Solo marca 'granted' si la suscripcion se sincronizo de verdad con el backend.
-    try {
-        await subscribeToPush()
-        pushStatus.value = 'granted'
-    } catch (e) {
-        console.error('Error al sincronizar la subscripcion push:', e)
-        pushStatus.value = 'error'
-    }
-}
+const totalArea = computed(() =>
+  activeFields.value.reduce((s, f) => s + (f.area_ha || 0), 0).toFixed(1)
+)
 
-async function setupPushNotifications() {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-        pushStatus.value = 'unsupported'
-        return
-    }
-    if (Notification.permission === 'granted') {
-        await syncSubscription()
-        return
-    }
-    if (Notification.permission === 'denied') {
-        pushStatus.value = 'denied'
-        return
-    }
-    pushStatus.value = 'idle'
+// Campo más urgente que necesita riego HOY
+const urgentField = computed(() => {
+  const withRec = activeFields.value.filter(
+    f => f.last_recommendation && ['high', 'critical'].includes(f.last_recommendation.urgency)
+  )
+  // Ordenar por mm recomendado descendente
+  return withRec.sort((a, b) =>
+    b.last_recommendation.recommended_irrigation_mm - a.last_recommendation.recommended_irrigation_mm
+  )[0] || null
+})
+
+const urgentCount = computed(() => activeFields.value.filter(
+  f => f.last_recommendation && ['high', 'critical', 'medium'].includes(f.last_recommendation.urgency)
+).length)
+
+async function load() {
+  try {
+    fields.value = await listMyFields()
+  } finally {
+    loading.value = false
+  }
 }
 
 async function enableNotifications() {
-    pushStatus.value = 'requesting'
-    const granted = await requestPushPermission()
-    if (!granted) {
-        pushStatus.value = 'denied'
-        return
-    }
-    await syncSubscription()
+  pushStatus.value = 'requesting'
+  const granted = await requestPushPermission()
+  if (!granted) { pushStatus.value = 'denied'; return }
+  try { await subscribeToPush(); pushStatus.value = 'granted' }
+  catch { pushStatus.value = 'error' }
 }
 
-function handleLogout() {
-    logout()
-    router.push('/login')
+function urgencyDot(u) {
+  return {
+    critical: 'bg-rust', high: 'bg-amber',
+    medium: 'bg-amber', low: 'bg-primary', none: 'bg-soft',
+  }[u] || 'bg-soft'
 }
 
-onMounted(setupPushNotifications)
+function urgencyColor(u) {
+  return {
+    critical: 'var(--color-rust)', high: 'var(--color-rust)',
+    medium: 'var(--color-amber)', low: 'var(--color-primary)', none: 'var(--color-soft)',
+  }[u] || 'var(--color-primary)'
+}
+
+onMounted(() => {
+  load()
+  if ('Notification' in window) {
+    if (Notification.permission === 'granted') pushStatus.value = 'granted'
+    else if (Notification.permission === 'denied') pushStatus.value = 'denied'
+  }
+})
 </script>
 
 <template>
-    <div class="max-w-2xl lg:max-w-3xl mx-auto px-4 py-6 space-y-4">
+  <div class="max-w-[1180px] mx-auto px-5 md:px-8 pt-3 md:pt-8 pb-8">
 
-    <!-- Bienvenida -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-      <p class="text-xs text-gray-400 mb-0.5">Bienvenido</p>
-      <p class="font-bold text-gray-900 text-base">{{ user?.email }}</p>
+    <!-- Header -->
+    <div class="flex justify-between items-start md:items-end mb-5 md:mb-7">
+      <div>
+        <div class="app-label mb-1">{{ todayLabel }}</div>
+        <h1 class="text-[26px] md:text-[38px] font-bold text-ink tracking-tight leading-tight m-0">
+          Hola, {{ user?.name || 'Productor' }}.
+        </h1>
+      </div>
     </div>
 
-    <!-- Banner push: idle -->
-    <div
-      v-if="pushStatus === 'idle'"
-      class="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4"
-    >
-      <div class="flex items-start gap-3 mb-3">
-        <Bell class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-        <div>
-          <p class="font-bold text-amber-900 text-sm">Activá las notificaciones</p>
-          <p class="text-amber-800 text-xs mt-0.5">Recibí alertas de riego en el momento justo.</p>
-        </div>
+    <!-- Push activation banner (solo si idle) -->
+    <div v-if="pushStatus === 'idle'" class="mb-4 bg-amber-soft border border-amber/30 rounded-2xl p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-amber text-white flex items-center justify-center shrink-0">
+        <Bell :size="18" />
       </div>
-      <button
-        @click="enableNotifications"
-        class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
-      >
-        Activar notificaciones
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-bold text-ink">Activá las alertas de riego</div>
+        <div class="text-xs text-muted">Te avisamos cuando hay que regar.</div>
+      </div>
+      <button @click="enableNotifications" class="bg-amber text-white text-sm font-bold px-3 py-2 rounded-xl shrink-0">
+        Activar
       </button>
     </div>
 
-    <!-- Banner push: requesting -->
-    <div
-      v-else-if="pushStatus === 'requesting'"
-      class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex items-center gap-3"
-    >
-      <Bell class="w-5 h-5 text-amber-500 shrink-0" />
-      <p class="text-amber-800 text-sm font-medium">Esperando permiso...</p>
-    </div>
+    <!-- ─── Two-column on desktop · single column on mobile ─── -->
+    <div class="grid md:grid-cols-[1.4fr_1fr] gap-4 mb-7">
 
-    <!-- Banner push: granted -->
-    <div
-      v-else-if="pushStatus === 'granted'"
-      class="bg-green-50 border-2 border-green-300 rounded-2xl p-4"
-    >
-      <div class="flex items-start gap-3 mb-3">
-        <Bell class="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
-        <div>
-          <p class="font-bold text-green-900 text-sm">Notificaciones activas</p>
-          <p class="text-green-800 text-xs mt-0.5">Vas a recibir las recomendaciones de riego.</p>
+      <!-- Today's action — hero card -->
+      <div class="relative overflow-hidden bg-ink text-white rounded-3xl p-6 md:p-7 min-h-[180px] md:min-h-[220px]">
+        <div class="text-[11px] font-bold uppercase tracking-widest opacity-70 mb-2">
+          Acción del día
+        </div>
+
+        <template v-if="urgentField">
+          <h2 class="text-xl md:text-[28px] font-bold tracking-tight leading-tight m-0 mb-1">
+            {{ urgentCount }} {{ urgentCount === 1 ? 'campo necesita' : 'campos necesitan' }} riego hoy
+          </h2>
+          <div class="text-sm opacity-70 mb-5 md:mb-6">
+            <template v-if="activeFields.length - urgentCount > 0">
+              {{ activeFields.length - urgentCount }}
+              {{ (activeFields.length - urgentCount) === 1 ? 'está' : 'están' }} dentro de rango.
+            </template>
+            <template v-else>
+              Revisalos antes del mediodía.
+            </template>
+          </div>
+          <div class="flex items-end justify-between gap-4 pt-4 md:pt-5 border-t border-white/12">
+            <div>
+              <div class="text-xs opacity-65 mb-1">{{ urgentField.name }}</div>
+              <div class="app-mono text-3xl md:text-[42px] font-bold tracking-tight leading-none">
+                {{ urgentField.last_recommendation.recommended_irrigation_mm.toFixed(0) }}<span class="text-base opacity-60 ml-1">mm</span>
+              </div>
+            </div>
+            <RouterLink
+              :to="`/fields/${urgentField.id}/recommendation`"
+              class="bg-white text-ink font-bold text-sm px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5"
+            >
+              Ver <ArrowRight :size="14" />
+            </RouterLink>
+          </div>
+        </template>
+
+        <template v-else-if="activeFields.length === 0">
+          <h2 class="text-xl md:text-[28px] font-bold tracking-tight leading-tight m-0 mb-1">
+            Bienvenido a vid.
+          </h2>
+          <div class="text-sm opacity-70 mb-5 md:mb-6">
+            Registrá tu primer campo para empezar a recibir recomendaciones.
+          </div>
+          <RouterLink
+            to="/fields/new"
+            class="inline-flex items-center gap-1.5 bg-white text-ink font-bold text-sm px-4 py-2.5 rounded-xl"
+          >
+            <Plus :size="14" /> Registrar campo
+          </RouterLink>
+        </template>
+
+        <template v-else>
+          <h2 class="text-xl md:text-[28px] font-bold tracking-tight leading-tight m-0 mb-1">
+            Todo en orden hoy.
+          </h2>
+          <div class="text-sm opacity-70">
+            No se requiere riego en ninguno de tus campos.
+          </div>
+        </template>
+
+        <!-- Decorative drop -->
+        <svg class="absolute -top-10 -right-10 opacity-5 pointer-events-none" width="220" height="220" viewBox="0 0 32 32" fill="none">
+          <path d="M16 3c-4 6-7 9-7 13a7 7 0 0 0 14 0c0-4-3-7-7-13z" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <!-- Summary (solo desktop, queda muy denso en mobile) -->
+      <div class="hidden md:flex flex-col gap-3">
+        <div class="bg-surface border border-line rounded-3xl px-5 py-4">
+          <div class="app-label mb-2">Resumen</div>
+          <div class="grid grid-cols-2 gap-3.5">
+            <div>
+              <div class="app-label">Campos activos</div>
+              <div class="text-lg font-bold mt-1">{{ activeFields.length }}</div>
+            </div>
+            <div>
+              <div class="app-label">Superficie total</div>
+              <div class="app-mono text-lg font-bold mt-1">{{ totalArea }} <span class="text-sm text-muted font-semibold">ha</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-primary-soft rounded-3xl px-5 py-3.5 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+            <Satellite :size="18" />
+          </div>
+          <div class="flex-1">
+            <div class="text-xs font-bold uppercase tracking-wide text-primary">Sentinel-2</div>
+            <div class="text-sm font-medium">Datos de NDVI semanales</div>
+          </div>
         </div>
       </div>
-      <button
-        @click="handleTestPush"
-        class="w-full border-2 border-green-700 text-green-800 font-bold py-2.5 rounded-xl text-sm hover:bg-green-100 transition-colors"
+    </div>
+
+    <!-- Fields list -->
+    <div class="flex items-center justify-between px-1 mb-2.5">
+      <div class="app-label">Mis campos</div>
+    </div>
+
+    <div v-if="loading" class="text-center py-12 text-muted text-sm">Cargando...</div>
+    <div v-else-if="fields.length === 0" class="bg-surface border border-line rounded-3xl p-6 text-center">
+      <p class="text-muted text-sm mb-3">Aún no registraste tu primer campo.</p>
+      <RouterLink to="/fields/new" class="inline-flex items-center gap-1.5 bg-primary text-white font-bold text-sm px-4 py-2.5 rounded-xl">
+        <Plus :size="14" /> Registrar campo
+      </RouterLink>
+    </div>
+
+    <div v-else class="grid md:grid-cols-2 gap-3">
+      <RouterLink
+        v-for="f in fields" :key="f.id"
+        :to="`/fields/${f.id}/recommendation`"
+        class="bg-surface border border-line rounded-2xl p-4 md:p-5 flex items-center gap-3 hover:border-soft transition-colors"
       >
-        Probar notificación
-      </button>
-      <p v-if="testResult" class="text-xs text-gray-600 mt-2">{{ testResult }}</p>
-    </div>
-
-    <!-- Banner push: denied -->
-    <div
-      v-else-if="pushStatus === 'denied'"
-      class="bg-gray-100 border border-gray-200 rounded-2xl p-4 flex items-center gap-3"
-    >
-      <BellOff class="w-5 h-5 text-gray-400 shrink-0" />
-      <p class="text-gray-500 text-sm">Notificaciones desactivadas. Habilitálas desde la configuración del navegador.</p>
-    </div>
-
-    <!-- Banner push: error -->
-    <div
-      v-else-if="pushStatus === 'error'"
-      class="bg-red-50 border-2 border-red-300 rounded-2xl p-4"
-    >
-      <div class="flex items-start gap-3 mb-3">
-        <AlertCircle class="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-        <div>
-          <p class="font-bold text-red-800 text-sm">No se pudieron activar las notificaciones</p>
-          <p class="text-red-600 text-xs mt-0.5">Verificá tu conexión e intentá de nuevo.</p>
+        <span
+          class="w-2 h-2 rounded-full shrink-0"
+          :class="urgencyDot(f.last_recommendation?.urgency || 'none')"
+        />
+        <div class="flex-1 min-w-0">
+          <div class="text-[15px] md:text-base font-bold text-ink tracking-tight truncate">{{ f.name }}</div>
+          <div class="text-xs text-muted">{{ f.crop_type }} · {{ f.area_ha?.toFixed(1) }} ha</div>
         </div>
-      </div>
-      <button
-        @click="enableNotifications"
-        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
-      >
-        Reintentar
-      </button>
+        <Sparkline
+          v-if="f.last_recommendation?.deficit_history?.length > 1"
+          :data="f.last_recommendation.deficit_history"
+          :color="urgencyColor(f.last_recommendation.urgency)"
+          :width="60" :height="24"
+        />
+        <div class="app-mono text-base font-bold text-ink min-w-[60px] text-right">
+          <template v-if="f.last_recommendation && f.last_recommendation.recommended_irrigation_mm > 0">
+            {{ f.last_recommendation.recommended_irrigation_mm.toFixed(0) }} mm
+          </template>
+          <template v-else-if="f.last_recommendation">—</template>
+          <span v-else class="text-xs text-muted font-normal">Sin datos</span>
+        </div>
+      </RouterLink>
     </div>
-
-    <!-- CTA principal -->
-    <RouterLink
-      to="/fields"
-      class="flex items-center justify-between bg-green-800 hover:bg-green-700 text-white font-bold py-4 px-5 rounded-2xl text-base transition-colors shadow-sm"
-    >
-      <span>Ver mis campos</span>
-      <ArrowRight class="w-5 h-5" />
-    </RouterLink>
-
   </div>
 </template>

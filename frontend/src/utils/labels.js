@@ -22,9 +22,13 @@ export const STATUS_LABELS = {
 }
 
 export const URGENCY_LABEL = {
-    low: 'Sin urgencia', medium: 'Urgencia moderada',
-    high: 'Urgencia alta', critical: 'CRÍTICO — Riegue hoy',
+  none: 'Sin urgencia',
+  low: 'Urgencia baja',
+  medium: 'Urgencia moderada',
+  high: 'Urgencia alta',
+  critical: 'Crítico',
 }
+
 
 export const STAGE_LABELS = {
     initial: 'Etapa inicial', development: 'Desarrollo',
@@ -36,9 +40,11 @@ export const KC_SOURCE_LABELS = {
 }
 
 export const CONFIDENCE_LABELS = {
-    high: 'Alta', medium: 'Media', low: 'Baja',
+  low: 'Confianza baja',
+  medium: 'Confianza media',
+  high: 'Confianza alta',
 }
 
 export const ALERT_LABELS = {
-    frost: 'Alerta de helada', heat_wave: 'Alerta de ola de calor',
+    frost: 'Helada', heat_wave: 'Ola de calor',
 }
