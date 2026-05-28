@@ -102,35 +102,52 @@ onMounted(load)
         <div v-else-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
         <div v-else-if="items.length === 0" class="text-center py-12 text-gray-400 text-sm">No tenés riegos pendientes de confirmar.</div>
 
-        <div v-else class="space-y-2">
-            <div
-                v-for="item in items"
-                :key="item.recommendation_id"
-                class="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3 flex items-center justify-between gap-3"
-            >
-                <span class="text-sm text-gray-500 w-24 shrink-0">{{ item.date }}</span>
-
-                <span :class="[
-                    'text-xs font-bold px-2.5 py-1 rounded-full',
-                    item.urgency === 'low'    ? 'bg-green-100 text-green-800' :
-                    item.urgency === 'medium' ? 'bg-amber-100 text-amber-800' :
-                    item.urgency === 'high'   ? 'bg-orange-100 text-orange-800' :
-                                                'bg-red-100 text-red-700'
-                ]">
-                    {{ URGENCY_LABEL[item.urgency] }}
-                </span>
-
-                <span class="text-sm font-bold text-gray-900 w-16 text-right shrink-0">
-                    {{ item.recommended_irrigation_mm }} mm
-                </span>
-
-                <button
-                    @click="openConfirm(item)"
-                    class="flex items-center gap-1 text-sm font-semibold text-white bg-green-800 hover:bg-green-700 px-3 py-1.5 rounded-xl transition-colors shrink-0"
-                >
+        <div v-else>
+            <!-- Encabezado de columnas -->
+            <div class="grid grid-cols-[6rem_1fr_7rem_1fr_auto] items-center gap-3 px-4 mb-1.5">
+                <span class="app-label">Fecha</span>
+                <span class="app-label">Urgencia</span>
+                <span class="app-label justify-self-end">Recomendado</span>
+                <span></span>
+                <!-- placeholder invisible para reservar el ancho del boton y alinear columnas -->
+                <span aria-hidden="true" class="invisible flex items-center gap-1 text-sm font-semibold px-3 py-1.5">
                     <Droplet class="w-3.5 h-3.5" />
                     Confirmar
-                </button>
+                </span>
+            </div>
+
+            <div class="space-y-2">
+                <div
+                    v-for="item in items"
+                    :key="item.recommendation_id"
+                    class="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3 grid grid-cols-[6rem_1fr_7rem_1fr_auto] items-center gap-3"
+                >
+                    <span class="text-sm text-gray-500">{{ item.date }}</span>
+
+                    <span :class="[
+                        'justify-self-start text-xs font-bold px-2.5 py-1 rounded-full',
+                        item.urgency === 'low'    ? 'bg-green-100 text-green-800' :
+                        item.urgency === 'medium' ? 'bg-amber-100 text-amber-800' :
+                        item.urgency === 'high'   ? 'bg-orange-100 text-orange-800' :
+                                                    'bg-red-100 text-red-700'
+                    ]">
+                        {{ URGENCY_LABEL[item.urgency] }}
+                    </span>
+
+                    <span class="justify-self-end text-sm font-bold text-gray-900">
+                        {{ item.recommended_irrigation_mm }} mm
+                    </span>
+
+                    <span></span>
+
+                    <button
+                        @click="openConfirm(item)"
+                        class="justify-self-end flex items-center gap-1 text-sm font-semibold text-white bg-green-800 hover:bg-green-700 px-3 py-1.5 rounded-xl transition-colors"
+                    >
+                        <Droplet class="w-3.5 h-3.5" />
+                        Confirmar
+                    </button>
+                </div>
             </div>
         </div>
 
