@@ -1,8 +1,10 @@
 """Cliente Open-Meteo para datos climáticos (actuales, recientes, pronóstico).
 
-Usa la Forecast API con parámetro `past_days` para cubrir hoy y días pasados
-(hasta 92 días atrás). Timezone America/Argentina/Mendoza para que los días
-se alineen con el calendario local.
+Usa la Forecast API con parámetro `past_days` para cubrir hoy y días pasados,
+y la Archive API (ERA5) para el histórico del backfill, ya que la Forecast API
+solo retiene ~3 semanas reales hacia atrás (acepta hasta 92 días de `past_days`
+pero los más viejos vuelven null). Timezone America/Argentina/Mendoza para que
+los días se alineen con el calendario local.
 """
 
 import logging
@@ -19,6 +21,8 @@ from app.ingestion.validation import validate_climate_row, validate_forecast_row
 from app.ingestion import nasa_power
 
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+ARCHIVE_LAG_DAYS = 15
 TIMEZONE = "America/Argentina/Mendoza"
 TIMEOUT_SECONDS = 10.0
 
@@ -44,12 +48,12 @@ DAILY_VARS_FORECAST = [
     "et0_fao_evapotranspiration",
 ]
 
-def _fetch_daily(params: dict, retries: int = 3, backoff: float = 2.0) -> dict:
+def _fetch_daily(params: dict, url: str = OPEN_METEO_FORECAST_URL, retries: int = 3, backoff: float = 2.0) -> dict:
     """Helper: Hace GET a Open-Meteo y devuelve la seccion 'daily' del payload"""
     last_err = None
     for attempt in range(retries):
         try:
-            response = httpx.get(OPEN_METEO_FORECAST_URL, params=params, timeout=TIMEOUT_SECONDS)
+            response = httpx.get(url, params=params, timeout=TIMEOUT_SECONDS)
             response.raise_for_status()
             payload = response.json()
             daily = payload.get("daily")
@@ -88,6 +92,48 @@ def _climate_data_from_daily(daily: dict, idx: int, target_date: date) -> Climat
         "eto_reference_mm":   daily["et0_fao_evapotranspiration"][idx],
     })
     return ClimateData(date=target_date, **row)
+
+def _archive_params(latitude: float, longitude: float, start: date, end: date) -> dict:
+    """Parametros para la Archive API (ERA5): rango explicito por fechas ISO"""
+    return {
+        "latitude": latitude,
+        "longitude": longitude,
+        "daily": ",".join(DAILY_VARS_FULL),
+        "timezone": TIMEZONE,
+        "wind_speed_unit": "ms",
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+    }
+
+def _merge_daily_into(
+    result: dict[date, ClimateData], daily: dict, start: date, end: date
+) -> None:
+    """Vuelca las filas de un payload 'daily' al dict result, filtrando por rango."""
+    for idx, iso_date in enumerate(daily["time"]):
+        current = date.fromisoformat(iso_date)
+        if current < start or current > end:
+            continue
+        try:
+            result[current] = _climate_data_from_daily(daily, idx, current)
+        except Exception as e:
+            logger.warning("Fila climatica invalida para %s: %s; dia omitido", current, e)
+            continue
+
+
+def _fill_from_nasa(
+    result: dict[date, ClimateData],
+    latitude: float, longitude: float,
+    start: date, end: date,
+) -> None:
+    """Rellena un tramo dia por dia desde NASA POWER (fallback)."""
+    current = start
+    while current <= end:
+        if current not in result:
+            try:
+                result[current] = nasa_power.get_climate_data(latitude, longitude, current)
+            except RuntimeError as nasa_error:
+                logger.warning("NASA POWER fallo para %s: %s; dia omitido.", current, nasa_error)
+        current += timedelta(days=1)
 
 def get_climate_data(latitude: float, longitude: float, target_date: date) -> ClimateData:
     """Obtiene los datos climaticos diarios para una fecha pasada o actual.
@@ -147,27 +193,30 @@ def get_climate_data(latitude: float, longitude: float, target_date: date) -> Cl
                 f"Ambas fuentes fallaron. Open-Meteo: {open_meteo_error}. NASA POWER: {nasa_error}"
             ) from nasa_error
         
-def get_climate_data_for_range(
-        latitude: float, longitude: float, start_date: date, end_date: date
-) -> dict[date, ClimateData]:
+def get_climate_data_for_range( latitude: float, longitude: float, start_date: date, end_date: date) -> dict[date, ClimateData]:
     """Obtiene datos climaticos diarios para un rango de fechas.
-    
-    Reemplaza N llamadas dia-por-dia de get_climate_data por una unica request,
-    pensado para el backfill.
+
+    Reemplaza N llamadas dia-por-dia de get_climate_data por una (o dos)
+    requests batch, pensado para el backfill. Hace un split por antiguedad
+    porque el Forecast API solo retiene ~3 semanas de datos reales hacia atras
+    (pide hasta 92 dias de past_days pero los devuelve null):
+      - Fechas <= hoy - ARCHIVE_LAG_DAYS: Archive API (ERA5), que SI trae el
+        historico completo (incluido et0) para fechas viejas.
+      - Fechas mas recientes: Forecast API via past_days.
+    Ambos tramos se mergean.
 
     Args:
         latitude:   latitud en grados decimales.
         longitude:  longitud en grados decimales.
-        start_date: primer dia del rango (inclusive). No futuro, no > 92 dias.
+        start_date: primer dia del rango (inclusive). No futuro.
         end_date:   ultimo dia del rango (inclusive). No futuro.
 
     Returns:
         dict {fecha: ClimateData}, una entrada por cada dia con datos validos.
 
     Raises:
-        ValueError:   si las fechas son invalidas (futuras, mal ordenadas o
-                      start_date supera los 92 dias de past_days).
-        RuntimeError: si Open-Meteo falla y NASA POWER tampoco devuelve nada.
+        ValueError:   si las fechas son invalidas (futuras o mal ordenadas).
+        RuntimeError: si ambas fuentes fallan y no se obtiene ningun dato.
     """
     today = date.today()
 
@@ -176,49 +225,55 @@ def get_climate_data_for_range(
     if end_date > today:
         raise ValueError(f"end_date {end_date} es futura; usar get_forecast para el pronóstico.")
     
-    delta_days = (today - start_date).days
-    if delta_days > 92:
-        raise ValueError(f"start_date {start_date} supera los 92 dias de past_days soportados")
-    
-    params = {
-        "latitude": latitude,
-        "longitude": longitude,
-        "daily": ",".join(DAILY_VARS_FULL),
-        "timezone": TIMEZONE,
-        "wind_speed_unit": "ms", # FAO-56 requiere m/s, no km/h
-        "past_days": delta_days,
-        "forecast_days": 1,
-    }
+    archive_cutoff = today - timedelta(days=ARCHIVE_LAG_DAYS)
 
-    try:
-        daily = _fetch_daily(params)
-    except RuntimeError as open_meteo_error:
-        logger.warning("Open-Meteo fallo para el rango %s..%s (%s); usando NASA POWER dia por dia.", start_date, end_date, open_meteo_error)
-        fallback: dict[date, ClimateData] = {}
-        current = start_date
-        while current <= end_date:
-            try:
-                fallback[current] = nasa_power.get_climate_data(latitude, longitude, current)
-            except RuntimeError as nasa_error:
-                logger.warning("NASA POWER fallo para %s: %s; dia omitido.", current, nasa_error)
-            current += timedelta(days=1)
-        if not fallback:
-            raise RuntimeError(
-                f"Ambas fuentes fallaron para el rango {start_date}..{end_date}. "
-                f"Open-Meteo: {open_meteo_error}") from open_meteo_error
-        
-        return fallback
-    
     result: dict[date, ClimateData] = {}
-    for idx, iso_date in enumerate(daily["time"]):
-        current = date.fromisoformat(iso_date)
-        if current < start_date or current > end_date:
-            continue
+    errors: list[str] = []
+
+    # --- Tramo historico: Archive API (ERA5) ---
+    archive_end = min(end_date, archive_cutoff)
+    if start_date <= archive_end:
         try:
-            result[current] = _climate_data_from_daily(daily, idx, current)
-        except Exception as e:
-            logger.warning("Fila climatica invalida para %s: %s; dia omitido", current, e)
-            continue
+            daily = _fetch_daily(_archive_params(latitude, longitude, start_date, archive_end),
+                                 url=OPEN_METEO_ARCHIVE_URL)
+            _merge_daily_into(result, daily, start_date, archive_end)
+        except RuntimeError as archive_error:
+            logger.warning(
+                "Archive API fallo para %s..%s (%s); usando NASA POWER dia por dia.",
+                start_date, archive_end, archive_error,
+            )
+            errors.append(f"Archive: {archive_error}")
+            _fill_from_nasa(result, latitude, longitude, start_date, archive_end)
+
+    # --- Tramo reciente: Forecast API (past_days) ---
+    forecast_start = max(start_date, archive_cutoff + timedelta(days=1))
+    if forecast_start <= end_date:
+        delta_days = (today - forecast_start).days
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "daily": ",".join(DAILY_VARS_FULL),
+            "timezone": TIMEZONE,
+            "wind_speed_unit": "ms",  # FAO-56 requiere m/s, no km/h
+            "past_days": delta_days,
+            "forecast_days": 1,
+        }
+        try:
+            daily = _fetch_daily(params)
+            _merge_daily_into(result, daily, forecast_start, end_date)
+        except RuntimeError as forecast_error:
+            logger.warning(
+                "Forecast API fallo para %s..%s (%s); usando NASA POWER dia por dia.",
+                forecast_start, end_date, forecast_error,
+            )
+            errors.append(f"Forecast: {forecast_error}")
+            _fill_from_nasa(result, latitude, longitude, forecast_start, end_date)
+
+    if not result:
+        raise RuntimeError(
+            f"Ambas fuentes fallaron para el rango {start_date}..{end_date}. "
+            + " | ".join(errors)
+        )
 
     return result
 
