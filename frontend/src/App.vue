@@ -81,7 +81,7 @@ const activeTab = computed(() => {
         <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
           <path d="M16 3c-4 6-7 9-7 13a7 7 0 0 0 14 0c0-4-3-7-7-13z" fill="currentColor"/>
         </svg>
-        <span class="text-base font-bold tracking-tight text-ink">vid<span class="text-primary">.</span></span>
+        <span class="text-base font-bold tracking-tight text-ink">Irrigation Advisor</span>
       </div>
     </nav>
 
@@ -91,7 +91,7 @@ const activeTab = computed(() => {
         <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
           <path d="M16 3c-4 6-7 9-7 13a7 7 0 0 0 14 0c0-4-3-7-7-13z" fill="currentColor"/>
         </svg>
-        <span class="text-base md:text-lg font-bold tracking-tight text-ink">vid<span class="text-primary">.</span></span>
+        <span class="text-base md:text-lg font-bold tracking-tight text-ink">Irrigation Advisor</span>
       </div>
       <div class="flex gap-2 text-sm">
         <RouterLink to="/login" class="px-3 py-1.5 text-muted font-semibold">Ingresar</RouterLink>

@@ -156,7 +156,7 @@ onMounted(() => {
 
         <template v-else-if="activeFields.length === 0">
           <h2 class="text-xl md:text-[28px] font-bold tracking-tight leading-tight m-0 mb-1">
-            Bienvenido a vid.
+            Bienvenido a Irrigation Advisor.
           </h2>
           <div class="text-sm opacity-70 mb-5 md:mb-6">
             Registrá tu primer campo para empezar a recibir recomendaciones.
