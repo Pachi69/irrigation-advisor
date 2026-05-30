@@ -161,17 +161,26 @@ La columna AWC (θ_fc − θ_wp) es la que efectivamente entra en el TAW. Los va
 
 El sistema usa exclusivamente **Sentinel-2 (10 m)** vía Google Earth Engine. Se evaluó **Planet Labs (PlanetScope, 3 m)** como alternativa de mayor resolución, pero se descartó: el acceso a las imágenes de alta resolución requiere suscripción paga, y los productos públicos gratuitos de la plataforma son los mismos Sentinel-2 ya disponibles gratis en GEE. La resolución de 10 m de Sentinel-2 es suficiente para promediar el NDVI sobre el polígono de un campo agrícola.
 
-### Conversión de lámina de riego a tiempo (enfoque identificado, pendiente de implementación)
+### Conversión de lámina de riego a tiempo y volumen (definida — entrevista finca Morgan, mayo 2026)
 
-La recomendación se entrega en **lámina (mm)**. Para expresarla en **tiempo de riego**, toda fórmula requiere una tasa de aplicación; en el riego a manto de Mendoza esa tasa se deriva del **derecho de riego (dotación, L/s/ha)** asignado por el Departamento General de Irrigación, sin necesidad de medir el caudal en campo.
+La recomendación se calcula en **lámina (mm)** y se expresa además en **volumen (m³)** y **tiempo de riego**. La entrevista confirmó que el productor conoce su caudal/dotación y que recibe la orden de regar en **horas**, por lo que se entregan las tres unidades. Para el tiempo, la tasa de aplicación se deriva del **derecho de riego (dotación, L/s/ha)** asignado por el DGI, sin medir el caudal en campo; al despejar, **la superficie se cancela**.
 
-Despejando volumen y caudal, **la superficie del campo se cancela**, quedando:
+Riego **superficial / por aspersión** (lo usado en San Rafael; Morgan riega por aspersión):
 
 ```
-tiempo (s) = 10.000 × lámina (mm) / dotación (L/s/ha) / eficiencia
+volumen (m³) = lámina (mm) × superficie (ha) × 10
+tiempo (s)   = 10.000 × lámina (mm) / dotación (L/s/ha) / eficiencia
 ```
 
-- La **dotación** es una constante del derecho de riego del campo (la Ley de Aguas de Mendoza fija un máximo de 1,5 L/s/ha).
-- La **eficiencia** corrige las pérdidas del riego a manto (escurrimiento, percolación profunda; típicamente 0,5–0,7).
+Inversa, para confirmar un riego ingresado en tiempo o volumen y normalizarlo a lámina (mm):
 
-Pendiente: la **entrevista con el productor** debe confirmar si conoce su dotación, si riega por turno y qué eficiencia asumir. Hasta entonces el sistema mantiene la recomendación en mm.
+```
+lámina (mm) desde tiempo  = tiempo (s) × dotación (L/s/ha) × eficiencia / 10.000
+lámina (mm) desde volumen = volumen (m³) / (superficie (ha) × 10)
+```
+
+- **Dotación:** constante del derecho de riego del sector (Ley de Aguas de Mendoza: máximo 1,5 L/s/ha; default si el productor no la carga).
+- **Eficiencia:** corrige pérdidas; default **0,8 aspersión** y **0,6 superficial** (ajustable por sector).
+- `volumen_m3` y `tiempo_min` se **persisten** en la recomendación al generarse (inmutables).
+
+**Riego por goteo (pendiente / futuro):** la tasa NO se deriva de la dotación/ha sino de los emisores (caudal por gotero × densidad), y FAO-56 añade un factor de **fracción mojada** al balance. La conversión se implementa como estrategia por `tipo_riego` para incorporarlo sin refactor. Ver `docs/diseno/sprint-2-sectores.md`.

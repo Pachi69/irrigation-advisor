@@ -9,7 +9,7 @@
 | Procesamiento satelital | Google Earth Engine (Sentinel-2) | Sentinel-2 SR Harmonizado, 10m/pixel, cada 5–15 días. Autenticación via cuenta de servicio GEE. |
 | Datos de suelo | SoilGrids 2.0 (ISRIC) | API REST gratuita (CC-BY 4.0). Devuelve fracciones arena/limo/arcilla en g/kg a 250m. Sin credenciales requeridas. |
 | Datos climáticos | Open-Meteo API (primaria) + NASA POWER (fallback) | Gratuitos, sin credenciales; Open-Meteo sirve modelos ECMWF/ERA5 y calcula ETo FAO-56. Detalle en sección "Fuentes de datos climáticos". |
-| Jobs automáticos | APScheduler | Job recomendación (00:01hs) + job notificaciones push (08:00hs) + job alertas climáticas (cada 6hs) |
+| Jobs automáticos | APScheduler | Job de cálculo (madrugada, batch por sector) + job de notificación (ventana ~15–30 min, por hora/frecuencia de sector) + job de alertas climáticas (cada 6hs) |
 | Frontend | Vue 3 + Vite (PWA) | Liviano, rápido de desarrollar, soporte PWA nativo |
 | Notificaciones | Web Push (VAPID) | Estándar PWA, sin costo, sin dependencia de terceros |
 | Deploy | UM-Cloud (Docker) | Contenerización de backend y frontend sobre infraestructura de la universidad |
@@ -28,16 +28,19 @@ Módulos internos:
 
 | Módulo | Responsabilidad |
 |---|---|
-| `ingesta/` | Conexión a GEE y Open-Meteo, validación y limpieza de datos |
-| `calculo/` | ETo Penman-Monteith (FAO-56), Kc dinámico desde NDVI, balance hídrico |
-| `decision/` | Índice de urgencia, ajuste por pronóstico, generación de alertas |
+| `ingestion/` | Conexión a GEE y Open-Meteo (clima 1× por campo, NDVI cacheado por sector), validación y limpieza de datos |
+| `calculation/` | ETo Penman-Monteith (FAO-56), Kc dinámico desde NDVI, balance hídrico por sector, conversión lámina↔m³↔tiempo (estrategia por `tipo_riego`) |
+| `decision/` | Índice de urgencia, ajuste por pronóstico, confianza de Kc según malla, generación de alertas |
+| `services/` | Orquestación de campo/sector (alta, centroide, soil/elevación) y recomendación por sector |
 | `api/` | Endpoints REST consumidos por la PWA |
-| `jobs/` | Job de recomendación (00:01hs), notificaciones push (08:00hs) y alertas climáticas (cada 6hs) |
+| `jobs/` | Job de cálculo (madrugada, batch por sector), job de notificación (ventana ~15–30 min, por hora/frecuencia de sector) y alertas climáticas (cada 6hs) |
 | `auth/` | Registro, login, JWT, roles (productor / admin) |
 
 ### Base de datos (PostgreSQL)
-Entidades principales: `productor`, `campo`, `suelo`, `recomendacion`, `alerta`.
-El polígono del campo se almacena como GeoJSON y es asignado por el admin al momento de aprobar el campo.
+Entidades principales: `usuario`, `campo`, `sector`, `registro_satelital`, `balance_hidrico_diario`, `recomendacion`, `confirmacion_riego`, `alerta`, `suscripcion_push`. Detalle completo en `docs/modelo-datos/er-diagram.md`.
+- `campo` es el contenedor (un dueño, ubicación para clima, tipo de suelo); `sector` es la unidad de cálculo (variedad, polígono, tipo de riego, malla → NDVI/balance/recomendación independientes).
+- **No existe tabla `suelo`**: FC/WP se derivan en runtime del `tipo_suelo` del campo (Saxton & Rawls 2006).
+- El polígono lo dibuja el productor **por sector** (GeoJSON); el admin revisa/ajusta antes de aprobar el campo. El `lat/lon` del campo se deriva del centroide de la unión de los sectores.
 
 ### Frontend (PWA — Vue 3 + Vite)
 Pantallas principales:
@@ -47,9 +50,10 @@ Pantallas principales:
 - Estado general del cultivo
 
 ### Notificaciones push
-Implementadas con el estándar Web Push (VAPID). Se envían desde el backend en dos contextos:
-- **Recomendación diaria**: generada por el job nocturno.
-- **Alertas climáticas**: generadas por el job cada 6hs ante condiciones críticas (helada, ola de calor).
+Implementadas con el estándar Web Push (VAPID). El **cálculo está desacoplado de la notificación**:
+- **Cálculo (job de madrugada, batch por sector)**: genera y persiste balance + recomendación de cada sector. No depende de la hora del productor.
+- **Notificación de recomendación (job cada ~15–30 min)**: revisa los sectores cuya `hora_notif` cae en la ventana y cuya `frecuencia_notif_dias` ya se cumplió; envía push **solo si la lámina recomendada > 0** (si es 0, la recomendación igual queda registrada). A cada tick solo hace `SELECT` + push → liviano aunque muchos usuarios compartan horario.
+- **Alertas climáticas (job cada 6hs)**: condiciones críticas a nivel campo (helada, ola de calor); se envían siempre.
 
 ---
 
@@ -60,9 +64,10 @@ irrigation-advisor/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   ├── calculo/
-│   │   ├── ingesta/
+│   │   ├── calculation/
+│   │   ├── ingestion/
 │   │   ├── decision/
+│   │   ├── services/
 │   │   ├── jobs/
 │   │   ├── auth/
 │   │   └── models/
