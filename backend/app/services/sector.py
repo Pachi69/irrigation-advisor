@@ -30,7 +30,6 @@ def create_sector(field: FieldModel, data: SectorCreate, db: Session) -> SectorM
         polygon_geojson=data.polygon_geojson,
         irrigation_type=data.irrigation_type,
         flow_rate_ls_ha=data.flow_rate_ls_ha,
-        efficiency=data.efficiency,
         hail_net_type=data.hail_net_type,
         notification_frequency_days=data.notification_frequency_days,
         notification_hour=data.notification_hour,

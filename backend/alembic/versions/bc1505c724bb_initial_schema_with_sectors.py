@@ -1,8 +1,8 @@
 """initial schema with sectors
 
-Revision ID: a54f22feb24e
+Revision ID: bc1505c724bb
 Revises: 
-Create Date: 2026-05-30 19:42:18.928976
+Create Date: 2026-05-31 14:13:34.371360
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a54f22feb24e'
+revision: str = 'bc1505c724bb'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,7 +35,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
-    sa.Column('soil_type', sa.Enum('sand', 'loamy_sand', 'sandy_loam', 'sandy_clay_loam', 'loam', 'silt_loam', 'silt', 'clay_loam', 'silty_clay_loam', 'sandy_clay', 'silty_clay', 'clay', name='soiltype'), nullable=False),
+    sa.Column('soil_type', sa.Enum('sand', 'loamy_sand', 'sandy_loam', 'sandy_clay_loam', 'loam', 'silt_loam', 'silt', 'clay_loam', 'silty_clay_loam', 'sandy_clay', 'silty_clay', 'clay', name='soiltype'), nullable=True),
     sa.Column('status', sa.Enum('active', 'inactive', 'pending', name='fieldstatus'), nullable=False),
     sa.Column('elevation_m', sa.Float(), nullable=True),
     sa.Column('latitude', sa.Float(), nullable=True),
@@ -79,7 +79,6 @@ def upgrade() -> None:
     sa.Column('polygon_geojson', sa.JSON(), nullable=True),
     sa.Column('irrigation_type', sa.Enum('aspersion', 'superficial', name='irrigationtype'), nullable=False),
     sa.Column('flow_rate_ls_ha', sa.Float(), nullable=False),
-    sa.Column('efficiency', sa.Float(), nullable=False),
     sa.Column('hail_net_type', sa.Enum('none', 'open', 'dense', 'color', name='hailnettype'), nullable=False),
     sa.Column('notification_frequency_days', sa.Integer(), nullable=False),
     sa.Column('notification_hour', sa.Time(), nullable=True),

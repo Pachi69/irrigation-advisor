@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPendingConfirmations, confirmIrrigation } from '../services/fields';
+import { getPendingConfirmations, confirmIrrigation } from '../services/sectors'
 import { ArrowLeft, Droplet } from 'lucide-vue-next'
 import { URGENCY_LABEL } from '../utils/labels'
 
@@ -84,7 +84,7 @@ onMounted(load)
 
         <div class="flex items-center justify-between mb-5">
             <button
-                @click="router.push(`/fields/${route.params.id}/recommendation`)"
+                @click="router.push(`/sectors/${route.params.id}/recommendation`)"
                 class="flex items-center gap-1 text-green-800 font-semibold text-sm hover:underline"
             >
                 <ArrowLeft class="w-4 h-4" />
@@ -109,7 +109,6 @@ onMounted(load)
                 <span class="app-label">Urgencia</span>
                 <span class="app-label justify-self-end">Recomendado</span>
                 <span></span>
-                <!-- placeholder invisible para reservar el ancho del boton y alinear columnas -->
                 <span aria-hidden="true" class="invisible flex items-center gap-1 text-sm font-semibold px-3 py-1.5">
                     <Droplet class="w-3.5 h-3.5" />
                     Confirmar

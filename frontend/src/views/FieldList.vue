@@ -1,18 +1,14 @@
 <script setup>
 /**
- * FieldList.vue — Mis Campos
- *
- * Mobile: lista vertical de tarjetas (banner urgencia + nombre + cultivo + sparkline + mm + CTA).
- * Desktop: grid 3-col + chips de filtro.
- *
- * Usa los campos `last_recommendation` embebidos en FieldPublic.
+ * FieldList.vue — Mis Campos.
+ * Cada card resume el campo: nº de sectores + urgencia máxima entre ellos.
+ * Click → detalle del campo (lista de sectores).
  */
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { listMyFields } from '../services/fields'
 import { Plus, ChevronRight, Clock } from 'lucide-vue-next'
-import { CROP_LABELS, URGENCY_LABEL } from '../utils/labels'
-import Sparkline from '../components/Sparkline.vue'
+import { URGENCY_LABEL } from '../utils/labels'
 
 const fields = ref([])
 const loading = ref(true)
@@ -27,15 +23,27 @@ async function load() {
   finally { loading.value = false }
 }
 
-function urgency(f) {
-  return f.last_recommendation?.urgency || 'none'
+const URGENCY_RANK =  { none: 0, low: 1, medium: 2, high: 3, critical: 4 }
+
+function maxUrgency(f) {
+  const urgencies = (f.sectors || [])
+    .map(s => s.last_recommendation?.urgeny)
+    .filter(Boolean)
+  if (urgencies.length === 0) return 'none'
+  return urgencies.reduce((max, u) => URGENCY_RANK[u] > URGENCY_RANK[max] ? u : max, 'none')
+}
+function sectorCount(f) {
+  return (f.sectors || []).length
+}
+
+function fieldArea(f) {
+  return (f.sectors || []).reduce((s, sec) => s + (sec.area_ha || 0), 0)
 }
 
 const filtered = computed(() => {
-  if (filter.value === 'all') return fields.value
   if (filter.value === 'pending') return fields.value.filter(f => f.status === 'pending')
   if (filter.value === 'urgent') return fields.value.filter(
-    f => f.last_recommendation && ['high', 'critical'].includes(f.last_recommendation.urgency)
+    f => ['high', 'critical'].includes(maxUrgency(f))
   )
   return fields.value
 })
@@ -44,26 +52,24 @@ const counts = computed(() => ({
   all: fields.value.length,
   active: fields.value.filter(f => f.status === 'active').length,
   pending: fields.value.filter(f => f.status === 'pending').length,
-  urgent: fields.value.filter(
-    f => f.last_recommendation && ['high', 'critical'].includes(f.last_recommendation.urgency)
-  ).length,
+  urgent: fields.value.filter(f => ['high', 'critical'].includes(maxUrgency(f))).length,
 }))
 
 const totalArea = computed(() =>
   fields.value.filter(f => f.status === 'active')
-    .reduce((s, f) => s + (f.area_ha || 0), 0).toFixed(1)
+    .reduce((s, f) => s + fieldArea(f), 0).toFixed(1)
 )
 
 const hasPending = computed(() => fields.value.some(f => f.status === 'pending'))
 
 function urgencyMeta(u) {
   return ({
-    critical: { dot: 'bg-rust', text: 'text-rust',    color: 'var(--color-rust)' },
-    high:     { dot: 'bg-amber', text: 'text-amber',  color: 'var(--color-rust)' },
-    medium:   { dot: 'bg-amber', text: 'text-amber',  color: 'var(--color-amber)' },
-    low:      { dot: 'bg-primary', text: 'text-primary', color: 'var(--color-primary)' },
-    none:     { dot: 'bg-soft', text: 'text-muted',   color: 'var(--color-soft)' },
-  })[u] || { dot: 'bg-soft', text: 'text-muted', color: 'var(--color-soft)' }
+    critical: { dot: 'bg-rust', text: 'text-rust' },
+    high:     { dot: 'bg-amber', text: 'text-amber' },
+    medium:   { dot: 'bg-amber', text: 'text-amber' },
+    low:      { dot: 'bg-primary', text: 'text-primary' },
+    none:     { dot: 'bg-soft', text: 'text-muted' },
+  })[u] || { dot: 'bg-soft', text: 'text-muted' }
 }
 
 onMounted(load)
@@ -127,50 +133,33 @@ onMounted(load)
           </div>
           <div class="text-base font-bold text-ink tracking-tight">{{ f.name }}</div>
           <div class="text-[13px] text-muted mb-2.5">
-            {{ CROP_LABELS[f.crop_type] || f.crop_type }} · {{ f.area_ha?.toFixed(1) }} ha
+            {{ sectorCount(f) }} {{ sectorCount(f) === 1 ? 'sector' : 'sectores' }} · {{ fieldArea(f).toFixed(1) }} ha
           </div>
-          <div class="text-xs text-muted leading-relaxed">
-            Un administrador revisará tu campo en las próximas 24 hs.
-          </div>
+          <RouterLink :to="`/fields/${f.id}`" class="text-xs font-bold text-primary inline-flex items-center gap-1">
+            Ver detalle <ChevronRight :size="12" />
+          </RouterLink>
         </div>
 
         <!-- Active -->
         <RouterLink
-          v-else :to="`/fields/${f.id}/recommendation`"
+          v-else :to="`/fields/${f.id}`"
           class="bg-surface border border-line rounded-2xl overflow-hidden flex flex-col hover:border-soft transition-colors"
         >
           <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-2">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1.5 mb-1">
-                <span class="w-2 h-2 rounded-full" :class="urgencyMeta(urgency(f)).dot" />
-                <span class="text-[10px] font-bold uppercase tracking-wider" :class="urgencyMeta(urgency(f)).text">
-                  {{ URGENCY_LABEL[urgency(f)] || 'Sin datos' }}
+                <span class="w-2 h-2 rounded-full" :class="urgencyMeta(maxUrgency(f)).dot" />
+                <span class="text-[10px] font-bold uppercase tracking-wider" :class="urgencyMeta(maxUrgency(f)).text">
+                  {{ URGENCY_LABEL[maxUrgency(f)] || 'Sin datos' }}
                 </span>
               </div>
               <div class="text-base md:text-lg font-bold text-ink tracking-tight">{{ f.name }}</div>
               <div class="text-[13px] text-muted mt-0.5">
-                {{ CROP_LABELS[f.crop_type] || f.crop_type }} · {{ f.area_ha?.toFixed(1) }} ha
+                {{ sectorCount(f) }} {{ sectorCount(f) === 1 ? 'sector' : 'sectores' }} · {{ fieldArea(f).toFixed(1) }} ha
               </div>
             </div>
-            <Sparkline
-              v-if="f.last_recommendation?.deficit_history?.length > 1"
-              :data="f.last_recommendation.deficit_history"
-              :color="urgencyMeta(urgency(f)).color"
-              :width="70" :height="28"
-            />
           </div>
-
-          <div class="px-4 py-3 border-t border-line flex items-center justify-between bg-chip">
-            <div>
-              <div class="app-label">Hoy</div>
-              <div class="app-mono text-lg font-bold text-ink mt-0.5">
-                <template v-if="f.last_recommendation && f.last_recommendation.recommended_irrigation_mm > 0">
-                  {{ f.last_recommendation.recommended_irrigation_mm.toFixed(0) }} mm
-                </template>
-                <template v-else-if="f.last_recommendation">Sin riego</template>
-                <span v-else class="text-sm text-muted font-normal">Sin datos</span>
-              </div>
-            </div>
+          <div class="px-4 py-3 border-t border-line flex items-center justify-end bg-chip">
             <span class="inline-flex items-center gap-1 text-sm font-bold text-primary">
               Abrir <ChevronRight :size="14" />
             </span>

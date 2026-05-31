@@ -1,28 +1,19 @@
 <script setup>
-/**
- * FieldRecommendation.vue — pantalla central del producto.
- *
- * Layout:
- *  - Mobile: stack vertical (hero + alertas + balance + cultivo + satélite + acciones).
- *  - Desktop: 2 columnas (hero+alerta+satélite | balance+cultivo+CTA confirm).
- *
- * Reemplaza la versión actual con el mismo flujo de datos (getRecommendation,
- * getFieldAlerts, getFieldSatelliteImage, getFieldById).
- */
 import { ref, onMounted, computed, watch, onBeforeUnmount, useTemplateRef } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
-  getRecommendation, getFieldAlerts, getFieldSatelliteImage, getFieldById,
-} from '../services/fields'
+  getRecommendation, getSectorSatelliteImage, getSectorById,
+} from '../services/sectors.js'
+import { getFieldAlerts } from '../services/fields.js'
 import {
-  ArrowLeft, Clock, Droplet, Droplets, Leaf, Satellite, AlertTriangle,
-  Snowflake, Sun, MoreHorizontal, Pencil,
+  ArrowLeft, Clock, Droplet, Satellite, AlertTriangle,
+  Snowflake, Sun, Pencil,
 } from 'lucide-vue-next'
 import {
   ALERT_LABELS, STAGE_LABELS, KC_SOURCE_LABELS, CONFIDENCE_LABELS, CROP_LABELS,
-} from '../utils/labels'
+} from '../utils/labels.js'
 import UrgencyHero from '../components/UrgencyHero.vue'
 import SoilTank from '../components/SoilTank.vue'
 
@@ -30,7 +21,7 @@ const route = useRoute()
 const router = useRouter()
 
 const rec = ref(null)
-const field = ref(null)
+const sector = ref(null)
 const alerts = ref([])
 const loading = ref(true)
 const error = ref('')
@@ -76,9 +67,9 @@ function dismissAlert(id) {
 
 async function load() {
   try {
-    [rec.value, field.value] = await Promise.all([
+    [rec.value, sector.value] = await Promise.all([
       getRecommendation(route.params.id),
-      getFieldById(route.params.id),
+      getSectorById(route.params.id),
     ])
     loadSatellite()
     fetchAlerts()
@@ -90,23 +81,24 @@ async function load() {
 }
 
 async function fetchAlerts() {
+  if (!sector.value?.field_id) return
   try {
-    const all = await getFieldAlerts(route.params.id)
+    const all = await getFieldAlerts(sector.value.field_id)
     alerts.value = all.filter(a => !dismissed.includes(a.id))
   } catch {}
 }
 
 async function loadSatellite() {
   try {
-    const blob = await getFieldSatelliteImage(route.params.id)
+    const blob = await getSectorSatelliteImage(route.params.id)
     satelliteUrl.value = URL.createObjectURL(blob)
   } catch {}
 }
 
 // Init Leaflet map once we have data + image
-watch([satelliteUrl, field], ([url, f]) => {
-  if (!url || !f?.polygon_geojson || !mapRef.value || map) return
-  const coords = f.polygon_geojson.coordinates[0]
+watch([satelliteUrl, sector], ([url, s]) => {
+  if (!url || !s?.polygon_geojson || !mapRef.value || map) return
+  const coords = s.polygon_geojson.coordinates[0]
   const lats = coords.map(c => c[1])
   const lngs = coords.map(c => c[0])
   const bounds = [[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]]
@@ -129,30 +121,30 @@ onMounted(load)
 
     <!-- Breadcrumb / back row -->
     <div class="flex items-center justify-between mb-4 md:mb-5 gap-2">
-      <button @click="router.push('/fields')" class="flex items-center gap-1.5 text-primary font-semibold text-sm">
+      <button @click="router.push(sector ? `/fields/${sector.field_id}` : '/fields')" class="flex items-center gap-1.5 text-primary font-semibold text-sm">
         <ArrowLeft :size="16" />
-        <span class="hidden md:inline">Mis campos</span>
+        <span class="hidden md:inline">Volver al campo</span>
         <span class="md:hidden">Volver</span>
       </button>
       <div class="flex items-center gap-2">
-        <RouterLink :to="`/fields/${route.params.id}/history`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
+        <RouterLink :to="`/sectors/${route.params.id}/history`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
           <Clock :size="13" /> Historial
         </RouterLink>
-        <RouterLink :to="`/fields/${route.params.id}/confirmations`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-primary-ink bg-primary px-3 py-1.5 rounded-xl">
+        <RouterLink :to="`/sectors/${route.params.id}/confirmations`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-primary-ink bg-primary px-3 py-1.5 rounded-xl">
           <Droplet :size="13" /> Confirmar riego
         </RouterLink>
-        <RouterLink :to="`/fields/${route.params.id}/edit`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
+        <RouterLink :to="`/sectors/${route.params.id}/edit`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
             <Pencil :size="13" /> Editar
         </RouterLink>
       </div>
     </div>
 
     <!-- Title -->
-    <h1 v-if="field" class="text-2xl md:text-3xl font-bold text-ink tracking-tight leading-tight mb-1">
-      {{ field.name }}
+    <h1 v-if="sector" class="text-2xl md:text-3xl font-bold text-ink tracking-tight leading-tight mb-1">
+      {{ sector.name }}
     </h1>
-    <div v-if="field" class="text-sm text-muted mb-5 md:mb-6">
-      {{ CROP_LABELS[field.crop_type] || field.crop_type }} · {{ field.area_ha?.toFixed(1) }} ha
+    <div v-if="sector" class="text-sm text-muted mb-5 md:mb-6">
+      {{ CROP_LABELS[sector.crop_type] || sector.crop_type }}<template v-if="sector.variety"> · {{ sector.variety }}</template> · {{ sector.area_ha?.toFixed(1) }} ha
     </div>
 
     <div v-if="loading" class="text-center py-12 text-muted text-sm">Calculando recomendación...</div>
@@ -171,7 +163,7 @@ onMounted(load)
           :reason="rec.reason"
           :date-label="`Hoy · ${dateLabel}`"
           :confidence="CONFIDENCE_LABELS[rec.confidence] || 'Sin datos'"
-          :area-ha="field?.area_ha || 1"
+          :area-ha="sector?.area_ha || 1"
         />
 
         <!-- ─── ALERTS ─── -->
@@ -291,7 +283,7 @@ onMounted(load)
           <p class="text-sm text-ink leading-relaxed mb-3.5">
             Cuando hayas regado, confirmá cuántos mm aplicaste para que recalibremos el balance hídrico.
           </p>
-          <RouterLink :to="`/fields/${route.params.id}/confirmations`"
+          <RouterLink :to="`/sectors/${route.params.id}/confirmations`"
             class="w-full bg-primary text-primary-ink font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-1.5">
             Confirmar riego
           </RouterLink>

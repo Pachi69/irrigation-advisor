@@ -6,10 +6,12 @@ export async function listPendingFields() {
     return data
 }
 
-export async function approveField(fieldId, polygonGeojson) {
-    // POST /admin/fields/:id/approve -> devuelve el campo actualizado
-    const { data } = await api.post(`/admin/fields/${fieldId}/approve`, {
-        polygon_geojson: polygonGeojson,
-    })
+export async function approveField(fieldId) {
+    const { data } = await api.post(`/admin/fields/${fieldId}/approve`)
+    return data
+}
+
+export async function adminUpdateSector(sectorId, payload) {
+    const { data } = await api.patch(`/admin/sectors/${sectorId}`, payload)
     return data
 }

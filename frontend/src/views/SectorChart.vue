@@ -13,7 +13,7 @@ import {
     Legend,
     Filler
 } from 'chart.js'
-import { getFieldChartData } from '../services/fields';
+import { getSectorChartData } from '../services/sectors'
 import { ArrowLeft } from 'lucide-vue-next'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
@@ -26,7 +26,7 @@ const rawData = ref(null)
 
 onMounted(async () => {
     try {
-        rawData.value = await getFieldChartData(route.params.id)
+        rawData.value = await getSectorChartData(route.params.id)
     } catch {
         error.value = 'No se pudo cargar el gráfico'
     } finally {
@@ -117,7 +117,7 @@ const ndviOptions = {
 
         <div class="flex items-center gap-3 mb-5">
             <button
-                @click="router.push(`/fields/${route.params.id}/history`)"
+                @click="router.push(`/sectors/${route.params.id}/history`)"
                 class="flex items-center gap-1 text-green-800 font-semibold text-sm hover:underline"
             >
                 <ArrowLeft class="w-4 h-4" />
@@ -142,7 +142,6 @@ const ndviOptions = {
                 <div class="h-64 lg:h-96">
                     <Line :data="ndviChartData" :options="ndviOptions" />
                 </div>
-                
             </div>
         </div>
 

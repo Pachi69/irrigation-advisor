@@ -1,17 +1,16 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { getRecommendationHistory } from '../services/fields';
+import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { getRecommendationHistory } from '../services/sectors'
 import { ArrowLeft, BarChart2 } from 'lucide-vue-next'
 import { URGENCY_LABEL } from '../utils/labels'
 
-const route = useRoute()    
+const route = useRoute()
 const router = useRouter()
 
 const history = ref([])
 const loading = ref(true)
 const error = ref('')
-
 
 onMounted(async () => {
     try {
@@ -29,7 +28,7 @@ onMounted(async () => {
 
         <div class="flex items-center justify-between mb-5">
             <button
-                @click="router.push(`/fields/${route.params.id}/recommendation`)"
+                @click="router.push(`/sectors/${route.params.id}/recommendation`)"
                 class="flex items-center gap-1 text-green-800 font-semibold text-sm hover:underline"
             >
                 <ArrowLeft class="w-4 h-4" />
@@ -37,7 +36,7 @@ onMounted(async () => {
             </button>
             <h1 class="text-base font-bold text-gray-900">Historial</h1>
             <RouterLink
-                :to="`/fields/${route.params.id}/chart`"
+                :to="`/sectors/${route.params.id}/chart`"
                 class="flex items-center gap-1 text-sm font-semibold text-green-800 border-2 border-green-800 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
             >
                 <BarChart2 class="w-3.5 h-3.5" />

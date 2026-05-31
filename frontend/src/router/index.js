@@ -4,14 +4,17 @@ import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import FieldList from '../views/FieldList.vue'
 import FieldRegister from '../views/FieldRegister.vue'
-import { useAuth } from '../stores/auth'
-import AdminFields from '../views/AdminFields.vue'
-import FieldRecommendation from '../views/FieldRecommendation.vue'
-import FieldHistory from '../views/FieldHistory.vue'
+import FieldDetail from '../views/FieldDetail.vue'
 import FieldEdit from '../views/FieldEdit.vue'
-import FieldChart from '../views/FieldChart.vue'
-import FieldConfirmations from '../views/FieldConfirmations.vue'
+import SectorRegister from '../views/SectorRegister.vue'
+import SectorRecommendation from '../views/SectorRecommendation.vue'
+import SectorHistory from '../views/SectorHistory.vue'
+import SectorChart from '../views/SectorChart.vue'
+import SectorConfirmations from '../views/SectorConfirmations.vue'
+import SectorEdit from '../views/SectorEdit.vue'
+import AdminFields from '../views/AdminFields.vue'
 import Account from '../views/Account.vue'
+import { useAuth } from '../stores/auth'
 
 const routes = [
   {
@@ -39,33 +42,51 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/fields/:id',
+    name: 'field-detail',
+    component: FieldDetail,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/fields/:id/edit',
     name: 'field-edit',
     component: FieldEdit,
     meta: { requiresAuth: true },
   },
   {
-    path: '/fields/:id/recommendation',
-    name: 'field-recommendation',
-    component: FieldRecommendation,
+    path: '/fields/:id/sectors/new',
+    name: 'sector-register',
+    component: SectorRegister,
     meta: { requiresAuth: true },
   },
   {
-    path: '/fields/:id/history',
-    name: 'field-history',
-    component: FieldHistory,
+    path: '/sectors/:id/recommendation',
+    name: 'sector-recommendation',
+    component: SectorRecommendation,
     meta: { requiresAuth: true },
   },
   {
-    path: '/fields/:id/chart',
-    name: 'field-chart',
-    component: FieldChart,
+    path: '/sectors/:id/history',
+    name: 'sector-history',
+    component: SectorHistory,
     meta: { requiresAuth: true },
   },
   {
-    path: '/fields/:id/confirmations',
-    name: 'field-confirmations',
-    component: FieldConfirmations,
+    path: '/sectors/:id/chart',
+    name: 'sector-chart',
+    component: SectorChart,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/sectors/:id/confirmations',
+    name: 'sector-confirmations',
+    component: SectorConfirmations,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/sectors/:id/edit',
+    name: 'sector-edit',
+    component: SectorEdit,
     meta: { requiresAuth: true },
   },
   {

@@ -12,7 +12,6 @@ class SectorCreate(BaseModel):
     variety: Optional[str] = None
     irrigation_type: IrrigationType = IrrigationType.aspersion
     flow_rate_ls_ha: float = Field(default=1.5, gt=0)
-    efficiency: float = Field(default=0.8, gt=0, le=1)
     hail_net_type: HailNetType = HailNetType.none
     notification_frequency_days: int = Field(default=1, ge=1)
     notification_hour: Optional[time] = None
@@ -25,7 +24,6 @@ class SectorUpdate(BaseModel):
     variety: Optional[str] = None
     irrigation_type: Optional[IrrigationType] = None
     flow_rate_ls_ha: Optional[float] = Field(default=None, gt=0)
-    efficiency: Optional[float] = Field(default=None, gt=0, le=1)
     hail_net_type: Optional[HailNetType] = None
     notification_frequency_days: Optional[int] = Field(default=None, ge=1)
     notification_hour: Optional[time] = None
@@ -40,9 +38,9 @@ class SectorPublic(BaseModel):
     crop_type: CropType
     variety: Optional[str] = None
     area_ha: Optional[float] = None
+    polygon_geojson: Optional[dict] = None
     irrigation_type: IrrigationType
     flow_rate_ls_ha: float
-    efficiency: float
     hail_net_type: HailNetType
     notification_frequency_days: int
     notification_hour: Optional[time] = None

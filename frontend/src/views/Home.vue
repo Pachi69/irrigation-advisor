@@ -1,11 +1,7 @@
 <script setup>
 /**
  * Home.vue — Dashboard del productor.
- *
- * Mobile: greeting + acción del día + lista compacta de campos.
- * Desktop: header + grid 2-col (acción del día + resumen) + grid de campos.
- *
- * Usa los campos `last_recommendation` embebidos en FieldPublic.
+ * Razona sobre sectores (la unidad de riego); el campo es contenedor.
  */
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
@@ -13,6 +9,7 @@ import { useAuth } from '../stores/auth'
 import { listMyFields } from '../services/fields'
 import { requestPushPermission, subscribeToPush } from '../services/push'
 import { ArrowRight, Plus, Bell, Satellite } from 'lucide-vue-next'
+import { CROP_LABELS } from '../utils/labels'
 import Sparkline from '../components/Sparkline.vue'
 
 const router = useRouter()
@@ -31,23 +28,29 @@ const todayLabel = computed(() => {
 
 const activeFields = computed(() => fields.value.filter(f => f.status === 'active'))
 
-const totalArea = computed(() =>
-  activeFields.value.reduce((s, f) => s + (f.area_ha || 0), 0).toFixed(1)
+// Todos los sectores de campos activos, con el nombre del campo embebido
+const activeSectors = computed(() =>
+  activeFields.value.flatMap(f =>
+    (f.sectors || []).map(s => ({ ...s, fieldName: f.name }))
+  )
 )
 
-// Campo más urgente que necesita riego HOY
-const urgentField = computed(() => {
-  const withRec = activeFields.value.filter(
-    f => f.last_recommendation && ['high', 'critical'].includes(f.last_recommendation.urgency)
+const totalArea = computed(() =>
+  activeSectors.value.reduce((s, sec) => s + (sec.area_ha || 0), 0).toFixed(1)
+)
+
+// Sector más urgente que necesita riego HOY
+const urgentSector = computed(() => {
+  const withRec = activeSectors.value.filter(
+    s => s.last_recommendation && ['high', 'critical'].includes(s.last_recommendation.urgency)
   )
-  // Ordenar por mm recomendado descendente
   return withRec.sort((a, b) =>
     b.last_recommendation.recommended_irrigation_mm - a.last_recommendation.recommended_irrigation_mm
   )[0] || null
 })
 
-const urgentCount = computed(() => activeFields.value.filter(
-  f => f.last_recommendation && ['high', 'critical', 'medium'].includes(f.last_recommendation.urgency)
+const urgentCount = computed(() => activeSectors.value.filter(
+  s => s.last_recommendation && ['high', 'critical', 'medium'].includes(s.last_recommendation.urgency)
 ).length)
 
 async function load() {
@@ -125,14 +128,14 @@ onMounted(() => {
           Acción del día
         </div>
 
-        <template v-if="urgentField">
+        <template v-if="urgentSector">
           <h2 class="text-xl md:text-[28px] font-bold tracking-tight leading-tight m-0 mb-1">
-            {{ urgentCount }} {{ urgentCount === 1 ? 'campo necesita' : 'campos necesitan' }} riego hoy
+            {{ urgentCount }} {{ urgentCount === 1 ? 'sector necesita' : 'sectores necesitan' }} riego hoy
           </h2>
           <div class="text-sm opacity-70 mb-5 md:mb-6">
-            <template v-if="activeFields.length - urgentCount > 0">
-              {{ activeFields.length - urgentCount }}
-              {{ (activeFields.length - urgentCount) === 1 ? 'está' : 'están' }} dentro de rango.
+            <template v-if="activeSectors.length - urgentCount > 0">
+              {{ activeSectors.length - urgentCount }}
+              {{ (activeSectors.length - urgentCount) === 1 ? 'está' : 'están' }} dentro de rango.
             </template>
             <template v-else>
               Revisalos antes del mediodía.
@@ -140,13 +143,13 @@ onMounted(() => {
           </div>
           <div class="flex items-end justify-between gap-4 pt-4 md:pt-5 border-t border-white/12">
             <div>
-              <div class="text-xs opacity-65 mb-1">{{ urgentField.name }}</div>
+              <div class="text-xs opacity-65 mb-1">{{ urgentSector.fieldName }} · {{ urgentSector.name }}</div>
               <div class="app-mono text-3xl md:text-[42px] font-bold tracking-tight leading-none">
-                {{ urgentField.last_recommendation.recommended_irrigation_mm.toFixed(0) }}<span class="text-base opacity-60 ml-1">mm</span>
+                {{ urgentSector.last_recommendation.recommended_irrigation_mm.toFixed(0) }}<span class="text-base opacity-60 ml-1">mm</span>
               </div>
             </div>
             <RouterLink
-              :to="`/fields/${urgentField.id}/recommendation`"
+              :to="`/sectors/${urgentSector.id}/recommendation`"
               class="bg-white text-ink font-bold text-sm px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5"
             >
               Ver <ArrowRight :size="14" />
@@ -154,7 +157,7 @@ onMounted(() => {
           </div>
         </template>
 
-        <template v-else-if="activeFields.length === 0">
+        <template v-else-if="activeSectors.length === 0">
           <h2 class="text-xl md:text-[28px] font-bold tracking-tight leading-tight m-0 mb-1">
             Bienvenido a Irrigation Advisor.
           </h2>
@@ -226,29 +229,29 @@ onMounted(() => {
 
     <div v-else class="grid md:grid-cols-2 gap-3">
       <RouterLink
-        v-for="f in fields" :key="f.id"
-        :to="`/fields/${f.id}/recommendation`"
+        v-for="s in activeSectors" :key="s.id"
+        :to="`/sectors/${s.id}/recommendation`"
         class="bg-surface border border-line rounded-2xl p-4 md:p-5 flex items-center gap-3 hover:border-soft transition-colors"
       >
         <span
           class="w-2 h-2 rounded-full shrink-0"
-          :class="urgencyDot(f.last_recommendation?.urgency || 'none')"
+          :class="urgencyDot(s.last_recommendation?.urgency || 'none')"
         />
         <div class="flex-1 min-w-0">
-          <div class="text-[15px] md:text-base font-bold text-ink tracking-tight truncate">{{ f.name }}</div>
-          <div class="text-xs text-muted">{{ f.crop_type }} · {{ f.area_ha?.toFixed(1) }} ha</div>
+          <div class="text-[15px] md:text-base font-bold text-ink tracking-tight truncate">{{ s.fieldName }} · {{ s.name }}</div>
+          <div class="text-xs text-muted">{{ CROP_LABELS[s.crop_type] || s.crop_type }} · {{ s.area_ha?.toFixed(1) }} ha</div>
         </div>
         <Sparkline
-          v-if="f.last_recommendation?.deficit_history?.length > 1"
-          :data="f.last_recommendation.deficit_history"
-          :color="urgencyColor(f.last_recommendation.urgency)"
+          v-if="s.last_recommendation?.deficit_history?.length > 1"
+          :data="s.last_recommendation.deficit_history"
+          :color="urgencyColor(s.last_recommendation.urgency)"
           :width="60" :height="24"
         />
         <div class="app-mono text-base font-bold text-ink min-w-[60px] text-right">
-          <template v-if="f.last_recommendation && f.last_recommendation.recommended_irrigation_mm > 0">
-            {{ f.last_recommendation.recommended_irrigation_mm.toFixed(0) }} mm
+          <template v-if="s.last_recommendation && s.last_recommendation.recommended_irrigation_mm > 0">
+            {{ s.last_recommendation.recommended_irrigation_mm.toFixed(0) }} mm
           </template>
-          <template v-else-if="f.last_recommendation">—</template>
+          <template v-else-if="s.last_recommendation">—</template>
           <span v-else class="text-xs text-muted font-normal">Sin datos</span>
         </div>
       </RouterLink>

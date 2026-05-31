@@ -9,14 +9,12 @@ from app.schemas.sector import SectorPublic
 class FieldCreate(BaseModel):
     """Lo que el productor envía al registrar un campo"""
     name: str = Field(min_length=2, max_length=255)
-    soil_type: SoilType = SoilType.loam
-
 
 class FieldPublic(BaseModel):
     """Lo que la API devuelve al cliente"""
     id: int
     name: str
-    soil_type: SoilType
+    soil_type: SoilType | None = None
     status: FieldStatus
     elevation_m: float | None = None
     latitude: float | None = None
@@ -30,4 +28,3 @@ class FieldPublic(BaseModel):
 class FieldUpdate(BaseModel):
     """ Campos editables por el productor. Todos opcionales - solo se actualizan los enviados."""
     name: str | None = Field(default=None, min_length=2, max_length=255)
-    soil_type: SoilType | None = None

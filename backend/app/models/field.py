@@ -12,7 +12,7 @@ class Field(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    soil_type: Mapped[SoilType] = mapped_column(Enum(SoilType), nullable=False)
+    soil_type: Mapped[SoilType | None] = mapped_column(Enum(SoilType), nullable=True)
     status: Mapped[FieldStatus] = mapped_column(Enum(FieldStatus), nullable=False, default=FieldStatus.pending)
     elevation_m: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

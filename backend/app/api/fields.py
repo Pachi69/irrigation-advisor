@@ -37,7 +37,7 @@ def create_field(
             detail="Ya tenes un campo pendiente de aprobacion. Espera a que sea procesado antes de registrar otro"
         )
 
-    field = FieldModel(user_id=current_user.id, name=data.name, soil_type=data.soil_type)
+    field = FieldModel(user_id=current_user.id, name=data.name)
     db.add(field)
     db.commit()
     db.refresh(field)
