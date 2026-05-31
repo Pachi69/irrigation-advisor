@@ -5,7 +5,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.models.field import Field as FieldModel
+from app.models.sector import Sector as SectorModel
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.recommendation import Recommendation
 from app.models.enums import UrgencyLevel, ConfidenceLevel
@@ -62,7 +62,7 @@ def build_recommendation_response(
 ) -> RecommendationResponse:
     """Construye RecommendationResponse plano desde los dos modelos separados."""
     return RecommendationResponse(
-        field_id=wb.field_id,
+        sector_id=wb.sector_id,
         date=wb.date,
         urgency_level=rec.urgency,
         recommended_irrigation_mm=rec.recommended_irrigation_mm,
@@ -82,7 +82,7 @@ def build_recommendation_response(
     )
 
 def run_backfill(
-    field: FieldModel, start_date: DateType, end_date: DateType, db: Session
+    sector: SectorModel, start_date: DateType, end_date: DateType, db: Session
 ) -> None:
     """Rellena los DailyWaterBalance + Recommendation faltantes entre start y end.
     
@@ -96,25 +96,26 @@ def run_backfill(
         return
     
     # Prefetch satelital: asegura que las imagenes del periodo esten en la DB
-    prefetch_s2_for_range(field, start_date, end_date, db)
+    prefetch_s2_for_range(sector, start_date, end_date, db)
     
+    field = sector.field
     try:
         climate_by_date = get_climate_data_for_range(field.latitude, field.longitude, start_date, end_date)
     except (ValueError, RuntimeError) as e:
-        logger.error("Backfill campo %d: no se pudo traer clima %s..%s: %s", field.id, start_date, end_date, e)
+        logger.error("Backfill sector %d: no se pudo traer clima %s..%s: %s", sector.id, start_date, end_date, e)
         return
-    satellite_by_date = get_satellite_data_for_range(field, start_date, end_date, db)
+    satellite_by_date = get_satellite_data_for_range(sector, start_date, end_date, db)
 
-    irrigation_by_date = confirmed_irrigation_by_range(field.id, start_date, end_date, db)
+    irrigation_by_date = confirmed_irrigation_by_range(sector.id, start_date, end_date, db)
 
     # Deficit inicial: el ultimo conocido del campo
-    previous_deficit = field.last_deficit_mm or 0.0
+    previous_deficit = sector.last_deficit_mm or 0.0
 
     current = start_date
     while current <= end_date:
         climate = climate_by_date.get(current)
         if climate is None:
-            logger.warning("Backfill campo %d: sin datos de clima para %s; dia omitido.", field.id, current,)
+            logger.warning("Backfill sector %d: sin datos de clima para %s; dia omitido.", sector.id, current,)
             current += timedelta(days=1)
             continue
 
@@ -122,7 +123,7 @@ def run_backfill(
 
         try: 
             climate, eto, satellite_data, ndvi_date, kc_result, balance = compute_balance_from_data(
-                field, current,
+                sector, current,
                 climate=climate,
                 satellite_data=satellite_data,
                 ndvi_date=ndvi_date,
@@ -130,7 +131,7 @@ def run_backfill(
                 irrigation_mm=irrigation_by_date.get(current, 0.0),
             )
             wb = save_water_balance(
-                field, current, db,
+                sector, current, db,
                 climate=climate, eto=eto, kc_result=kc_result, balance=balance,
                 satellite_data=satellite_data, ndvi_date=ndvi_date,
             )
@@ -145,16 +146,16 @@ def run_backfill(
             db.flush()
             previous_deficit = balance.water_deficit_mm
             logger.info(
-                "Backfill campo %d: dia %s, deficit %.2f mm",
-                field.id, current, balance.water_deficit_mm,
+                "Backfill sector %d: dia %s, deficit %.2f mm",
+                sector.id, current, balance.water_deficit_mm,
             )
         except Exception as e:
-            logger.error("Error en backfill dia %s campo %d: %s", current, field.id, e)
+            logger.error("Error en backfill dia %s sector %d: %s", current, sector.id, e)
             # no break: el deficit no avanza, seguimos con el dia siguiente
 
         current += timedelta(days=1)
 
-def run_recommendation_pipeline(field: FieldModel, db: Session) -> RecommendationResponse:
+def run_recommendation_pipeline(sector: SectorModel, db: Session) -> RecommendationResponse:
     """Ejecuta el pipeline completo de recomendacion para un campo activo.
 
     Raises:
@@ -165,29 +166,30 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
     yesterday = today - timedelta(days=1)
 
     # Backfill: rellenar dias faltantes entre last_deficit_date y ayer
-    if field.last_deficit_date is not None:
+    if sector.last_deficit_date is not None:
         run_backfill(
-            field,
-            field.last_deficit_date + timedelta(days=1),
+            sector,
+            sector.last_deficit_date + timedelta(days=1),
             yesterday - timedelta(days=1),
             db,
         )
 
     # Obtener imagen S2 mas reciente
-    fetch_latest_s2(field, today, db)
+    fetch_latest_s2(sector, today, db)
 
     # Calcular balance hidrico de ayer
     climate, eto, satellite_data, ndvi_date, kc_result, balance = compute_balance_for_day(
-        field, yesterday, db
+        sector, yesterday, db
     )
-
+    
     # Pronostico y urgencia (solo aplican al pipeline en vivo)
+    field = sector.field
     forecast = get_forecast(field.latitude, field.longitude, days=3)
     urgency = calculate_urgency(balance, forecast, kc_result)
 
     # Persistir
     wb = save_water_balance(
-        field, yesterday, db,
+        sector, yesterday, db,
         climate=climate, eto=eto, kc_result=kc_result, balance=balance,
         satellite_data=satellite_data, ndvi_date=ndvi_date,
     )
@@ -201,8 +203,8 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
 
     db.commit()
     logger.info(
-        "Recomendacion persistida - campo %d fecha %s urgencia %s",
-        field.id, yesterday, urgency.urgency_level,
+        "Recomendacion persistida - sector %d fecha %s urgencia %s",
+        sector.id, yesterday, urgency.urgency_level,
     )
 
     return build_recommendation_response(
@@ -211,7 +213,7 @@ def run_recommendation_pipeline(field: FieldModel, db: Session) -> Recommendatio
     )
 
 
-def recompute_balance_from(field: FieldModel, from_date: DateType, seed_deficit_mm: float, db: Session) -> None:
+def recompute_balance_from(sector: SectorModel, from_date: DateType, seed_deficit_mm: float, db: Session) -> None:
     """Rebobina el puntero del deficit del campo a (from-date -1 ), siembra el
     deficit inicial y recalcula el balance desde from_date hasta hoy.
     
@@ -222,15 +224,15 @@ def recompute_balance_from(field: FieldModel, from_date: DateType, seed_deficit_
     today = DateType.today()
     yesterday = today - timedelta(days=1)
 
-    field.last_deficit_mm = seed_deficit_mm
-    field.last_deficit_date = from_date - timedelta(days=1)
+    sector.last_deficit_mm = seed_deficit_mm
+    sector.last_deficit_date = from_date - timedelta(days=1)
     db.flush()
 
-    run_backfill(field, from_date, yesterday - timedelta(days=1), db)
+    run_backfill(sector, from_date, yesterday - timedelta(days=1), db)
     db.commit()
 
     # Re ejecuta el pipeline live para que "ayer" quede con urgencia/confianza reales.
     try:
-        run_recommendation_pipeline(field, db)
+        run_recommendation_pipeline(sector, db)
     except Exception as e:
-        logger.warning("Campo %d: no se pudo re-ejecutar pipeline live tras recalculo: %s", field.id, e)
+        logger.warning("Sector %d: no se pudo re-ejecutar pipeline live tras recalculo: %s", sector.id, e)

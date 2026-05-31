@@ -1,13 +1,12 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.schemas.field import FieldPublic
 from app.schemas.auth import UserPublic
 
 class FieldApproval(BaseModel):
-    """Body del endpoint de aprobacion: solo el poligono GeoJSON"""
-    polygon_geojson: dict = Field(
-        description="Feature o Geometry GeoJSON del tipo Polygon o MultiPolygon"
-    )
+    """Body de la aprobación. Los polígonos de los sectores se editan
+    vía PATCH /sectors/{sector_id} antes de aprobar."""
+    pass
 
 class FieldAdminView(FieldPublic):
     """Vista extendida del campo para el admin: incluye dueño."""

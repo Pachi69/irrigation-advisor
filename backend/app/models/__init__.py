@@ -1,9 +1,11 @@
 from app.models.enums import (
     CropType, SoilType, FieldStatus,
     KcSource, PhenologicalStage, UrgencyLevel, ConfidenceLevel,
+    IrrigationType, HailNetType,
 )
 from app.models.user import User, UserRole
 from app.models.field import Field
+from app.models.sector import Sector
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.recommendation import Recommendation
 from app.models.irrigation_confirmation import IrrigationConfirmation

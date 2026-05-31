@@ -1,11 +1,11 @@
 from typing import List
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models.field import Field as FieldModel
+from app.models.sector import Sector as SectorModel
 from app.models.satellite_record import SatelliteRecord
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.recommendation import Recommendation
@@ -14,25 +14,25 @@ from app.schemas.irrigation_confirmation import PendingConfirmationItem, Irrigat
 from app.schemas.recommendation import RecommendationResponse, RecommendationHistoryItem
 from app.services.recommendation import run_recommendation_pipeline, build_recommendation_response
 from app.services.irrigation import confirm_irrigation
-from app.api._helpers import owned_field, active_field
+from app.api._helpers import owned_sector, active_sector
 
 
 import logging
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/fields", tags=["recommendation"])
+router = APIRouter(prefix="/sectors", tags=["recommendation"])
 
 
-@router.get("/{field_id}/recommendation", response_model=RecommendationResponse)
+@router.get("/{sector_id}/recommendation", response_model=RecommendationResponse)
 def get_recommendation(
-    field: FieldModel = Depends(active_field),
+    sector: SectorModel = Depends(active_sector),
     db: Session = Depends(get_db),
 ):
     """Devuelve la ultima recomendacion guardada. Solo recalcula si no existe ninguna."""
 
     existing_wb = (
         db.query(DailyWaterBalance)
-        .filter(DailyWaterBalance.field_id == field.id)
+        .filter(DailyWaterBalance.sector_id == sector.id)
         .options(joinedload(DailyWaterBalance.recommendation))
         .order_by(DailyWaterBalance.date.desc())
         .first()
@@ -44,7 +44,7 @@ def get_recommendation(
             sat_rec = (
                 db.query(SatelliteRecord)
                 .filter(
-                    SatelliteRecord.field_id == field.id,
+                    SatelliteRecord.sector_id == sector.id,
                     SatelliteRecord.date == existing_wb.ndvi_date,
                 )
                 .first()
@@ -54,20 +54,20 @@ def get_recommendation(
         return build_recommendation_response(existing_wb, existing_wb.recommendation, cloud_cover)
 
     try:
-        return run_recommendation_pipeline(field, db)
+        return run_recommendation_pipeline(sector, db)
     except (ValueError, RuntimeError) as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e))
 
 
-@router.get("/{field_id}/recommendations", response_model=List[RecommendationHistoryItem])
+@router.get("/{sector_id}/recommendations", response_model=List[RecommendationHistoryItem])
 def get_recommendation_history(
-    field: FieldModel = Depends(owned_field),
+    sector: SectorModel = Depends(owned_sector),
     db: Session = Depends(get_db),
 ):
     """Devuelve el historial de recomendaciones del campo, ordenado del mas reciente al mas antiguo""" 
     balances = (
         db.query(DailyWaterBalance)
-        .filter(DailyWaterBalance.field_id == field.id)
+        .filter(DailyWaterBalance.sector_id == sector.id)
         .options(joinedload(DailyWaterBalance.recommendation))
         .order_by(DailyWaterBalance.date.desc())
         .limit(90)
@@ -94,30 +94,8 @@ def get_recommendation_history(
     ]
 
 
-@router.get("/{field_id}/satellite-image")
-def get_satellite_image(
-    field: FieldModel = Depends(owned_field),
-    db: Session = Depends(get_db),
-):
-    """Devuelve el thumbnail PNG NDVI del ultimo registro satelital del campo."""
-    record = (
-        db.query(SatelliteRecord)
-        .filter(
-            SatelliteRecord.field_id == field.id,
-            SatelliteRecord.thumbnail_png.is_not(None)
-        )
-        .order_by(SatelliteRecord.date.desc())
-        .first()
-    )
-
-    if not record or not record.thumbnail_png:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen satelital no encontrada")
-    
-    return Response(content=record.thumbnail_png, media_type="image/png")
-
-
-@router.get("/{field_id}/pending-confirmations", response_model=List[PendingConfirmationItem])
-def get_pending_confirmations(field: FieldModel = Depends(owned_field), db: Session = Depends(get_db)):
+@router.get("/{sector_id}/pending-confirmations", response_model=List[PendingConfirmationItem])
+def get_pending_confirmations(sector: SectorModel = Depends(owned_sector), db: Session = Depends(get_db)):
     """Recomendaciones accionables (mm > 0) que aun no fueron confirmadas."""
     rows = (
         db.query(DailyWaterBalance, Recommendation)
@@ -127,7 +105,7 @@ def get_pending_confirmations(field: FieldModel = Depends(owned_field), db: Sess
             IrrigationConfirmation.recommendation_id == Recommendation.id
         )
         .filter(
-            DailyWaterBalance.field_id == field.id,
+            DailyWaterBalance.sector_id == sector.id,
             Recommendation.recommended_irrigation_mm > 0,
             IrrigationConfirmation.id.is_(None),
         )
@@ -145,13 +123,13 @@ def get_pending_confirmations(field: FieldModel = Depends(owned_field), db: Sess
         for wb, rec in rows
     ]
 
-@router.post("/{field_id}/recommendations/{rec_id}/confirm", response_model=IrrigationConfirmationResponse, status_code=status.HTTP_201_CREATED)
-def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationCreate, field: FieldModel = Depends(owned_field), db: Session = Depends(get_db)):
+@router.post("/{sector_id}/recommendations/{rec_id}/confirm", response_model=IrrigationConfirmationResponse, status_code=status.HTTP_201_CREATED)
+def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationCreate, sector: SectorModel = Depends(active_sector), db: Session = Depends(get_db)):
     """Registra el riego aplicado para una recomendacion y recalcula el balance."""
     rec = (
         db.query(Recommendation)
         .join(DailyWaterBalance, Recommendation.water_balance_id == DailyWaterBalance.id)
-        .filter(Recommendation.id == rec_id, DailyWaterBalance.field_id == field.id)
+        .filter(Recommendation.id == rec_id, DailyWaterBalance.sector_id == sector.id)
         .first()
     )
     if rec is None:
@@ -168,4 +146,4 @@ def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationC
     if data.irrigation_date > date.today():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La fecha de riego no puede ser futura")
     
-    return confirm_irrigation(field, rec, data.irrigation_date, data.applied_irrigation_mm, db)
+    return confirm_irrigation(sector, rec, data.irrigation_date, data.applied_irrigation_mm, db)

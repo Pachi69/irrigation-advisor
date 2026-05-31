@@ -10,6 +10,7 @@ from app.api.climate import router as climate_router
 from app.api.recommendation import router as recommendation_router
 from app.jobs.scheduler import scheduler
 from app.api.push import router as push_router
+from app.api.sectors import router as sector_router
 
 import logging
 
@@ -30,7 +31,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Irrigation Advisor API",
-    version="0.1.0",
+    version="0.2.0",
     docs_url="/docs" if settings.environment == "development" else None,
     lifespan=lifespan
 )
@@ -49,6 +50,7 @@ app.include_router(admin_router)
 app.include_router(climate_router)
 app.include_router(recommendation_router)
 app.include_router(push_router)
+app.include_router(sector_router)
 
 @app.get("/health")
 def health_check():

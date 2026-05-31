@@ -11,11 +11,11 @@ from app.models.enums import KcSource, PhenologicalStage
 class DailyWaterBalance(Base):
     __tablename__ = "daily_water_balances"
     __table_args__ = (
-        UniqueConstraint("field_id", "date", name="uq_balance_field_date"),
+        UniqueConstraint("sector_id", "date", name="uq_balance_sector_date"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
+    sector_id: Mapped[int] = mapped_column(ForeignKey("sectors.id", ondelete="CASCADE"), nullable=False, index=True)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     eto_mm: Mapped[float] = mapped_column(Float, nullable=False)
     kc: Mapped[float] = mapped_column(Float, nullable=False)
@@ -31,7 +31,7 @@ class DailyWaterBalance(Base):
     ndvi_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    field: Mapped["Field"] = relationship(back_populates="water_balances")
+    sector: Mapped["Sector"] = relationship(back_populates="water_balances")
     recommendation: Mapped[Optional["Recommendation"]] = relationship(
         back_populates="water_balance", uselist=False, cascade="all, delete-orphan", passive_deletes=True
     )

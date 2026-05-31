@@ -5,7 +5,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.models.field import Field as FieldModel
+from app.models.sector import Sector as SectorModel
 from app.models.satellite_record import SatelliteRecord
 from app.schemas.satellite import SatelliteData
 from app.ingestion.satellite import get_satellite_indices, get_satellite_indices_for_range
@@ -16,7 +16,7 @@ NDVI_MAX_AGE_DAYS = 15
 SAT_FORWARD_FILL_MAX_DAYS = 5 # tope para el forward-fill del hueco inicial
 
 def get_satellite_data_for_date(
-    field: FieldModel, target_date: DateType, db: Session
+    sector: SectorModel, target_date: DateType, db: Session
 ) -> tuple[SatelliteData | None, DateType | None]:
     """Devuelve el NDVI vigente a una fecha (mas reciente con fecha <= target_date,
     dentro de los ultimos NDVI_MAX_AGE_DAYS dias)."""
@@ -24,7 +24,7 @@ def get_satellite_data_for_date(
     sat_record = (
         db.query(SatelliteRecord)
         .filter(
-            SatelliteRecord.field_id == field.id,
+            SatelliteRecord.sector_id == sector.id,
             SatelliteRecord.date <= target_date,
             SatelliteRecord.date >= cutoff,
         )
@@ -35,14 +35,14 @@ def get_satellite_data_for_date(
         return None, None
     return (
         SatelliteData(
-            field_id=field.id, date=sat_record.date,
+            sector_id=sector.id, date=sat_record.date,
             ndvi=sat_record.ndvi, cloud_cover_pct=sat_record.cloud_cover_pct,
         ),
         sat_record.date,
     )
 
 def get_satellite_data_for_range(
-    field: FieldModel, start_date: DateType, end_date: DateType, db: Session
+    sector: SectorModel, start_date: DateType, end_date: DateType, db: Session
 ) -> dict[DateType, tuple[SatelliteData | None, DateType | None]]:
     """Resuelve el dato satelital vigente para cada dia de un rango, en memoria.
 
@@ -62,7 +62,7 @@ def get_satellite_data_for_range(
     records = (
         db.query(SatelliteRecord)
         .filter(
-            SatelliteRecord.field_id == field.id,
+            SatelliteRecord.sector_id == sector.id,
             SatelliteRecord.date >= lookback_start,
             SatelliteRecord.date <= end_date,
         )
@@ -101,7 +101,7 @@ def get_satellite_data_for_range(
         if chosen is not None:
             result[current] = (
                 SatelliteData(
-                    field_id=field.id, date=chosen.date,
+                    sector_id=sector.id, date=chosen.date,
                     ndvi=chosen.ndvi, cloud_cover_pct=chosen.cloud_cover_pct,
                 ),
                 chosen.date
@@ -114,28 +114,28 @@ def get_satellite_data_for_range(
     return result
 
 
-def fetch_latest_s2(field: FieldModel, today: DateType, db: Session) -> None:
+def fetch_latest_s2(sector: SectorModel, today: DateType, db: Session) -> None:
     """Consulta GEE para la imagen S2 mas reciente y la persiste si no esta duplicada.
 
     Si la fila para esa fecha ya existe pero sin thumbnail, lo actualiza.
     """
-    if not field.polygon_geojson:
+    if not sector.polygon_geojson:
         return
     try:
-        new_indices = get_satellite_indices(field.polygon_geojson, today)
+        new_indices = get_satellite_indices(sector.polygon_geojson, today)
         if new_indices is None:
             return
         existing = (
             db.query(SatelliteRecord)
             .filter(
-                SatelliteRecord.field_id == field.id,
+                SatelliteRecord.sector_id == sector.id,
                 SatelliteRecord.date == new_indices.image_date,
             )
             .first()
         )
         if existing is None:
             db.add(SatelliteRecord(
-                field_id=field.id,
+                sector_id=sector.id,
                 date=new_indices.image_date,
                 ndvi=new_indices.ndvi,
                 cloud_cover_pct=new_indices.cloud_cover_pct,
@@ -143,44 +143,49 @@ def fetch_latest_s2(field: FieldModel, today: DateType, db: Session) -> None:
             ))
             db.flush()
             logger.info(
-                "Nueva imagen S2 persistida: fecha %s, NDVI %.4f",
-                new_indices.image_date, new_indices.ndvi,
+                "Nueva imagen S2 persistida: sector %d, fecha %s, NDVI %.4f",
+                sector.id, new_indices.image_date, new_indices.ndvi,
             )
         elif existing.thumbnail_png is None and new_indices.thumbnail_png is not None:
             existing.thumbnail_png = new_indices.thumbnail_png
             db.flush()
-            logger.info("Thumbnail agregado a registro existente del %s", new_indices.image_date)
+            logger.info(
+                "Thumbnail agregado a registro existente del %s (sector %d)",
+                new_indices.image_date, sector.id,
+            )
     except RuntimeError as e:
         logger.warning(
-            "No se pudo obtener NDVI de GEE: %s. Se usara registro existente o Kc tabular.", e,
+            "No se pudo obtener NDVI de GEE para sector %d: %s. "
+            "Se usará registro existente o Kc tabular.", sector.id, e,
         )
 
 
+
 def prefetch_s2_for_range(
-    field: FieldModel, start_date: DateType, end_date: DateType, db: Session
+    sector: SectorModel, start_date: DateType, end_date: DateType, db: Session
 ) -> None:
     """Trae todas las imagenes S2 del periodo y las persiste antes del backfill.
 
     Amplia la ventana NDVI_MAX_AGE_DAYS hacia atras para que el primer dia
     tambien pueda usar Kc dinamico.
     """
-    if not field.polygon_geojson:
+    if not sector.polygon_geojson:
         return
     lookback_start = start_date - timedelta(days=NDVI_MAX_AGE_DAYS)
     try:
         indices_list = get_satellite_indices_for_range(
-            field.polygon_geojson, lookback_start, end_date,
+            sector.polygon_geojson, lookback_start, end_date,
         )
     except RuntimeError as e:
         logger.warning(
-            "No se pudieron traer imagenes S2 para campo %d: %s. Backfill usara Kc tabular.",
-            field.id, e,
+            "No se pudieron traer imágenes S2 para sector %d: %s. "
+            "Backfill usará Kc tabular.", sector.id, e,
         )
         return
     if not indices_list:
         logger.info(
-            "Sin imagenes S2 disponibles para campo %d entre %s y %s",
-            field.id, lookback_start, end_date,
+            "Sin imágenes S2 para sector %d entre %s y %s",
+            sector.id, lookback_start, end_date,
         )
         return
     persisted = 0
@@ -188,14 +193,14 @@ def prefetch_s2_for_range(
         existing = (
             db.query(SatelliteRecord)
             .filter(
-                SatelliteRecord.field_id == field.id,
+                SatelliteRecord.sector_id == sector.id,
                 SatelliteRecord.date == idx.image_date,
             )
             .first()
         )
         if existing is None:
             db.add(SatelliteRecord(
-                field_id=field.id,
+                sector_id=sector.id,
                 date=idx.image_date,
                 ndvi=idx.ndvi,
                 cloud_cover_pct=idx.cloud_cover_pct,
@@ -204,6 +209,6 @@ def prefetch_s2_for_range(
             persisted += 1
     db.flush()
     logger.info(
-        "Prefetch S2 campo %d: %d imagenes nuevas persistidas (rango %s a %s)",
-        field.id, persisted, lookback_start, end_date,
+        "Prefetch S2 sector %d: %d imagenes nuevas persistidas (rango %s a %s)",
+        sector.id, persisted, lookback_start, end_date,
     )

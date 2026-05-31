@@ -5,7 +5,7 @@ from app.models.enums import UrgencyLevel, ConfidenceLevel, KcSource, Phenologic
 
 class RecommendationResponse(BaseModel):
     """Respuesta completa de la recomendacion de riego para un campo."""
-    field_id: int
+    sector_id: int
     date: date
 
     # Resultado final

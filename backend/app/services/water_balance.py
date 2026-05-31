@@ -6,9 +6,10 @@ import logging
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.field import Field as FieldModel
+from app.models.sector import Sector as SectorModel
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.irrigation_confirmation import IrrigationConfirmation
+from app.models.enums import HailNetType
 from app.schemas.calculation import EToResult, KcResult, WaterBalanceResult
 from app.schemas.climate import ClimateData
 from app.schemas.satellite import SatelliteData
@@ -22,19 +23,19 @@ from app.services.satellite import get_satellite_data_for_date
 logger = logging.getLogger(__name__)
 
 
-def confirmed_irrigation_mm(field_id: int, target_date: DateType, db: Session) -> float:
+def confirmed_irrigation_mm(sector_id: int, target_date: DateType, db: Session) -> float:
     """Suma del riego confirmado por el productor para un campo en una fecha (mm)"""
     total = (
         db.query(func.coalesce(func.sum(IrrigationConfirmation.applied_irrigation_mm), 0.0))
         .filter(
-            IrrigationConfirmation.field_id == field_id,
+            IrrigationConfirmation.sector_id == sector_id,
             IrrigationConfirmation.irrigation_date == target_date
         )
         .scalar()
     )
     return float(total or 0.0)
 
-def confirmed_irrigation_by_range(field_id: int, start: DateType, end: DateType, db: Session) -> dict[DateType, float]:
+def confirmed_irrigation_by_range(sector_id: int, start: DateType, end: DateType, db: Session) -> dict[DateType, float]:
     """Riego confirmado por fecha en un rango (para el backfill, evita n+1)"""
     rows = (
         db.query(
@@ -42,7 +43,7 @@ def confirmed_irrigation_by_range(field_id: int, start: DateType, end: DateType,
             func.sum(IrrigationConfirmation.applied_irrigation_mm),
         )
         .filter(
-            IrrigationConfirmation.field_id == field_id,
+            IrrigationConfirmation.sector_id == sector_id,
             IrrigationConfirmation.irrigation_date >= start,
             IrrigationConfirmation.irrigation_date <= end,
         )
@@ -52,7 +53,7 @@ def confirmed_irrigation_by_range(field_id: int, start: DateType, end: DateType,
     return {d: float(s) for d,s in rows}
 
 def compute_balance_from_data(
-    field: FieldModel,
+    sector: SectorModel,
     target_date: DateType,
     *,
     climate: ClimateData,
@@ -61,20 +62,19 @@ def compute_balance_from_data(
     previous_deficit_mm: float,
     irrigation_mm: float = 0.0,
 ) -> tuple[ClimateData, EToResult, SatelliteData | None, DateType | None, KcResult, WaterBalanceResult]:
-    """Calcula ETo, Kc y balance hidrico para un dia a partir de datos ya traidos.
+    """Calcula ETo, Kc y balance hidrico para un dia a partir de datos ya traidos."""
+    field = sector.field
 
-    Actualiza field.last_deficit_mm y field.last_deficit_date.
-    """
     if climate.eto_reference_mm is None:
         eto_result = calculate_eto(climate, field.latitude, target_date, field.elevation_m)
         climate = climate.model_copy(update={"eto_reference_mm": eto_result.eto_mm})
     eto = EToResult(eto_mm=climate.eto_reference_mm)
 
     kc_result = calculate_kc(
-        crop_type=field.crop_type,
+        crop_type=sector.crop_type,
         current_date=target_date,
         satellite_data=satellite_data,
-        has_hail_net=field.has_hail_net,
+        has_hail_net=sector.hail_net_type in (HailNetType.dense, HailNetType.color),
     )
 
     balance = calculate_water_balance(
@@ -83,43 +83,38 @@ def compute_balance_from_data(
         precipitation_mm=climate.precipitation_mm,
         previous_deficit_mm=previous_deficit_mm,
         soil_type=field.soil_type,
-        root_depth_m=get_root_depth(field.crop_type),
-        depletion_factor_p=get_depletion_factor(field.crop_type),
+        root_depth_m=get_root_depth(sector.crop_type),
+        depletion_factor_p=get_depletion_factor(sector.crop_type),
         irrigation_mm=irrigation_mm,
     )
 
-    field.last_deficit_mm = balance.water_deficit_mm
-    field.last_deficit_date = target_date
+    sector.last_deficit_mm = balance.water_deficit_mm
+    sector.last_deficit_date = target_date
 
     return climate, eto, satellite_data, ndvi_date, kc_result, balance
 
 def compute_balance_for_day(
-    field: FieldModel, target_date: DateType, db: Session
+    sector: SectorModel, target_date: DateType, db: Session
 ) -> tuple[ClimateData, EToResult, SatelliteData | None, DateType | None, KcResult, WaterBalanceResult]:
-    """Calcula el balance para una fecha trayendo clima y satelite por su cuenta.
-
-    Usado por el pipeline en vivo (dia de ayer). El backfill usa la version batch.
-
-    Actualiza field.last_deficit_mm y field.last_deficit_date.
-    """
+    """Calcula el balance para una fecha trayendo clima y satelite por su cuenta."""
+    field = sector.field
     climate = get_climate_data(field.latitude, field.longitude, target_date)
-    satellite_data, ndvi_date = get_satellite_data_for_date(field, target_date, db)
+    satellite_data, ndvi_date = get_satellite_data_for_date(sector, target_date, db)
 
     last_wb = (
         db.query(DailyWaterBalance)
         .filter(
-            DailyWaterBalance.field_id == field.id,
+            DailyWaterBalance.sector_id == sector.id,
             DailyWaterBalance.date < target_date,
         )
         .order_by(DailyWaterBalance.date.desc())
         .first()
     )
-    previous_deficit = last_wb.water_deficit_mm if last_wb else (field.last_deficit_mm or 0.0)
-
-    irrigation_mm = confirmed_irrigation_mm(field.id, target_date, db)
+    previous_deficit = last_wb.water_deficit_mm if last_wb else (sector.last_deficit_mm or 0.0)
+    irrigation_mm = confirmed_irrigation_mm(sector.id, target_date, db)
 
     return compute_balance_from_data(
-        field, target_date,
+        sector, target_date,
         climate=climate,
         satellite_data=satellite_data,
         ndvi_date=ndvi_date,
@@ -129,7 +124,7 @@ def compute_balance_for_day(
 
 
 def save_water_balance(
-    field: FieldModel,
+    sector: SectorModel,
     target_date: DateType,
     db: Session,
     *,
@@ -143,11 +138,11 @@ def save_water_balance(
     """Crea o actualiza DailyWaterBalance para un campo en una fecha."""
     wb = (
         db.query(DailyWaterBalance)
-        .filter(DailyWaterBalance.field_id == field.id, DailyWaterBalance.date == target_date)
+        .filter(DailyWaterBalance.sector_id == sector.id, DailyWaterBalance.date == target_date)
         .first()
     )
     if wb is None:
-        wb = DailyWaterBalance(field_id=field.id, date=target_date)
+        wb = DailyWaterBalance(sector_id=sector.id, date=target_date)
         db.add(wb)
 
     wb.eto_mm = eto.eto_mm

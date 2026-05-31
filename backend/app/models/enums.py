@@ -46,3 +46,14 @@ class FieldStatus(enum.Enum):
     active = "active"
     inactive = "inactive"
     pending = "pending"
+
+
+class IrrigationType(enum.Enum):
+    aspersion = "aspersion"
+    superficial = "superficial"
+
+class HailNetType(enum.Enum):
+    none = "none"
+    open = "open"
+    dense = "dense"
+    color = "color"
