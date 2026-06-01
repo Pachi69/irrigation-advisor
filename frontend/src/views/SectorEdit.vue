@@ -47,6 +47,7 @@ async function handleSubmit() {
         await updateSector(route.params.id, {
             ...form.value,
             variety: form.value.variety || null,
+            flow_rate_ls_ha: form.value.flow_rate_ls_ha || null,
         })
         backToField()
     } catch {
@@ -127,8 +128,12 @@ async function confirmDelete() {
                 <input
                     v-model.number="form.flow_rate_ls_ha"
                     type="number" min="0.1" step="0.1" :disabled="saving"
+                    placeholder="Dejar vacío si no lo sabés"
                     class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 transition-colors"
                 />
+                <p class="text-xs text-gray-400 mt-1.5">Caudal de la bomba dividido por las hectáreas del sector. Si
+                    lo dejás vacío, calculamos el volumen pero no el tiempo de riego.
+                </p>
             </div>
 
             <div>

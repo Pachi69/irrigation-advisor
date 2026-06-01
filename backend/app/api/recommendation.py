@@ -14,6 +14,7 @@ from app.schemas.irrigation_confirmation import PendingConfirmationItem, Irrigat
 from app.schemas.recommendation import RecommendationResponse, RecommendationHistoryItem
 from app.services.recommendation import run_recommendation_pipeline, build_recommendation_response
 from app.services.irrigation import confirm_irrigation
+from app.calculation.irrigation import time_min_to_mm, volume_m3_to_mm, efficiency_for
 from app.api._helpers import owned_sector, active_sector
 
 
@@ -79,6 +80,8 @@ def get_recommendation_history(
             date=b.date,
             urgency=b.recommendation.urgency,
             recommended_irrigation_mm=b.recommendation.recommended_irrigation_mm,
+            volume_m3=b.recommendation.volume_m3,
+            time_min=b.recommendation.time_min,
             reason=b.recommendation.reason,
             confidence=b.recommendation.confidence,
             water_deficit_mm=b.water_deficit_mm,
@@ -117,6 +120,7 @@ def get_pending_confirmations(sector: SectorModel = Depends(owned_sector), db: S
             recommendation_id=rec.id,
             date=wb.date,
             recommended_irrigation_mm=rec.recommended_irrigation_mm,
+            time_min=rec.time_min,
             urgency=rec.urgency,
             water_deficit_mm=wb.water_deficit_mm,
         )
@@ -125,7 +129,11 @@ def get_pending_confirmations(sector: SectorModel = Depends(owned_sector), db: S
 
 @router.post("/{sector_id}/recommendations/{rec_id}/confirm", response_model=IrrigationConfirmationResponse, status_code=status.HTTP_201_CREATED)
 def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationCreate, sector: SectorModel = Depends(active_sector), db: Session = Depends(get_db)):
-    """Registra el riego aplicado para una recomendacion y recalcula el balance."""
+    """Registra el riego aplicado (en tiempo) para una recomendacion y recalcula el balance.
+    
+    El tiempo o volumen se convierte a lamina neta (mm) con los datos del sector antes de persistir:
+    el balance hidrico siempre trabaja en mm netos.
+    """
     rec = (
         db.query(Recommendation)
         .join(DailyWaterBalance, Recommendation.water_balance_id == DailyWaterBalance.id)
@@ -146,4 +154,12 @@ def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationC
     if data.irrigation_date > date.today():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La fecha de riego no puede ser futura")
     
-    return confirm_irrigation(sector, rec, data.irrigation_date, data.applied_irrigation_mm, db)
+    eff = efficiency_for(sector.irrigation_type)
+    if data.applied_volume_m3 is not None:
+        applied_mm = volume_m3_to_mm(data.applied_volume_m3, sector.area_ha, eff)
+    else:
+        if not sector.flow_rate_ls_ha:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El sector no tiene una caudal cargado, confirma el riego por volumen (m3)")
+        applied_mm = time_min_to_mm(data.applied_time_min, sector.flow_rate_ls_ha, eff)
+    
+    return confirm_irrigation(sector, rec, data.irrigation_date, applied_mm, db)

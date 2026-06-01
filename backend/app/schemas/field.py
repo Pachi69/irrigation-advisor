@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from app.models.enums import SoilType, FieldStatus
+from app.models.enums import SoilType
 from app.schemas.sector import SectorPublic
 
 
@@ -15,7 +15,6 @@ class FieldPublic(BaseModel):
     id: int
     name: str
     soil_type: SoilType | None = None
-    status: FieldStatus
     elevation_m: float | None = None
     latitude: float | None = None
     longitude: float | None = None

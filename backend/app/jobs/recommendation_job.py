@@ -5,7 +5,7 @@ Se ejecuta a las 00:01 hs (hora Mendoza) para todos los sectores de campos activ
 import logging
 from app.database import SessionLocal
 from app.services.recommendation import run_recommendation_pipeline
-from app.api._helpers import iter_active_fields
+from app.api._helpers import iter_active_sectors
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ def generate_daily_recommendations() -> None:
     """Genera y persiste recomendaciones para todos los sectores de campos activos."""
     db = SessionLocal()
     try:
-        sectors = iter_active_fields(db)
+        sectors = iter_active_sectors(db)
         logger.info("Job diario: procesado %d sectores activos", len(sectors))
         ok = errors = 0
         for sector in sectors:

@@ -7,14 +7,14 @@ from app.models.field import Field as FieldModel
 from app.schemas.climate import ClimateData, ForecastDay
 from app.ingestion.climate import get_climate_data, get_forecast
 from app.calculation.eto import calculate_eto
-from app.api._helpers import active_field
+from app.api._helpers import located_field
 
 router = APIRouter(prefix="/fields", tags=["climate"])
 
 
 @router.get("/{field_id}/climate", response_model=ClimateData)
 def get_field_climate(
-    field: FieldModel = Depends(active_field),
+    field: FieldModel = Depends(located_field),
     target_date: Optional[DateType] = Query(
         default=None,
         alias="date",
@@ -42,7 +42,7 @@ def get_field_climate(
 
 @router.get("/{field_id}/forecast", response_model=list[ForecastDay])
 def get_field_forecast(
-    field: FieldModel = Depends(active_field),
+    field: FieldModel = Depends(located_field),
     days: int = Query(default=5, ge= 1, le=16, description="Dias a pronosticar [1-16]"),
 ):
     """Devuelve el pronostico de los proximos N dias para el campo indicado.

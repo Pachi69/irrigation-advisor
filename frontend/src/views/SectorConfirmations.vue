@@ -1,29 +1,36 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPendingConfirmations, confirmIrrigation } from '../services/sectors'
+import { getPendingConfirmations, confirmIrrigation, getSectorById } from '../services/sectors'
 import { ArrowLeft, Droplet } from 'lucide-vue-next'
 import { URGENCY_LABEL } from '../utils/labels'
+import { formatMinutes } from '../utils/format'
 
 const route = useRoute()
 const router = useRouter()
 
 const items = ref([])
+const sector = ref(null)
 const loading = ref(true)
 const error = ref('')
 
 const selected = ref(null)
-const form = ref({ irrigation_date: '', applied_irrigation_mm: null })
+const form = ref({ irrigation_date: '', hours: 0, minutes: 0, volume_m3: null })
 const submitting = ref(false)
 const formError = ref('')
 
 const today = new Date().toISOString().slice(0, 10)
 
+const hasCaudal = computed(() => sector.value?.flow_rate_ls_ha != null)
+
 async function load() {
     loading.value = true
     error.value = ''
     try {
-        items.value = await getPendingConfirmations(route.params.id)
+        [items.value, sector.value] = await Promise.all([
+            getPendingConfirmations(route.params.id),
+            getSectorById(route.params.id),
+        ])
     } catch {
         error.value = 'No se pudieron cargar las recomendaciones pendientes'
     } finally {
@@ -33,9 +40,13 @@ async function load() {
 
 function openConfirm(item) {
     selected.value = item
+    // Precarga el tiempo recomendado (item.time_min) partido en horas y minutos
+    const total = Math.round(item.time_min || 0)
     form.value = {
         irrigation_date: item.date,
-        applied_irrigation_mm: item.recommended_irrigation_mm
+        hours: Math.floor(total / 60),
+        minutes: total % 60,
+        volume_m3: null,
     }
     formError.value = ''
 }
@@ -46,11 +57,6 @@ function closeConfirm() {
 
 async function submit() {
     formError.value = ''
-    const mm = Number(form.value.applied_irrigation_mm)
-    if (!(mm > 0)) {
-        formError.value = 'Ingresa una lamina mayor a 0 mm'
-        return
-    }
     if (!form.value.irrigation_date) {
         formError.value = 'Elegi la fecha de riego'
         return
@@ -59,12 +65,28 @@ async function submit() {
         formError.value = 'La fecha de riego no puede ser futura'
         return
     }
+
+    const payload = { irrigation_date: form.value.irrigation_date }
+
+    if (hasCaudal.value) {
+        const totalMin = (Number(form.value.hours) || 0) * 60 + (Number(form.value.minutes) || 0)
+        if (!(totalMin > 0)) {
+            formError.value = 'Ingresa un tiempo de riego mayor a 0 min'
+            return
+        }
+        payload.applied_time_min = totalMin
+    } else {
+        const vol = Number(form.value.volume_m3)
+        if (!(vol > 0)) {
+            formError.value = 'Ingresa un volumen de riego mayor a 0 m3'
+            return
+        }
+        payload.applied_volume_m3 = vol
+    }
+
     submitting.value = true
     try {
-        await confirmIrrigation(route.params.id, selected.value.recommendation_id, {
-            irrigation_date: form.value.irrigation_date,
-            applied_irrigation_mm: mm,
-        })
+        await confirmIrrigation(route.params.id, selected.value.recommendation_id, payload)
         items.value = items.value.filter(
             (i) => i.recommendation_id !== selected.value.recommendation_id,
         )
@@ -134,7 +156,7 @@ onMounted(load)
                     </span>
 
                     <span class="justify-self-end text-sm font-bold text-gray-900">
-                        {{ item.recommended_irrigation_mm }} mm
+                        {{ hasCaudal ? formatMinutes(item.time_min) : `${item.recommended_irrigation_mm.toFixed(0)} mm` }}
                     </span>
 
                     <span></span>
@@ -168,14 +190,41 @@ onMounted(load)
                     class="w-full border border-gray-300 rounded-xl px-3 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                 />
 
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Lámina aplicada (mm)</label>
-                <input
-                    type="number"
-                    v-model="form.applied_irrigation_mm"
-                    min="0"
-                    step="0.1"
-                    class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
-                />
+                <!-- Por tiempo (si hay caudal) -->
+                <template v-if="hasCaudal">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Tiempo de riego aplicado</label>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <input
+                                type="number" v-model="form.hours" min="0" placeholder="0"
+                                class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                            />
+                            <span class="block text-[11px] text-gray-400 mt-1 text-center">horas</span>
+                        </div>
+                        <div class="flex-1">
+                            <input
+                                type="number" v-model="form.minutes" min="0" max="59" placeholder="0"
+                                class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                            />
+                            <span class="block text-[11px] text-gray-400 mt-1 text-center">minutos</span>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Por volumen (si no hay caudal) -->
+                <template v-else>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Volumen de riego aplicado</label>
+                    <div class="relative">
+                        <input
+                            type="number" v-model="form.volume_m3" min="0" step="any" placeholder="0"
+                            class="w-full border border-gray-300 rounded-xl px-3 py-2 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
+                        />
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">m³</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-1">
+                        Este sector no tiene caudal cargado, así que confirmá el agua aplicada en m³.
+                    </p>
+                </template>
 
                 <p v-if="formError" class="text-red-600 text-sm font-medium mt-3">{{ formError }}</p>
 

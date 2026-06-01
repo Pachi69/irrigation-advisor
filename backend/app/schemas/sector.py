@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import CropType, HailNetType, IrrigationType, UrgencyLevel
+from app.models.enums import CropType, HailNetType, IrrigationType, UrgencyLevel, SectorStatus
 
 
 class SectorCreate(BaseModel):
@@ -11,7 +11,7 @@ class SectorCreate(BaseModel):
     crop_type: CropType
     variety: Optional[str] = None
     irrigation_type: IrrigationType = IrrigationType.aspersion
-    flow_rate_ls_ha: float = Field(default=1.5, gt=0)
+    flow_rate_ls_ha: Optional[float] = Field(default=None, gt=0)
     hail_net_type: HailNetType = HailNetType.none
     notification_frequency_days: int = Field(default=1, ge=1)
     notification_hour: Optional[time] = None
@@ -35,12 +35,13 @@ class SectorPublic(BaseModel):
     id: int
     field_id: int
     name: str
+    status: SectorStatus
     crop_type: CropType
     variety: Optional[str] = None
     area_ha: Optional[float] = None
     polygon_geojson: Optional[dict] = None
     irrigation_type: IrrigationType
-    flow_rate_ls_ha: float
+    flow_rate_ls_ha: Optional[float] = None
     hail_net_type: HailNetType
     notification_frequency_days: int
     notification_hour: Optional[time] = None
@@ -56,6 +57,8 @@ class LastRecommendationSummary(BaseModel):
     date: date
     urgency: UrgencyLevel
     recommended_irrigation_mm: float
+    time_min: float | None = None
+    volume_m3: float | None = None
     deficit_pct: float
     deficit_history: list[float]
 

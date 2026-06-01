@@ -1,13 +1,13 @@
 import api from './api'
 
-export async function listPendingFields() {
-    // GET /admin/fields/pending -> lista de campos con su dueño
-    const { data } = await api.get('/admin/fields/pending')
+export async function listPendingSectors() {
+    // GET /admin/sectors/pending -> campos que tienen al menos un sector pendiente
+    const { data } = await api.get('/admin/sectors/pending')
     return data
 }
 
-export async function approveField(fieldId) {
-    const { data } = await api.post(`/admin/fields/${fieldId}/approve`)
+export async function approveSector(sectorId) {
+    const { data } = await api.post(`/admin/sectors/${sectorId}/approve`)
     return data
 }
 

@@ -10,6 +10,7 @@ import { listMyFields } from '../services/fields'
 import { requestPushPermission, subscribeToPush } from '../services/push'
 import { ArrowRight, Plus, Bell, Satellite } from 'lucide-vue-next'
 import { CROP_LABELS } from '../utils/labels'
+import { formatMinutes } from '../utils/format'
 import Sparkline from '../components/Sparkline.vue'
 
 const router = useRouter()
@@ -26,13 +27,17 @@ const todayLabel = computed(() => {
   return `${day.replace('.', '')} · ${date} · San Rafael`
 })
 
-const activeFields = computed(() => fields.value.filter(f => f.status === 'active'))
-
-// Todos los sectores de campos activos, con el nombre del campo embebido
-const activeSectors = computed(() =>
-  activeFields.value.flatMap(f =>
-    (f.sectors || []).map(s => ({ ...s, fieldName: f.name }))
+const activeFields = computed(() =>
+    fields.value.filter(f => (f.sectors || []).some(s => s.status === 'active'))
   )
+
+// Todos los sectores aprobados (activos) de todos los campos, con el nombre del campo embebido
+const activeSectors = computed(() =>
+    fields.value.flatMap(f =>
+      (f.sectors || [])
+        .filter(s => s.status === 'active')
+        .map(s => ({ ...s, fieldName: f.name }))
+    )
 )
 
 const totalArea = computed(() =>
@@ -145,7 +150,7 @@ onMounted(() => {
             <div>
               <div class="text-xs opacity-65 mb-1">{{ urgentSector.fieldName }} · {{ urgentSector.name }}</div>
               <div class="app-mono text-3xl md:text-[42px] font-bold tracking-tight leading-none">
-                {{ urgentSector.last_recommendation.recommended_irrigation_mm.toFixed(0) }}<span class="text-base opacity-60 ml-1">mm</span>
+                {{ formatMinutes(urgentSector.last_recommendation.time_min) }}
               </div>
             </div>
             <RouterLink
@@ -249,7 +254,7 @@ onMounted(() => {
         />
         <div class="app-mono text-base font-bold text-ink min-w-[60px] text-right">
           <template v-if="s.last_recommendation && s.last_recommendation.recommended_irrigation_mm > 0">
-            {{ s.last_recommendation.recommended_irrigation_mm.toFixed(0) }} mm
+            {{ formatMinutes(s.last_recommendation.time_min) }}
           </template>
           <template v-else-if="s.last_recommendation">—</template>
           <span v-else class="text-xs text-muted font-normal">Sin datos</span>

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.models.field import Field as FieldModel
 from app.models.sector import Sector as SectorModel
+from app.models.enums import SectorStatus
 from app.schemas.sector import SectorCreate
 from app.api._geo import setup_field_geo, validate_and_compute_centroid
 from app.ingestion.soil import get_soil_type_from_coords
@@ -19,7 +20,7 @@ def create_sector(field: FieldModel, data: SectorCreate, db: Session) -> SectorM
     area_ha = None
 
     if data.polygon_geojson:
-        _, _, area_ha, _ = setup_field_geo(data.polygon_geojson)
+        _, _, area_ha = setup_field_geo(data.polygon_geojson)
         
     sector = SectorModel(
         field_id=field.id,
@@ -66,20 +67,25 @@ def update_field_geo(field: FieldModel, db: Session) -> None:
     if field.elevation_m is None:
         field.elevation_m = get_elevation(field.latitude, field.longitude)
 
-    detected = get_soil_type_from_coords(field.latitude, field.longitude)
-    if detected is not None:
-        field.soil_type = detected
+    if field.soil_type is None:
+        detected = get_soil_type_from_coords(field.latitude, field.longitude)
+        if detected is not None:
+            field.soil_type = detected
 
     db.flush()
 
 
 def initialize_sector_balance(sector: SectorModel, db: Session) -> None:
-    """Inciailiza el balance hidrico de un sector recien aprobado.
+    """Aprueba e inciailiza el balance hidrico de un sector.
     
     - Si last_saturation_date < hoy: asume Dr=0 ese dia y backfill hacia adelante.
     - Si last_saturation_date == hoy (o None): no hace backfill; asume Dr=0 hoy.
+
+    Marca el sector como active
     """
     from app.services.recommendation import recompute_balance_from
+
+    sector.status = SectorStatus.active
     today = DateType.today()
     saturation = sector.last_saturation_date
 

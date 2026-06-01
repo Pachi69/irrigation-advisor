@@ -5,7 +5,6 @@ from datetime import date as date_type
 from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel
-from app.models.enums import FieldStatus
 from app.models.alert import Alert
 from app.schemas.field import FieldCreate, FieldPublic, FieldUpdate
 from app.schemas.alert import AlertPublic
@@ -23,20 +22,6 @@ def create_field(
     db: Session = Depends(get_db),
 ):
     """Crea un campo asociado al usuario autenticado"""
-    existing_pending = (
-        db.query(FieldModel)
-        .filter(
-            FieldModel.user_id == current_user.id,
-            FieldModel.status == FieldStatus.pending,
-        )
-        .first()
-    )
-    if existing_pending:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, 
-            detail="Ya tenes un campo pendiente de aprobacion. Espera a que sea procesado antes de registrar otro"
-        )
-
     field = FieldModel(user_id=current_user.id, name=data.name)
     db.add(field)
     db.commit()

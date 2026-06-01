@@ -5,7 +5,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.field import Field as FieldModel
 from app.models.sector import Sector as SectorModel
-from app.models.enums import FieldStatus
+from app.models.enums import SectorStatus
 from app.auth.dependencies import get_current_user
 
 
@@ -19,9 +19,9 @@ def owned_field(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campo no encontrado")
     return field
 
-def active_field(field: FieldModel = Depends(owned_field)) -> FieldModel:
-    if field.status != FieldStatus.active:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El campo aun no fue aprobado (sin poligono asignado)")
+def located_field(field: FieldModel = Depends(owned_field)) -> FieldModel:
+    if field.latitude is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El campo aun no tiene ubicacion (sin sectores con poligono)")
     return field
 
 def owned_sector(
@@ -35,23 +35,24 @@ def owned_sector(
     return sector
 
 def active_sector(sector: SectorModel = Depends(owned_sector)) -> SectorModel:
-    if sector.field.status != FieldStatus.active:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El campo aun no fue aprobado")
+    if sector.status != SectorStatus.active:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El sector aun no fue aprobado")
     return sector
 
 def iter_active_sectors(db: Session) -> list[SectorModel]:
-    """Sectores de campos activos (job de recomendacion)"""
+    """Sectores aprobados (job de recomendacion)"""
     return (
         db.query(SectorModel)
-        .join(FieldModel, SectorModel.field_id == FieldModel.id)
-        .filter(FieldModel.status == FieldStatus.active)
+        .filter(SectorModel.status == SectorStatus.active)
         .all()
     )
 
 def iter_active_fields(db: Session) -> list[FieldModel]:
-    """Campos activos (job de alertas)"""
+    """Campos con al menos un sector aprobado (job de alertas)"""
     return (
         db.query(FieldModel)
-        .filter(FieldModel.status == FieldStatus.active)
+        .join(SectorModel, SectorModel.field_id == FieldModel.id)
+        .filter(SectorModel.status == SectorStatus.active)
+        .distinct()
         .all()
     )

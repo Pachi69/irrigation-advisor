@@ -1,8 +1,8 @@
-"""initial schema with sectors
+"""schema sectores con aprobacion por sector
 
-Revision ID: bc1505c724bb
+Revision ID: b58f8d6c73ce
 Revises: 
-Create Date: 2026-05-31 14:13:34.371360
+Create Date: 2026-06-01 12:35:22.116014
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'bc1505c724bb'
+revision: str = 'b58f8d6c73ce'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -36,7 +36,6 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('soil_type', sa.Enum('sand', 'loamy_sand', 'sandy_loam', 'sandy_clay_loam', 'loam', 'silt_loam', 'silt', 'clay_loam', 'silty_clay_loam', 'sandy_clay', 'silty_clay', 'clay', name='soiltype'), nullable=True),
-    sa.Column('status', sa.Enum('active', 'inactive', 'pending', name='fieldstatus'), nullable=False),
     sa.Column('elevation_m', sa.Float(), nullable=True),
     sa.Column('latitude', sa.Float(), nullable=True),
     sa.Column('longitude', sa.Float(), nullable=True),
@@ -72,6 +71,7 @@ def upgrade() -> None:
     op.create_table('sectors',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('field_id', sa.Integer(), nullable=False),
+    sa.Column('status', sa.Enum('active', 'inactive', 'pending', name='sectorstatus'), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('crop_type', sa.Enum('vine', 'peach', name='croptype'), nullable=False),
     sa.Column('variety', sa.String(length=255), nullable=True),
@@ -129,6 +129,8 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('water_balance_id', sa.Integer(), nullable=False),
     sa.Column('recommended_irrigation_mm', sa.Float(), nullable=False),
+    sa.Column('volume_m3', sa.Float(), nullable=True),
+    sa.Column('time_min', sa.Float(), nullable=True),
     sa.Column('urgency', sa.Enum('low', 'medium', 'high', 'critical', name='urgencylevel'), nullable=False),
     sa.Column('reason', sa.Text(), nullable=False),
     sa.Column('confidence', sa.Enum('low', 'medium', 'high', name='confidencelevel'), nullable=False),

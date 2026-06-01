@@ -14,7 +14,7 @@ const form = ref({
     crop_type: 'vine',
     variety: '',
     irrigation_type: 'aspersion',
-    flow_rate_ls_ha: 1.5,
+    flow_rate_ls_ha: null,
     hail_net_type: 'none',
     last_saturation_date: new Date().toISOString().slice(0, 10),
     polygon_geojson: null,
@@ -37,6 +37,7 @@ async function handleSubmit() {
         const payload = {
             ...form.value,
             variety: form.value.variety || null,
+            flow_rate_ls_ha: form.value.flow_rate_ls_ha || null,
         }
         await createSector(fieldId, payload)
         router.push(`/fields/${fieldId}`)
@@ -133,7 +134,8 @@ function cancel() {
                         type="number" min="0.1" step="0.1" :disabled="loading"
                         class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 transition-colors"
                     />
-                    <p class="text-xs text-gray-400 mt-1.5">Por defecto 1,5 (máximo legal Mendoza).</p>
+                    <p class="text-xs text-gray-400 mt-1.5">Caudal de la bomba dividido por las hectáreas del sector. Si lo dejás vacío, calculamos el
+                        volumen pero no el tiempo de riego.</p>
                 </div>
             </div>
 

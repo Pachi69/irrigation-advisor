@@ -49,6 +49,8 @@ def _build_last_recommendation(db: Session, sector_id: int) -> LastRecommendatio
         date=wb.date,
         urgency=rec.urgency,
         recommended_irrigation_mm=rec.recommended_irrigation_mm,
+        time_min=rec.time_min,
+        volume_m3=rec.volume_m3,
         deficit_pct=round((wb.water_deficit_mm / wb.taw_mm) * 100, 1),
         deficit_history=deficit_history,
     )
@@ -92,11 +94,11 @@ def get_sector(sector: SectorModel = Depends(owned_sector), db: Session = Depend
 
 @router.patch("/sectors/{sector_id}", response_model=SectorPublic)
 def update_sector(data: SectorUpdate, sector: SectorModel = Depends(owned_sector), db: Session = Depends(get_db)):
-    for attr, value in data.model_dump(exclude_none=True).items():
+    for attr, value in data.model_dump(exclude_unset=True).items():
         setattr(sector, attr, value)
 
     if data.polygon_geojson is not None:
-        _, _, sector.area_ha, _ = setup_field_geo(data.polygon_geojson)
+        _, _, sector.area_ha = setup_field_geo(data.polygon_geojson)
         update_field_geo(sector.field, db)
 
     db.commit()

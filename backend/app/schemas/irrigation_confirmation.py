@@ -1,14 +1,24 @@
 from datetime import date, datetime
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.enums import UrgencyLevel
 
 
 class IrrigationConfirmationCreate(BaseModel):
-    """Datos que envia el productor al confirmar un riego."""
+    """Datos que envia el productor al confirmar un riego (en tiempo de riego)
+    Se confirma por tiempo (si el sector tiene caudal cargado) o por volumen (m3).
+    """
     irrigation_date: date
-    applied_irrigation_mm: float = Field(gt=0)
+    applied_time_min: Optional[float] = Field(default=None, gt=0)
+    applied_volume_m3: Optional[float] = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def _exactly_one(self):
+        if (self.applied_time_min is None) == (self.applied_volume_m3 is None):
+            raise ValueError("Indica el riego por tiempo o por volumen, uno solo.")
+        return self
 
 
 class PendingConfirmationItem(BaseModel):
@@ -16,6 +26,7 @@ class PendingConfirmationItem(BaseModel):
     recommendation_id: int
     date: date
     recommended_irrigation_mm: float
+    time_min: Optional[float] = None
     urgency: UrgencyLevel
     water_deficit_mm: float
 

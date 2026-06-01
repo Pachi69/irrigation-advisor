@@ -11,6 +11,8 @@ class RecommendationResponse(BaseModel):
     # Resultado final
     urgency_level: UrgencyLevel = Field(validation_alias='urgency')
     recommended_irrigation_mm: float
+    volume_m3: float | None = None
+    time_min: float | None = None
     reason: str
     confidence: ConfidenceLevel
 
@@ -42,6 +44,8 @@ class RecommendationHistoryItem(BaseModel):
     date: date
     urgency: UrgencyLevel
     recommended_irrigation_mm: float
+    volume_m3: float | None = None
+    time_min: float | None = None
     reason: str
     confidence: ConfidenceLevel
     water_deficit_mm: float

@@ -14,11 +14,13 @@ from app.ingestion.climate import get_forecast, get_climate_data_for_range
 from app.calculation.urgency import calculate_urgency, urgency_from_balance
 from app.services.satellite import fetch_latest_s2, prefetch_s2_for_range, get_satellite_data_for_range
 from app.services.water_balance import compute_balance_for_day, save_water_balance, compute_balance_from_data, confirmed_irrigation_by_range
+from app.calculation.irrigation import efficiency_for, mm_to_time_min, mm_to_volume_m3
 
 
 logger = logging.getLogger(__name__)
 
 def save_recommendation(
+    sector: SectorModel,
     wb: DailyWaterBalance,
     db: Session,
     *,
@@ -32,6 +34,9 @@ def save_recommendation(
     Si ya existe una recomendacion para ese balance (ese dia), NO se sobreescribe:
     queda como registro de la decision generada ese dia. El balance se sigue
     recalculando aparte. Guarda un snapshot del estado hidrico del momento.
+
+    Persiste la lamina (mm neto) y sus equivalentes en volumen (m3) y tiempo (min),
+    derivados de la dotacion y eficiencia del sector en ese momento (inmutables).
     """
     rec = (
         db.query(Recommendation)
@@ -41,10 +46,13 @@ def save_recommendation(
 
     if rec is not None:
         return rec
-
+    
+    eff = efficiency_for(sector.irrigation_type)
     rec = Recommendation(
         water_balance_id=wb.id,
         recommended_irrigation_mm=recommended_irrigation_mm,
+        volume_m3=mm_to_volume_m3(recommended_irrigation_mm, sector.area_ha, eff),
+        time_min=mm_to_time_min(recommended_irrigation_mm, sector.flow_rate_ls_ha, eff),
         urgency=urgency_level,
         reason=reason,
         confidence=confidence,
@@ -66,6 +74,8 @@ def build_recommendation_response(
         date=wb.date,
         urgency_level=rec.urgency,
         recommended_irrigation_mm=rec.recommended_irrigation_mm,
+        volume_m3=rec.volume_m3,
+        time_min=rec.time_min,
         reason=rec.reason,
         confidence=rec.confidence,
         water_deficit_mm=wb.water_deficit_mm,
@@ -137,7 +147,7 @@ def run_backfill(
             )
             urgency = urgency_from_balance(balance, kc_result)
             save_recommendation(
-                wb, db,
+                sector, wb, db,
                 urgency_level=urgency.urgency_level,
                 recommended_irrigation_mm=urgency.recommended_irrigation_mm,
                 reason=urgency.reason,
@@ -194,7 +204,7 @@ def run_recommendation_pipeline(sector: SectorModel, db: Session) -> Recommendat
         satellite_data=satellite_data, ndvi_date=ndvi_date,
     )
     rec = save_recommendation(
-        wb, db,
+        sector, wb, db,
         urgency_level=urgency.urgency_level,
         recommended_irrigation_mm=urgency.recommended_irrigation_mm,
         reason=urgency.reason,

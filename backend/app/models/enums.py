@@ -42,7 +42,7 @@ class SoilType(enum.Enum):
     clay = "clay"
 
 
-class FieldStatus(enum.Enum):
+class SectorStatus(enum.Enum):
     active = "active"
     inactive = "inactive"
     pending = "pending"

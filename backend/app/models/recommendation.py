@@ -14,6 +14,8 @@ class Recommendation(Base):
         ForeignKey("daily_water_balances.id", ondelete="CASCADE"), nullable=False, unique=True, index=True, 
     )
     recommended_irrigation_mm: Mapped[float] = mapped_column(Float, nullable=False)
+    volume_m3: Mapped[float | None] = mapped_column(Float, nullable=True)
+    time_min: Mapped[float | None] = mapped_column(Float, nullable=True)
     urgency: Mapped[UrgencyLevel] = mapped_column(Enum(UrgencyLevel), nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[ConfidenceLevel] = mapped_column(Enum(ConfidenceLevel), nullable=False)

@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from app.database import SessionLocal
 from app.models.daily_water_balance import DailyWaterBalance
 from app.services.push import send_push_to_user
-from app.api._helpers import iter_active_fields
+from app.api._helpers import iter_active_sectors
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ def send_daily_recommendation_notifications() -> None:
     db = SessionLocal()
     target_date = date.today() - timedelta(days=1)  # La recomendacion se genera a las 00:00, asi que es para el dia anterior
     try:
-        sectors = iter_active_fields(db)
+        sectors = iter_active_sectors(db)
         logger.info("Job notificaciones: procesando %d sectores activos", len(sectors))
         ok = no_recommendation = not_sent = errors = 0
 

@@ -159,11 +159,12 @@ onMounted(load)
         <!-- ─── HERO ─── -->
         <UrgencyHero
           :mm="rec.recommended_irrigation_mm"
+          :time-min="rec.time_min"
+          :volume-m3="rec.volume_m3"
           :urgency="rec.urgency_level"
           :reason="rec.reason"
           :date-label="`Hoy · ${dateLabel}`"
           :confidence="CONFIDENCE_LABELS[rec.confidence] || 'Sin datos'"
-          :area-ha="sector?.area_ha || 1"
         />
 
         <!-- ─── ALERTS ─── -->

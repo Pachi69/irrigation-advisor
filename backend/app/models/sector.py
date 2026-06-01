@@ -2,10 +2,10 @@ from datetime import date, datetime, time
 from typing import Optional
 
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, JSON, String, func, Time
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.enums import CropType, HailNetType, IrrigationType
+from app.models.enums import CropType, HailNetType, IrrigationType, SectorStatus
 
 
 class Sector(Base):
@@ -13,6 +13,7 @@ class Sector(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     field_id: Mapped[int] = mapped_column(ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
+    status: Mapped[SectorStatus] = mapped_column(Enum(SectorStatus), nullable=False, default=SectorStatus.pending)
 
     # Identidad del sector
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -25,7 +26,9 @@ class Sector(Base):
 
     # Riego
     irrigation_type: Mapped[IrrigationType] = mapped_column(Enum(IrrigationType), nullable=False, default=IrrigationType.aspersion)
-    flow_rate_ls_ha: Mapped[float] = mapped_column(Float, nullable=False, default=1.5)
+    # Caudal del sistema (caudal de la bomba / area).
+    # sin el no se calcula el tiempo de riego.
+    flow_rate_ls_ha: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Malla antigranizo
     hail_net_type: Mapped[HailNetType] = mapped_column(Enum(HailNetType), nullable=False, default=HailNetType.none)

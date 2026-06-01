@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, Enum, Float, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.enums import SoilType, FieldStatus
+from app.models.enums import SoilType
 
 class Field(Base):
     __tablename__ = "fields"
@@ -13,7 +13,6 @@ class Field(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     soil_type: Mapped[SoilType | None] = mapped_column(Enum(SoilType), nullable=True)
-    status: Mapped[FieldStatus] = mapped_column(Enum(FieldStatus), nullable=False, default=FieldStatus.pending)
     elevation_m: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
