@@ -161,26 +161,29 @@ La columna AWC (θ_fc − θ_wp) es la que efectivamente entra en el TAW. Los va
 
 El sistema usa exclusivamente **Sentinel-2 (10 m)** vía Google Earth Engine. Se evaluó **Planet Labs (PlanetScope, 3 m)** como alternativa de mayor resolución, pero se descartó: el acceso a las imágenes de alta resolución requiere suscripción paga, y los productos públicos gratuitos de la plataforma son los mismos Sentinel-2 ya disponibles gratis en GEE. La resolución de 10 m de Sentinel-2 es suficiente para promediar el NDVI sobre el polígono de un campo agrícola.
 
-### Conversión de lámina de riego a tiempo y volumen (definida — entrevista finca Morgan, mayo 2026)
+### Conversión de lámina de riego a tiempo y volumen (definida — entrevista finca Morgan, mayo 2026; revisada junio 2026)
 
-La recomendación se calcula en **lámina (mm)** y se expresa además en **volumen (m³)** y **tiempo de riego**. La entrevista confirmó que el productor conoce su caudal/dotación y que recibe la orden de regar en **horas**, por lo que se entregan las tres unidades. Para el tiempo, la tasa de aplicación se deriva del **derecho de riego (dotación, L/s/ha)** asignado por el DGI, sin medir el caudal en campo; al despejar, **la superficie se cancela**.
+La recomendación se calcula en **lámina neta (mm)** —la salida natural del balance FAO-56— y se expresa además en **volumen (m³)** y **tiempo de riego**. La entrevista confirmó que el productor recibe la orden de regar en **horas** y le sirve también el volumen, por lo que se entregan las tres unidades.
 
-Riego **superficial / por aspersión** (lo usado en San Rafael; Morgan riega por aspersión):
+El **caudal** es propio de la instalación: es el caudal de la bomba dividido por la superficie del sector (L/s/ha). **No** es la dotación del derecho de riego del DGI (esa es el agua que entrega el canal, no la tasa de aplicación del sistema). Por eso lo **carga el productor** y es **opcional**: sin él se calcula el volumen pero no el tiempo. Al despejar el tiempo, **la superficie se cancela**.
 
-```
-volumen (m³) = lámina (mm) × superficie (ha) × 10
-tiempo (s)   = 10.000 × lámina (mm) / dotación (L/s/ha) / eficiencia
-```
-
-Inversa, para confirmar un riego ingresado en tiempo o volumen y normalizarlo a lámina (mm):
+Volumen y tiempo se expresan en **bruto** (agua que el sistema debe *entregar*, mayor que la neta por pérdidas), dividiendo por la **eficiencia**, para que las tres unidades representen la misma cantidad de agua de forma consistente entre sí:
 
 ```
-lámina (mm) desde tiempo  = tiempo (s) × dotación (L/s/ha) × eficiencia / 10.000
-lámina (mm) desde volumen = volumen (m³) / (superficie (ha) × 10)
+volumen (m³) = lámina (mm) × superficie (ha) × 10 / eficiencia
+tiempo (s)   = 10.000 × lámina (mm) / (caudal (L/s/ha) × eficiencia)
 ```
 
-- **Dotación:** constante del derecho de riego del sector (Ley de Aguas de Mendoza: máximo 1,5 L/s/ha; default si el productor no la carga).
-- **Eficiencia:** corrige pérdidas; default **0,8 aspersión** y **0,6 superficial** (ajustable por sector).
+Inversa, para confirmar un riego ingresado en tiempo o volumen y normalizarlo a lámina neta (mm):
+
+```
+lámina (mm) desde tiempo   = tiempo (s) × caudal (L/s/ha) × eficiencia / 10.000
+lámina (mm) desde volumen  = volumen (m³) × eficiencia / (superficie (ha) × 10)
+```
+
+- **Caudal (L/s/ha):** caudal de la bomba / superficie del sector. Opcional; sin él no se calcula el tiempo. **No** se aplica default: es específico de cada instalación y no es justificable bibliográficamente (a diferencia de la eficiencia). El máximo legal del DGI (1,5 L/s/ha) es el derecho de agua del canal, no la tasa de aplicación del sistema, por eso ya no se usa como default.
+- **Eficiencia:** corrige pérdidas; **0,85 aspersión** (FAO-56: aspersión/microaspersión 85–90 %) y **0,6 superficial**. Se deriva del método de riego (no la ingresa el productor).
 - `volumen_m3` y `tiempo_min` se **persisten** en la recomendación al generarse (inmutables).
+- La confirmación de riego acepta **tiempo** (si el sector tiene caudal) o **volumen (m³)**; ambos se normalizan a lámina neta para el balance.
 
 **Riego por goteo (pendiente / futuro):** la tasa NO se deriva de la dotación/ha sino de los emisores (caudal por gotero × densidad), y FAO-56 añade un factor de **fracción mojada** al balance. La conversión se implementa como estrategia por `tipo_riego` para incorporarlo sin refactor. Ver `docs/diseno/sprint-2-sectores.md`.

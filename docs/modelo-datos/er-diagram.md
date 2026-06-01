@@ -48,8 +48,7 @@ erDiagram
         float superficie_ha
         json poligono_geojson
         enum tipo_riego "aspersion | superficial"
-        float dotacion_ls_ha "L/s/ha (default 1.5)"
-        float eficiencia "0-1 (default 0.8 asp / 0.6 sup)"
+        float caudal_ls_ha "L/s/ha; caudal bomba / superficie; opcional (nullable), sin default"
         enum tipo_malla "ninguna | abierta | densa | color"
         int frecuencia_notif_dias "cada cuanto notificar"
         time hora_notif "hora elegida para notificar"
@@ -106,7 +105,7 @@ erDiagram
         int recomendacion_id FK
         int sector_id FK
         date fecha_riego
-        float lamina_aplicada_mm "normalizada desde mm / m3 / tiempo"
+        float lamina_aplicada_mm "neta; normalizada desde tiempo o volumen (m3)"
         timestamp created_at
     }
 
@@ -150,6 +149,7 @@ erDiagram
 ### Lo que NO va en la base de datos (configuración estática en código)
 - Kc por etapa fenológica, duración de etapas, profundidad de raíces (Zr) y fracción de depleción (p) por cultivo.
 - Valores FC/WP por tipo de suelo (Saxton & Rawls 2006).
+- **Eficiencia de riego** (0,85 aspersión / 0,6 superficial): se deriva del `tipo_riego` con un lookup en `app/calculation/irrigation.py`; no es columna del sector.
 - Umbrales de alerta climática (temperatura de helada, etc.).
 
 ### Flujo de confianza de Kc (según malla del sector)
