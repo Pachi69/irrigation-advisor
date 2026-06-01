@@ -22,3 +22,10 @@ Thumbs.db
 # SSH keys
 *.pem
 *.key
+
+# Editor / IDE
+.vscode/
+*.code-workspace
+
+# Scripts ad-hoc / diagnóstico (no se versionan)
+backend/scripts/
