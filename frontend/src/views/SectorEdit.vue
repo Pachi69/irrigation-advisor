@@ -14,6 +14,7 @@ const saving = ref(false)
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 const deleteError = ref('')
+const notifHours = Array.from({ length: 18 }, (_, i) => i + 5) // 05:00 a 22:00
 
 const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -27,6 +28,8 @@ onMounted(async () => {
             irrigation_type: sector.irrigation_type,
             flow_rate_ls_ha: sector.flow_rate_ls_ha,
             hail_net_type: sector.hail_net_type,
+            notification_hour: sector.notification_hour || '08:00:00',
+            notification_frequency_days: sector.notification_frequency_days || 1,
             last_saturation_date: sector.last_saturation_date,
         }
     } catch {
@@ -149,6 +152,29 @@ async function confirmDelete() {
             <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">
                 {{ error }}
             </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Hora de aviso</label>
+                    <select
+                        v-model="form.notification_hour" :disabled="saving"
+                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+                    >
+                        <option v-for="h in notifHours" :key="h" :value="`${String(h).padStart(2, '0')}:00:00`">
+                            {{ String(h).padStart(2, '0') }}:00
+                        </option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Frecuencia (días)</label>
+                    <input
+                        v-model.number="form.notification_frequency_days"
+                        type="number" min="1" step="1" :disabled="saving"
+                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 transition-colors"
+                    />
+                </div>
+              </div>
+              <p class="text-xs text-gray-400 -mt-2">Te avisamos a esa hora, cada tantos días, solo si hay que regar.</p>
 
             <div class="flex gap-3 pt-1">
                 <button

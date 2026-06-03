@@ -8,6 +8,7 @@ import { MapPin } from 'lucide-vue-next'
 const route = useRoute()
 const router = useRouter()
 const fieldId = route.params.id
+const notifHours = Array.from({ length: 18 }, (_, i) => i + 5) // 05:00 a 22:00
 
 const form = ref({
     name: '',
@@ -16,6 +17,8 @@ const form = ref({
     irrigation_type: 'aspersion',
     flow_rate_ls_ha: null,
     hail_net_type: 'none',
+    notification_hour: '08:00:00',
+    notification_frequency_days: 1,
     last_saturation_date: new Date().toISOString().slice(0, 10),
     polygon_geojson: null,
 })
@@ -165,6 +168,29 @@ function cancel() {
                 />
                 <p class="text-xs text-gray-400 mt-1.5">Última fecha en que el suelo quedó bien empapado.</p>
             </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Hora de Notificación</label>
+                    <select
+                        v-model="form.notification_hour" :disabled="loading"
+                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+                        >
+                            <option v-for="h in notifHours" :key="h" :value="`${String(h).padStart(2, '0')}:00:00`">
+                                {{ String(h).padStart(2, '0') }}:00
+                            </option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Frecuencia de Notificación (días)</label>
+                    <input
+                        v-model.number="form.notification_frequency_days"
+                        type="number" min="1" step="1" :disabled="loading"
+                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
+                    />
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Te avisamos a esa hora, cada tantos días, solo si hay que regar.</p>
 
             <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">
                 {{ error }}

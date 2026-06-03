@@ -20,9 +20,9 @@ scheduler.add_job(
 
 scheduler.add_job(
     send_daily_recommendation_notifications,
-    trigger=CronTrigger(hour=8, minute=0, timezone=MENDOZA_TZ),
+    trigger=CronTrigger(minute=0, timezone=MENDOZA_TZ),
     id="daily_notifications",
-    name="Notificaciones push recomendación - 08hs Mendoza",
+    name="Notificaciones push por hora elegida del sector - cada hora",
     replace_existing=True,
 )
 

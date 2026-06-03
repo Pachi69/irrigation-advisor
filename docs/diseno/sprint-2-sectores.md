@@ -220,12 +220,17 @@ Lo pesado; **no** atado a la hora del productor.
 - Por sector: calcula balance + recomendación (incluye `volumen_m3`, `tiempo_min`) y **persiste siempre** (aún en reposo o lámina 0).
 - **Concurrencia limitada** en llamadas externas (no disparar todas a la vez).
 
-### B) Job de notificación (cada ~15–30 min, liviano)
-- Toma sectores cuyo `hora_notif` cae en la ventana actual y cuya frecuencia se cumplió
-  (`hoy − ultima_notif_fecha ≥ frecuencia_notif_dias`).
+### B) Job de notificación (cada hora en punto, liviano)
+- Corre **cada hora en punto** (hora Mendoza). Granularidad por hora: el productor elige una
+  `hora_notif` **en punto** (sin minutos), así que basta un tick por hora.
+- Toma los sectores cuya hora elegida **coincide con la hora actual** y cuya frecuencia se cumplió
+  (`hoy − ultima_notif_fecha ≥ frecuencia_notif_dias`). Sin `hora_notif` cargada cae a un default (8:00).
 - Si la recomendación del día tiene **`lámina > 0` → envía push** y setea `ultima_notif_fecha = hoy`.
 - Si es 0 → no envía (la recomendación ya quedó registrada). `ultima_notif_fecha` solo se actualiza al enviar.
-- A cada tick: `SELECT` + push → barato aunque muchos usuarios compartan horario.
+- **Cuerpo del push** según unidad disponible (mismo criterio que el front): con caudal muestra el
+  **tiempo de riego**, sin caudal el **volumen (m³)**.
+- A cada tick: `SELECT` + push → barato aunque muchos usuarios compartan horario. Editar `hora_notif`
+  o frecuencia surte efecto en el próximo tick (el job lee la DB fresca, sin caché).
 
 ### C) Job de alertas climáticas (cada 6h)
 Sin cambios de fondo (helada / ola de calor se envían siempre; nivel `campo`).
