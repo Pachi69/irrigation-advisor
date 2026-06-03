@@ -141,11 +141,7 @@ def calculate_urgency(
     recommended_mm = deficit if urgency != UrgencyLevel.low else 0.0
 
     # Confianza desde fuente del Kc
-    confidence = (
-        ConfidenceLevel.high
-        if kc.source == KcSource.s2_dynamic
-        else ConfidenceLevel.medium
-    )
+    confidence = kc.kc_confidence
 
     # Razon legible
     reason = _build_reason(deficit_ratio, ks, expected_rain_3d, max_prob_3d, projected_ratio)
@@ -171,11 +167,7 @@ def urgency_from_balance(water_balance: WaterBalanceResult, kc: KcResult) -> Urg
     
     recommended_mm = deficit if urgency != UrgencyLevel.low else 0.0
 
-    confidence = (
-        ConfidenceLevel.high
-        if kc.source == KcSource.s2_dynamic
-        else ConfidenceLevel.medium
-    )
+    confidence = kc.kc_confidence
 
     pct = round(deficit_ratio * 100)
     reason = f"Deficit hidrico: {pct}% de la capacidad disponible."

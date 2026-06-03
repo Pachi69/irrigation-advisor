@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.models.sector import Sector as SectorModel
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.irrigation_confirmation import IrrigationConfirmation
-from app.models.enums import HailNetType
 from app.schemas.calculation import EToResult, KcResult, WaterBalanceResult
 from app.schemas.climate import ClimateData
 from app.schemas.satellite import SatelliteData
@@ -65,16 +64,18 @@ def compute_balance_from_data(
     """Calcula ETo, Kc y balance hidrico para un dia a partir de datos ya traidos."""
     field = sector.field
 
-    if climate.eto_reference_mm is None:
+    eto_mm = climate.eto_reference_mm
+    if eto_mm is None:
         eto_result = calculate_eto(climate, field.latitude, target_date, field.elevation_m)
-        climate = climate.model_copy(update={"eto_reference_mm": eto_result.eto_mm})
-    eto = EToResult(eto_mm=climate.eto_reference_mm)
+        eto_mm = eto_result.eto_mm
+        climate = climate.model_copy(update={"eto_reference_mm": eto_mm})
+    eto = EToResult(eto_mm=eto_mm)
 
     kc_result = calculate_kc(
         crop_type=sector.crop_type,
         current_date=target_date,
         satellite_data=satellite_data,
-        has_hail_net=sector.hail_net_type in (HailNetType.dense, HailNetType.color),
+        hail_net_type=sector.hail_net_type,
     )
 
     balance = calculate_water_balance(

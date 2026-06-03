@@ -9,6 +9,7 @@ class KcResult(BaseModel):
     kc: float
     source: KcSource
     phenological_stage: PhenologicalStage
+    kc_confidence: ConfidenceLevel
 
 class WaterBalanceResult(BaseModel):
     water_deficit_mm: float

@@ -23,7 +23,7 @@ from __future__ import annotations
 from datetime import date
 from dataclasses import dataclass
 
-from app.models.enums import CropType, KcSource, PhenologicalStage
+from app.models.enums import CropType, KcSource, PhenologicalStage, ConfidenceLevel, HailNetType
 from app.schemas.calculation import KcResult
 from app.schemas.satellite import SatelliteData
 
@@ -124,7 +124,7 @@ def calculate_kc(
     crop_type: CropType,
     current_date: date,
     satellite_data: SatelliteData | None,
-    has_hail_net: bool = False,
+    hail_net_type: HailNetType = HailNetType.none,
 ) -> KcResult:
     """Calcula el coeficiente de cultivo (Kc) para la fecha indicada.
 
@@ -141,14 +141,21 @@ def calculate_kc(
 
     # Reposo: Kc tabular bajo, el NDVI no representa al cultivo
     if stage is PhenologicalStage.dormancy:
-        return KcResult(kc=_DORMANT_KC, source=KcSource.tabular, phenological_stage=stage)
+        return KcResult(kc=_DORMANT_KC, source=KcSource.tabular, phenological_stage=stage, kc_confidence=ConfidenceLevel.medium)
+    
+    # Malla densa/color: tapa la vista optica -> NDVI no representa al cultivo -> Kc tabular
+    blocks_optics = hail_net_type in {HailNetType.dense, HailNetType.color}
     
     # Estrategia 1: Kc dinamico desde NDVI Satelital
-    # No aplica con malla antigranizo: la malla distorsiona la vista optica, asi que se cae a Kc tabular (FAO-56).
-    if not has_hail_net and satellite_data is not None and satellite_data.ndvi is not None:
+    if not blocks_optics and satellite_data is not None and satellite_data.ndvi is not None:
         kc, stage = _kc_from_ndvi(satellite_data.ndvi, days, params)
-        return KcResult(kc=kc, source=KcSource.s2_dynamic, phenological_stage=stage)
+        # Malla abierta deja ver el NDVI pero lo distorsiona -> misma fuente, menor confianza
+        confidence = (
+            ConfidenceLevel.medium if hail_net_type is HailNetType.open
+            else ConfidenceLevel.high
+        )
+        return KcResult(kc=kc, source=KcSource.s2_dynamic, phenological_stage=stage, kc_confidence=confidence)
     
     # Estrategia 2: Kc tabular FAO-56
     kc, stage = _kc_tabular(days, params)
-    return KcResult(kc=kc, source=KcSource.tabular, phenological_stage=stage)
+    return KcResult(kc=kc, source=KcSource.tabular, phenological_stage=stage, kc_confidence=ConfidenceLevel.medium)
