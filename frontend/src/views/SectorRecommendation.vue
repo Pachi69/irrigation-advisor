@@ -127,13 +127,15 @@ onMounted(load)
         <span class="md:hidden">Volver</span>
       </button>
       <div class="flex items-center gap-2">
-        <RouterLink :to="`/sectors/${route.params.id}/history`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
+        <RouterLink :to="`/sectors/${route.params.id}/history`" class="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
           <Clock :size="13" /> Historial
         </RouterLink>
-        <RouterLink :to="`/sectors/${route.params.id}/confirmations`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-primary-ink bg-primary px-3 py-1.5 rounded-xl">
-          <Droplet :size="13" /> Confirmar riego
+        <RouterLink :to="`/sectors/${route.params.id}/confirmations`" class="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm font-semibold text-primary-ink bg-primary px-3 py-1.5 rounded-xl">
+          <Droplet :size="13" />
+            <span class="md:hidden">Confirmar</span>
+            <span class="hidden md:inline">Confirmar riego</span>
         </RouterLink>
-        <RouterLink :to="`/sectors/${route.params.id}/edit`" class="flex items-center gap-1 text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
+        <RouterLink :to="`/sectors/${route.params.id}/edit`" class="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
             <Pencil :size="13" /> Editar
         </RouterLink>
       </div>
@@ -232,19 +234,19 @@ onMounted(load)
           <SoilTank :deficit-pct="deficitPct" />
           <div class="grid grid-cols-2 gap-x-4 gap-y-3.5 mt-4 pt-4 border-t border-line">
             <div>
-              <div class="app-label">Déficit actual</div>
+              <div class="app-label">Déficit actual <span class="normal-case font-normal tracking-normal">(Dr)</span></div>
               <div class="app-mono text-base font-bold mt-0.5">{{ rec.water_deficit_mm?.toFixed(1) }} <span class="text-sm text-muted font-semibold">mm</span></div>
             </div>
             <div>
-              <div class="app-label">TAW</div>
+              <div class="app-label">TAW <span class="normal-case font-normal tracking-normal">(agua total)</span></div>
               <div class="app-mono text-base font-bold mt-0.5">{{ rec.taw_mm?.toFixed(0) }} <span class="text-sm text-muted font-semibold">mm</span></div>
             </div>
             <div>
-              <div class="app-label">RAW</div>
+              <div class="app-label">RAW <span class="normal-case font-normal tracking-normal">(límite sin estrés)</span></div>
               <div class="app-mono text-base font-bold mt-0.5">{{ rec.raw_mm?.toFixed(0) }} <span class="text-sm text-muted font-semibold">mm</span></div>
             </div>
             <div>
-              <div class="app-label">Estrés Ks</div>
+              <div class="app-label">Estrés <span class="normal-case font-normal tracking-normal">(Ks)</span></div>
               <div class="app-mono text-base font-bold mt-0.5">{{ rec.ks?.toFixed(2) }}</div>
             </div>
           </div>
@@ -255,11 +257,11 @@ onMounted(load)
           <div class="app-label mb-3">Cultivo · Kc</div>
           <div class="grid grid-cols-2 gap-x-4 gap-y-3.5">
             <div>
-              <div class="app-label">Etapa</div>
+              <div class="app-label">Etapa <span class="normal-case font-normal tracking-normal">(fenológica)</span></div>
               <div class="text-sm font-bold mt-0.5">{{ STAGE_LABELS[rec.phenological_stage] }}</div>
             </div>
             <div>
-              <div class="app-label">Kc</div>
+              <div class="app-label">Kc <span class="normal-case font-normal tracking-normal">(coef. cultivo)</span></div>
               <div class="app-mono text-base font-bold mt-0.5">{{ rec.kc?.toFixed(3) }}</div>
             </div>
             <div>
@@ -267,7 +269,7 @@ onMounted(load)
               <div class="text-sm font-bold mt-0.5">{{ KC_SOURCE_LABELS[rec.kc_source] }}</div>
             </div>
             <div>
-              <div class="app-label">ETo ayer</div>
+              <div class="app-label">ETo ayer <span class="normal-case font-normal tracking-normal">(evapotransp.)</span></div>
               <div class="app-mono text-base font-bold mt-0.5">{{ rec.eto_mm?.toFixed(2) }} <span class="text-sm text-muted font-semibold">mm</span></div>
             </div>
           </div>

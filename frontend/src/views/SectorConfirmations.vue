@@ -126,7 +126,7 @@ onMounted(load)
 
         <div v-else>
             <!-- Encabezado de columnas -->
-            <div class="grid grid-cols-[6rem_1fr_7rem_1fr_auto] items-center gap-3 px-4 mb-1.5">
+            <div class="hidden md:grid grid-cols-[6rem_1fr_7rem_1fr_auto] items-center gap-3 px-4 mb-1.5">
                 <span class="app-label">Fecha</span>
                 <span class="app-label">Urgencia</span>
                 <span class="app-label justify-self-end">Recomendado</span>
@@ -141,12 +141,13 @@ onMounted(load)
                 <div
                     v-for="item in items"
                     :key="item.recommendation_id"
-                    class="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3 grid grid-cols-[6rem_1fr_7rem_1fr_auto] items-center gap-3"
+                    class="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3 grid grid-cols-2 gap-x-3 gap-y-2.5 items-center
+                    md:grid-cols-[6rem_1fr_7rem_1fr_auto] md:gap-3"
                 >
-                    <span class="text-sm text-gray-500">{{ item.date }}</span>
+                    <span class="justify-self-start order-1 md:order-none text-sm text-gray-500">{{ item.date }}</span>
 
                     <span :class="[
-                        'justify-self-start text-xs font-bold px-2.5 py-1 rounded-full',
+                        'justify-self-start order-3 md:order-none text-xs font-bold px-2.5 py-1 rounded-full',
                         item.urgency === 'low'    ? 'bg-green-100 text-green-800' :
                         item.urgency === 'medium' ? 'bg-amber-100 text-amber-800' :
                         item.urgency === 'high'   ? 'bg-orange-100 text-orange-800' :
@@ -155,15 +156,15 @@ onMounted(load)
                         {{ URGENCY_LABEL[item.urgency] }}
                     </span>
 
-                    <span class="justify-self-end text-sm font-bold text-gray-900">
+                    <span class="justify-self-end order-2 md:order-none text-sm font-bold text-gray-900">
                         {{ hasCaudal ? formatMinutes(item.time_min) : `${item.recommended_irrigation_mm.toFixed(0)} mm` }}
                     </span>
 
-                    <span></span>
+                    <span class="hidden md:block"></span>
 
                     <button
                         @click="openConfirm(item)"
-                        class="justify-self-end flex items-center gap-1 text-sm font-semibold text-white bg-green-800 hover:bg-green-700 px-3 py-1.5 rounded-xl transition-colors"
+                        class="justify-self-end order-4 md:order-none flex items-center gap-1 text-sm font-semibold text-white bg-green-800 hover:bg-green-700 px-3 py-1.5 rounded-xl transition-colors"
                     >
                         <Droplet class="w-3.5 h-3.5" />
                         Confirmar

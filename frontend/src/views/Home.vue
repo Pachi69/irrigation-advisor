@@ -88,6 +88,12 @@ function urgencyColor(u) {
   }[u] || 'var(--color-primary)'
 }
 
+function irrigationAmount(rec) {
+  if (rec.time_min != null) return formatMinutes(rec.time_min)
+  if (rec.volume_m3 != null) return `${Math.round(rec.volume_m3)} m³`
+  return `${rec.recommended_irrigation_mm.toFixed(1)} mm`
+}
+
 onMounted(() => {
   load()
   if ('Notification' in window) {
@@ -150,7 +156,7 @@ onMounted(() => {
             <div>
               <div class="text-xs opacity-65 mb-1">{{ urgentSector.fieldName }} · {{ urgentSector.name }}</div>
               <div class="app-mono text-3xl md:text-[42px] font-bold tracking-tight leading-none">
-                {{ formatMinutes(urgentSector.last_recommendation.time_min) }}
+                {{ irrigationAmount(urgentSector.last_recommendation) }}
               </div>
             </div>
             <RouterLink
@@ -254,7 +260,7 @@ onMounted(() => {
         />
         <div class="app-mono text-base font-bold text-ink min-w-[60px] text-right">
           <template v-if="s.last_recommendation && s.last_recommendation.recommended_irrigation_mm > 0">
-            {{ formatMinutes(s.last_recommendation.time_min) }}
+            {{ irrigationAmount(s.last_recommendation) }}
           </template>
           <template v-else-if="s.last_recommendation">—</template>
           <span v-else class="text-xs text-muted font-normal">Sin datos</span>
