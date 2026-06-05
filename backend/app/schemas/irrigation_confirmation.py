@@ -27,6 +27,7 @@ class PendingConfirmationItem(BaseModel):
     date: date
     recommended_irrigation_mm: float
     time_min: Optional[float] = None
+    volume_m3: Optional[float] = None
     urgency: UrgencyLevel
     water_deficit_mm: float
 

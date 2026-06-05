@@ -121,6 +121,7 @@ def get_pending_confirmations(sector: SectorModel = Depends(owned_sector), db: S
             date=wb.date,
             recommended_irrigation_mm=rec.recommended_irrigation_mm,
             time_min=rec.time_min,
+            volume_m3=rec.volume_m3,
             urgency=rec.urgency,
             water_deficit_mm=wb.water_deficit_mm,
         )
