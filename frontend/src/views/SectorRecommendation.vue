@@ -9,7 +9,7 @@ import {
 import { getFieldAlerts } from '../services/fields.js'
 import {
   ArrowLeft, Clock, Droplet, Satellite, AlertTriangle,
-  Snowflake, Sun, Pencil,
+  Snowflake, Sun, Pencil, Gauge,
 } from 'lucide-vue-next'
 import {
   ALERT_LABELS, STAGE_LABELS, KC_SOURCE_LABELS, CONFIDENCE_LABELS, CROP_LABELS,
@@ -127,6 +127,9 @@ onMounted(load)
         <span class="md:hidden">Volver</span>
       </button>
       <div class="flex items-center gap-2">
+        <RouterLink :to="`/sectors/${route.params.id}/metrics`" class="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
+          <Gauge :size="13" /> <span class="hidden md:inline">Métricas</span>
+        </RouterLink>
         <RouterLink :to="`/sectors/${route.params.id}/history`" class="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm font-semibold text-ink border border-line bg-surface px-3 py-1.5 rounded-xl">
           <Clock :size="13" /> Historial
         </RouterLink>

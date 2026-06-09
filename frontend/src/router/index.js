@@ -15,6 +15,7 @@ import SectorEdit from '../views/SectorEdit.vue'
 import AdminFields from '../views/AdminFields.vue'
 import Account from '../views/Account.vue'
 import { useAuth } from '../stores/auth'
+import SectorMetrics from '../views/SectorMetrics.vue'
 
 const routes = [
   {
@@ -88,6 +89,12 @@ const routes = [
     name: 'sector-edit',
     component: SectorEdit,
     meta: { requiresAuth: true },
+  },
+  {
+      path: '/sectors/:id/metrics',
+      name: 'sector-metrics',
+      component: SectorMetrics,
+      meta: { requiresAuth: true },
   },
   {
     path: '/admin/fields',

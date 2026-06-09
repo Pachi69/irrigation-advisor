@@ -55,3 +55,9 @@ export async function confirmIrrigation(sectorId, recommendationId, payload) {
     const { data } = await api.post(`/sectors/${sectorId}/recommendations/${recommendationId}/confirm`, payload,)
     return data
 }
+
+export async function getSectorMetrics(sectorId, { days = 90, start, end} = {}) {
+    const params = start && end ? { start, end } : { days }
+    const { data } = await api.get(`/sectors/${sectorId}/metrics`, { params })
+    return data
+}
