@@ -11,8 +11,9 @@ import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuth } from './stores/auth'
 import { onMounted, computed } from 'vue'
 import { subscribeToPush } from './services/push'
-import { Home, Sprout, User, Shield } from 'lucide-vue-next'
+import { Home, Sprout, User, Shield, FlaskConical } from 'lucide-vue-next'
 import InstallPrompt from './components/InstallPrompt.vue'
+
 
 const router = useRouter()
 const route = useRoute()
@@ -32,6 +33,7 @@ const activeTab = computed(() => {
   if (route.path.startsWith('/fields')) return 'fields'
   if (route.path.startsWith('/admin'))  return 'admin'
   if (route.path.startsWith('/account')) return 'account'
+  if (route.path.startsWith('/demo')) return 'demo'
   return 'home'
 })
 </script>
@@ -59,6 +61,9 @@ const activeTab = computed(() => {
         </RouterLink>
         <RouterLink to="/fields" class="nav-tab" :class="{ 'nav-tab-active': activeTab === 'fields' }">
           <Sprout :size="16" /> Mis campos
+        </RouterLink>
+        <RouterLink to="/demo" class="nav-tab" :class="{ 'nav-tab-active': activeTab === 'demo' }">
+          <FlaskConical :size="16" /> Demo
         </RouterLink>
         <RouterLink v-if="isAdmin" to="/admin/fields" class="nav-tab" :class="{ 'nav-tab-active': activeTab === 'admin' }">
           <Shield :size="16" /> Admin
@@ -116,6 +121,10 @@ const activeTab = computed(() => {
       <RouterLink v-if="isAdmin" to="/admin/fields" class="tab-item" :class="{ 'tab-item-active': activeTab === 'admin' }">
         <Shield :size="22" />
         <span>Admin</span>
+      </RouterLink>
+      <RouterLink to="/demo" class="tab-item" :class="{ 'tab-item-active': activeTab === 'demo' }">
+        <FlaskConical :size="22" />
+        <span>Demo</span>
       </RouterLink>
       <RouterLink to="/account" class="tab-item" :class="{ 'tab-item-active': activeTab === 'account' }">
         <User :size="22" />

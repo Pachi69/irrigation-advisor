@@ -16,6 +16,7 @@ import AdminFields from '../views/AdminFields.vue'
 import Account from '../views/Account.vue'
 import { useAuth } from '../stores/auth'
 import SectorMetrics from '../views/SectorMetrics.vue'
+import DemoView from '../views/DemoView.vue'
 
 const routes = [
   {
@@ -101,6 +102,12 @@ const routes = [
     name: 'admin-fields',
     component: AdminFields,
     meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/demo',
+    name: 'demo',
+    component: DemoView,
+    meta: { requiresAuth: true },
   },
   {
     path: '/login',

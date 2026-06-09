@@ -29,3 +29,6 @@ Thumbs.db
 
 # Scripts ad-hoc / diagnóstico (no se versionan)
 backend/scripts/
+
+# Cache generado de la sección demo (snapshot + thumbnail, regenerable)
+backend/app/demo/cache/

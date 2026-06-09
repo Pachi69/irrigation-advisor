@@ -12,6 +12,7 @@ from app.jobs.scheduler import scheduler
 from app.api.push import router as push_router
 from app.api.sectors import router as sector_router
 from app.api.metrics import router as metrics_router
+from app.api.demo import router as demo_router
 
 import logging
 
@@ -53,6 +54,7 @@ app.include_router(recommendation_router)
 app.include_router(push_router)
 app.include_router(sector_router)
 app.include_router(metrics_router)
+app.include_router(demo_router)
 
 @app.get("/health")
 def health_check():
