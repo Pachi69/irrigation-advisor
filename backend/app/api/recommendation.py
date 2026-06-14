@@ -1,18 +1,17 @@
 from typing import List
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.sector import Sector as SectorModel
-from app.models.satellite_record import SatelliteRecord
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.recommendation import Recommendation
 from app.models.irrigation_confirmation import IrrigationConfirmation
 from app.schemas.irrigation_confirmation import PendingConfirmationItem, IrrigationConfirmationCreate, IrrigationConfirmationResponse
 from app.schemas.recommendation import RecommendationResponse, RecommendationHistoryItem
-from app.services.recommendation import run_recommendation_pipeline, build_recommendation_response
+from app.services.recommendation import run_recommendation_pipeline, build_recommendation_response, build_recommendation_response_from_balance
 from app.services.irrigation import confirm_irrigation
 from app.calculation.irrigation import time_min_to_mm, volume_m3_to_mm, efficiency_for
 from app.api._helpers import owned_sector, active_sector
@@ -23,14 +22,27 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sectors", tags=["recommendation"])
 
-
 @router.get("/{sector_id}/recommendation", response_model=RecommendationResponse)
 def get_recommendation(
+    as_of: date | None = Query(default=None, alias="date"),
     sector: SectorModel = Depends(active_sector),
     db: Session = Depends(get_db),
 ):
     """Devuelve la ultima recomendacion guardada. Solo recalcula si no existe ninguna."""
 
+    # Fecha puntual (timeline), la recomendacion guardada de ese dia
+    if as_of is not None:
+        wb = (
+            db.query(DailyWaterBalance)
+            .filter(DailyWaterBalance.sector_id == sector.id, DailyWaterBalance.date == as_of)
+            .options(joinedload(DailyWaterBalance.recommendation))
+            .first()
+        )
+        if wb is None or wb.recommendation is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recomendacion no encontrada para esa fecha")
+        return build_recommendation_response_from_balance(sector, wb, db)
+
+    # Sin fecha: ultima recomendacion
     existing_wb = (
         db.query(DailyWaterBalance)
         .filter(DailyWaterBalance.sector_id == sector.id)
@@ -40,20 +52,8 @@ def get_recommendation(
     )
 
     if existing_wb and existing_wb.recommendation:
-        cloud_cover = None
-        if existing_wb.ndvi_date:
-            sat_rec = (
-                db.query(SatelliteRecord)
-                .filter(
-                    SatelliteRecord.sector_id == sector.id,
-                    SatelliteRecord.date == existing_wb.ndvi_date,
-                )
-                .first()
-            )
-            if sat_rec:
-                cloud_cover = sat_rec.cloud_cover_pct
-        return build_recommendation_response(existing_wb, existing_wb.recommendation, cloud_cover)
-
+        return build_recommendation_response(existing_wb, existing_wb.recommendation, db)
+    
     try:
         return run_recommendation_pipeline(sector, db)
     except (ValueError, RuntimeError) as e:

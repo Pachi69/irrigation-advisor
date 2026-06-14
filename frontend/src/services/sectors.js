@@ -26,8 +26,10 @@ export async function deleteSector(sectorId) {
 }
 
 
-export async function getRecommendation(sectorId) {
-    const { data } = await api.get(`/sectors/${sectorId}/recommendation`)
+export async function getRecommendation(sectorId, date) {
+    const { data } = await api.get(`/sectors/${sectorId}/recommendation`, {
+        params: date ? { date } : {},
+    })
     return data
 }
 
@@ -41,8 +43,11 @@ export async function getSectorChartData(sectorId) {
     return data
 }
 
-export async function getSectorSatelliteImage(sectorId) {
-    const resp = await api.get(`/sectors/${sectorId}/satellite-image`, { responseType: 'blob' })
+export async function getSectorSatelliteImage(sectorId, date) {
+    const resp = await api.get(`/sectors/${sectorId}/satellite-image`, {
+        params: date ? { date }: {},
+        responseType: 'blob',
+    })
     return resp.data
 }
 

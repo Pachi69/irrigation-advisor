@@ -9,7 +9,9 @@ from app.models.sector import Sector as SectorModel
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.recommendation import Recommendation
 from app.models.enums import UrgencyLevel, ConfidenceLevel
+from app.models.satellite_record import SatelliteRecord
 from app.schemas.recommendation import RecommendationResponse
+from app.schemas.calculation import WaterBalanceResult, KcResult
 from app.ingestion.climate import get_forecast, get_climate_data_for_range
 from app.calculation.urgency import calculate_urgency, urgency_from_balance
 from app.services.satellite import fetch_latest_s2, prefetch_s2_for_range, get_satellite_data_for_range
@@ -18,6 +20,23 @@ from app.calculation.irrigation import efficiency_for, mm_to_time_min, mm_to_vol
 
 
 logger = logging.getLogger(__name__)
+
+
+def _satellite_display(wb, db):
+    if wb.ndvi is not None:
+        sat = (
+            db.query(SatelliteRecord)
+            .filter(SatelliteRecord.sector_id == wb.sector_id, SatelliteRecord.date == wb.ndvi_date)
+            .first()
+        )
+        return wb.ndvi, wb.ndvi_date, (sat.cloud_cover_pct if sat else None)
+    sat = (
+        db.query(SatelliteRecord)
+        .filter(SatelliteRecord.sector_id == wb.sector_id, SatelliteRecord.date <= wb.date)
+        .order_by(SatelliteRecord.date.desc())
+        .first()
+    )
+    return (sat.ndvi, sat.date, sat.cloud_cover_pct) if sat else (None, None, None)
 
 def save_recommendation(
     sector: SectorModel,
@@ -66,9 +85,10 @@ def save_recommendation(
 def build_recommendation_response(
     wb: DailyWaterBalance,
     rec: Recommendation,
-    cloud_cover_pct: float | None = None,
+    db: Session,
 ) -> RecommendationResponse:
     """Construye RecommendationResponse plano desde los dos modelos separados."""
+    ndvi, ndvi_date, cloud_cover_pct = _satellite_display(wb, db)
     return RecommendationResponse(
         sector_id=wb.sector_id,
         date=wb.date,
@@ -86,9 +106,73 @@ def build_recommendation_response(
         kc=wb.kc,
         kc_source=wb.kc_source,
         phenological_stage=wb.phenological_stage,
-        ndvi=wb.ndvi,
-        ndvi_date=wb.ndvi_date,
+        ndvi=ndvi,
+        ndvi_date=ndvi_date,
         cloud_cover_pct=cloud_cover_pct,
+        temp_max_c=wb.temp_max_c,
+        temp_min_c=wb.temp_min_c,
+        temp_mean_c=wb.temp_mean_c,
+        humidity_pct=wb.humidity_pct,
+        wind_speed_ms=wb.wind_speed_ms,
+        solar_radiation_mj=wb.solar_radiation_mj,
+        pressure_kpa=wb.pressure_kpa,
+        precipitation_mm=wb.precipitation_mm,
+    )
+
+def build_recommendation_response_from_balance(
+    sector: SectorModel,
+    wb: DailyWaterBalance,
+    db: Session,
+) -> RecommendationResponse:
+    """Respuesta derivando urgencia/lamina del balance guardado (no de la
+    recomendacion guardada), para que el timeline sea coherente con el balance
+    recomputado tras un riego retroactivo. La confianza sale del Kc (fuente),
+    que no cambia con el recomputo del deficit. 
+    """
+    ndvi, ndvi_date, cloud_cover_pct = _satellite_display(wb, db)
+    wb_result = WaterBalanceResult(
+        water_deficit_mm=wb.water_deficit_mm,
+        ks=wb.ks,
+        taw_mm=wb.taw_mm,
+        raw_mm=wb.raw_mm if wb.raw_mm is not None else 0.0,
+    )
+    kc_result = KcResult(
+        kc=wb.kc,
+        source=wb.kc_source,
+        phenological_stage=wb.phenological_stage,
+        kc_confidence=wb.recommendation.confidence if wb.recommendation else ConfidenceLevel.medium
+    )
+    urg = urgency_from_balance(wb_result, kc_result)
+
+    eff = efficiency_for(sector.irrigation_type)
+    return RecommendationResponse(
+        sector_id=wb.sector_id,
+        date=wb.date,
+        urgency_level=urg.urgency_level,
+        recommended_irrigation_mm=urg.recommended_irrigation_mm,
+        volume_m3=mm_to_volume_m3(urg.recommended_irrigation_mm, sector.area_ha, eff),
+        time_min=mm_to_time_min(urg.recommended_irrigation_mm, sector.flow_rate_ls_ha, eff),
+        reason=urg.reason,
+        confidence=urg.confidence,
+        water_deficit_mm=wb.water_deficit_mm,
+        ks=wb.ks,
+        taw_mm=wb.taw_mm,
+        raw_mm=wb.raw_mm,
+        eto_mm=wb.eto_mm,
+        kc=wb.kc,
+        kc_source=wb.kc_source,
+        phenological_stage=wb.phenological_stage,
+        ndvi=ndvi,
+        ndvi_date=ndvi_date,
+        cloud_cover_pct=cloud_cover_pct,
+        temp_max_c=wb.temp_max_c,
+        temp_min_c=wb.temp_min_c,
+        temp_mean_c=wb.temp_mean_c,
+        humidity_pct=wb.humidity_pct,
+        wind_speed_ms=wb.wind_speed_ms,
+        solar_radiation_mj=wb.solar_radiation_mj,
+        pressure_kpa=wb.pressure_kpa,
+        precipitation_mm=wb.precipitation_mm,
     )
 
 def run_backfill(
@@ -217,10 +301,7 @@ def run_recommendation_pipeline(sector: SectorModel, db: Session) -> Recommendat
         sector.id, yesterday, urgency.urgency_level,
     )
 
-    return build_recommendation_response(
-        wb, rec,
-        cloud_cover_pct=satellite_data.cloud_cover_pct if satellite_data else None,
-    )
+    return build_recommendation_response(wb, rec, db)
 
 
 def recompute_balance_from(sector: SectorModel, from_date: DateType, seed_deficit_mm: float, db: Session) -> None:

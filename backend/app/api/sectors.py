@@ -2,7 +2,7 @@
 from datetime import date as date_type, timedelta
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -14,6 +14,7 @@ from app.models.recommendation import Recommendation
 from app.schemas.field import FieldPublic
 from app.schemas.sector import SectorCreate, SectorPublic, SectorUpdate, SectorChartData, DeficitPoint, NdviPoint, LastRecommendationSummary
 from app.services.sector import create_sector, update_field_geo
+from app.ingestion.satellite import get_satellite_indices
 from app.api._geo import setup_field_geo
 from app.api._helpers import owned_field, owned_sector
 from app.calculation.crop_params import get_depletion_factor
@@ -113,7 +114,33 @@ def delete_sector(sector: SectorModel = Depends(owned_sector), db: Session = Dep
 
 
 @router.get("/sectors/{sector_id}/satellite-image")
-def get_sector_satellite_image(sector: SectorModel = Depends(owned_sector), db: Session = Depends(get_db)):
+def get_sector_satellite_image(
+    as_of: date_type | None = Query(default=None, alias="date"),
+    sector: SectorModel = Depends(owned_sector),
+    db: Session = Depends(get_db)
+):
+    # Fecha puntual (timeline)
+    if as_of is not None:
+        record = (
+            db.query(SatelliteRecord)
+            .filter(SatelliteRecord.sector_id == sector.id, SatelliteRecord.date == as_of)
+            .first()
+        )
+        if record is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen satelital no encontrada")
+        if record.thumbnail_png is None and sector.polygon_geojson:
+            try:
+                idx = get_satellite_indices(sector.polygon_geojson, record.date + timedelta(days=1))
+            except RuntimeError:
+                idx = None
+            if idx and idx.image_date == record.date and idx.thumbnail_png:
+                record.thumbnail_png = idx.thumbnail_png
+                db.commit()
+        if not record.thumbnail_png:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen satelital no encontrada")
+        return Response(content=record.thumbnail_png, media_type="image/png")
+
+    # Sin fecha: la mas reciente con thumbnail
     record = (
         db.query(SatelliteRecord)
         .filter(
