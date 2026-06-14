@@ -130,7 +130,7 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- ─── Two-column on desktop · single column on mobile ─── -->
+    <!--  Two-column on desktop · single column on mobile  -->
     <div class="grid md:grid-cols-[1.4fr_1fr] gap-4 mb-7">
 
       <!-- Today's action — hero card -->

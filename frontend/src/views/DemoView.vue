@@ -97,7 +97,7 @@ onBeforeUnmount(() => { map?.remove(); map = null; overlayLayer = null })
         <ArrowLeft :size="16" /> Volver al inicio
         </button>
 
-        <!-- ─── Banner MODO DEMO ─── -->
+        <!--  Banner MODO DEMO  -->
         <div class="bg-amber-soft border border-amber/30 rounded-2xl p-4 flex items-start gap-3 mb-5">
             <div class="w-9 h-9 rounded-xl bg-amber text-white flex items-center justify-center shrink-0">
                 <FlaskConical :size="18" />
@@ -118,7 +118,7 @@ onBeforeUnmount(() => { map?.remove(); map = null; overlayLayer = null })
             Mismo lote de prueba · 7.3 ha · imagen y clima del 3 de febrero de 2026
         </div>
 
-        <!-- ─── Intro + botón (antes de correr) ─── -->
+        <!--  Intro + botón (antes de correr)  -->
         <div v-if="!snapshot && !loading" class="bg-surface border border-line rounded-3xl p-6 md:p-8">
             <p class="text-sm text-ink leading-relaxed mb-2">
                 <span class="font-bold">Hoy ({{ todayLabel }})</span> el lote está en <span class="font-bold">reposo invernal</span>:
@@ -143,7 +143,7 @@ onBeforeUnmount(() => { map?.remove(); map = null; overlayLayer = null })
             {{ error }}
         </div>
 
-        <!-- ─── Resultados ─── -->
+        <!--  Resultados  -->
         <div v-if="snapshot" class="flex flex-col gap-3 md:gap-4">
 
             <!-- Contraste reposo vs verano (la estrella) -->

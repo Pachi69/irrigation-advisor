@@ -41,7 +41,7 @@ const activeTab = computed(() => {
 <template>
   <div class="min-h-svh flex flex-col bg-paper text-ink font-sans">
 
-    <!-- ─── Desktop nav (md+) ─── -->
+    <!--  Desktop nav (md+)  -->
     <nav v-if="isAuthenticated" class="hidden md:flex items-center bg-surface border-b border-line px-8 h-[60px] gap-9">
       <RouterLink to="/" class="flex items-center gap-2.5">
         <span class="text-primary">
@@ -80,7 +80,7 @@ const activeTab = computed(() => {
       </div>
     </nav>
 
-    <!-- ─── Mobile brand bar ─── -->
+    <!--  Mobile brand bar  -->
     <nav v-if="isAuthenticated" class="md:hidden bg-paper px-5 pt-3 pb-2 flex items-center justify-between">
       <div class="flex items-center gap-2 text-primary">
         <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
@@ -90,7 +90,7 @@ const activeTab = computed(() => {
       </div>
     </nav>
 
-    <!-- ─── Unauthenticated top bar (login/register) ─── -->
+    <!--  Unauthenticated top bar (login/register)  -->
     <nav v-else class="bg-paper px-5 md:px-8 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2 text-primary">
         <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
@@ -108,7 +108,7 @@ const activeTab = computed(() => {
       <RouterView />
     </main>
 
-    <!-- ─── Mobile bottom tab bar ─── -->
+    <!--  Mobile bottom tab bar  -->
     <nav v-if="isAuthenticated" class="md:hidden fixed bottom-0 inset-x-0 bg-surface border-t border-line pt-2.5 pb-1.5 px-2 flex justify-around z-40">
       <RouterLink to="/" class="tab-item" :class="{ 'tab-item-active': activeTab === 'home' }">
         <Home :size="22" />

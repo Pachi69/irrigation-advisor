@@ -42,7 +42,7 @@
   --tracking-tightest: -0.04em;
 }
 
-/* ─── Base ────────────────────────────────────────────────────────────── */
+/*  Base ── */
 html, body {
   font-family: var(--font-sans);
   background: var(--color-paper);
@@ -50,7 +50,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── Utility classes ─────────────────────────────────────────────────── */
+/*  Utility classes  */
 @utility app-mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -72,7 +72,7 @@ html, body {
   color: var(--color-muted);
 }
 
-/* ─── Safe areas (Android PWA con gesture nav) ───────────────────────── */
+/*  Safe areas (Android PWA con gesture nav) ─ */
 @supports (padding: env(safe-area-inset-bottom)) {
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 }
