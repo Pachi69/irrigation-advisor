@@ -35,6 +35,16 @@ class RecommendationResponse(BaseModel):
     ndvi_date: date | None = None
     cloud_cover_pct: float | None = None
 
+    # Clima del dia usado para la recomendacion
+    temp_max_c: float | None = None
+    temp_min_c: float | None = None
+    temp_mean_c: float | None = None
+    humidity_pct: float | None = None
+    wind_speed_ms: float | None = None
+    solar_radiation_mj: float | None = None
+    pressure_kpa: float | None = None
+    precipitation_mm: float | None = None
+
     model_config = {"from_attributes": True, "populate_by_name": True}
 
 

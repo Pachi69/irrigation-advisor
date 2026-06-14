@@ -154,6 +154,13 @@ def save_water_balance(
     wb.ks = balance.ks
     wb.phenological_stage = kc_result.phenological_stage
     wb.precipitation_mm = climate.precipitation_mm
+    wb.temp_max_c = climate.temp_max_c
+    wb.temp_min_c = climate.temp_min_c
+    wb.temp_mean_c = climate.temp_mean_c
+    wb.humidity_pct = climate.humidity_pct
+    wb.wind_speed_ms = climate.wind_speed_10m
+    wb.solar_radiation_mj = climate.solar_radiation_mj
+    wb.pressure_kpa = climate.pressure_kpa
     wb.taw_mm = balance.taw_mm
     wb.raw_mm = balance.raw_mm
     wb.ndvi = satellite_data.ndvi if satellite_data else None
