@@ -9,14 +9,12 @@ import FieldEdit from '../views/FieldEdit.vue'
 import SectorRegister from '../views/SectorRegister.vue'
 import SectorRecommendation from '../views/SectorRecommendation.vue'
 import SectorHistory from '../views/SectorHistory.vue'
-import SectorChart from '../views/SectorChart.vue'
 import SectorConfirmations from '../views/SectorConfirmations.vue'
 import SectorEdit from '../views/SectorEdit.vue'
 import AdminFields from '../views/AdminFields.vue'
 import Account from '../views/Account.vue'
 import { useAuth } from '../stores/auth'
 import SectorMetrics from '../views/SectorMetrics.vue'
-import DemoView from '../views/DemoView.vue'
 
 const routes = [
   {
@@ -74,12 +72,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/sectors/:id/chart',
-    name: 'sector-chart',
-    component: SectorChart,
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/sectors/:id/confirmations',
     name: 'sector-confirmations',
     component: SectorConfirmations,
@@ -102,12 +94,6 @@ const routes = [
     name: 'admin-fields',
     component: AdminFields,
     meta: { requiresAuth: true, requiresAdmin: true },
-  },
-  {
-    path: '/demo',
-    name: 'demo',
-    component: DemoView,
-    meta: { requiresAuth: true },
   },
   {
     path: '/login',
