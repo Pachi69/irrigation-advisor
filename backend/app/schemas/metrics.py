@@ -35,6 +35,7 @@ class StressSummary(BaseModel):
     severe_stress_days_pct: float
     avg_ks: float | None
     min_ks: float | None
+    demand_coverage_pct: float | None # Σ(Ks·ETc)/Σ(ETc)·100 — % de demanda hídrica cubierta (Ks ponderado por ETc)
     avg_deficit_mm: float | None
     avg_deficit_pct: float | None   # deficit / TAW promedio
     max_deficit_mm: float | None

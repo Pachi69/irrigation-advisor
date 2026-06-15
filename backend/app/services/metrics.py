@@ -73,6 +73,8 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
     days_eval = stress_days = severe_days = days_above_raw = 0
     sum_ks = 0.0
     ks_count = 0
+    sum_ks_etc = 0.0
+    sum_etc_ks = 0.0
     min_ks: float | None = None
     sum_deficit = sum_deficit_pct = 0.0
     max_deficit: float | None = None
@@ -107,6 +109,8 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         if b.ks is not None:
             sum_ks += b.ks
             ks_count += 1
+            sum_ks_etc += b.ks * b.etc_mm
+            sum_etc_ks += b.etc_mm
             if min_ks is None or b.ks < min_ks:
                 min_ks = b.ks
             if b.ks < 1.0:
@@ -180,18 +184,21 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         applied_vs_required_pct=round(applied_vs_required_pct, 1) if applied_vs_required_pct is not None else None,
     )
 
+    demand_coverage_pct = round(sum_ks_etc / sum_etc_ks * 100, 1) if sum_etc_ks > 0 else None
+
     stress = StressSummary(
-        days_evaluated=days_eval,
-        stress_days=stress_days,
-        stress_days_pct=round(stress_days / days_eval * 100, 1) if days_eval else 0.0,
-        severe_stress_days=severe_days,
-        severe_stress_days_pct=round(severe_days / days_eval * 100, 1) if days_eval else 0.0,
-        avg_ks=round(sum_ks / ks_count, 2) if ks_count else None,
-        min_ks=round(min_ks, 2) if min_ks is not None else None,
-        avg_deficit_mm=round(sum_deficit / days_eval, 1) if days_eval else None,
-        avg_deficit_pct=round(sum_deficit_pct / days_eval * 100, 1) if days_eval else None,
-        max_deficit_mm=round(max_deficit, 1) if max_deficit is not None else None,
-        days_above_raw=days_above_raw,
+          days_evaluated=days_eval,
+          stress_days=stress_days,
+          stress_days_pct=round(stress_days / days_eval * 100, 1) if days_eval else 0.0,
+          severe_stress_days=severe_days,
+          severe_stress_days_pct=round(severe_days / days_eval * 100, 1) if days_eval else 0.0,
+          avg_ks=round(sum_ks / ks_count, 2) if ks_count else None,
+          min_ks=round(min_ks, 2) if min_ks is not None else None,
+          demand_coverage_pct=demand_coverage_pct,
+          avg_deficit_mm=round(sum_deficit / days_eval, 1) if days_eval else None,
+          avg_deficit_pct=round(sum_deficit_pct / days_eval * 100, 1) if days_eval else None,
+          max_deficit_mm=round(max_deficit, 1) if max_deficit is not None else None,
+          days_above_raw=days_above_raw,
     )
 
     adherence = AdherenceSummary(
