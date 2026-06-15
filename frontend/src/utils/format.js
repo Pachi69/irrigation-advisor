@@ -19,3 +19,10 @@ export const pct = (v) => (v == null ? '—' : `${v.toFixed(1)}%`)
 // Etiqueta corta de semana: "05 may"
 export const fmtWeek = (ws) =>
     new Date(ws + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
+
+// Cantidad de riego de una recomendacion. Lista para mostrar: tiempo, volumen o mm
+export function irrigationAmount(rec) {
+    if (rec.time_min != null) return formatMinutes(rec.time_min)
+    if (rec.volume_m3 != null) return `${Math.round(rec.volume_m3)} m³`
+    return `${rec.recommended_irrigation_mm.toFixed(1)} mm`
+}
