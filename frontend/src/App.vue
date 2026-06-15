@@ -11,7 +11,7 @@ import { RouterView, RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuth } from './stores/auth'
 import { onMounted, computed } from 'vue'
 import { subscribeToPush } from './services/push'
-import { Home, Sprout, User, Shield, FlaskConical } from 'lucide-vue-next'
+import { Home, Sprout, User, Shield } from 'lucide-vue-next'
 import InstallPrompt from './components/InstallPrompt.vue'
 
 
@@ -33,7 +33,6 @@ const activeTab = computed(() => {
   if (route.path.startsWith('/fields')) return 'fields'
   if (route.path.startsWith('/admin'))  return 'admin'
   if (route.path.startsWith('/account')) return 'account'
-  if (route.path.startsWith('/demo')) return 'demo'
   return 'home'
 })
 </script>
@@ -51,7 +50,7 @@ const activeTab = computed(() => {
           </svg>
         </span>
         <span class="text-lg font-bold tracking-tight">
-          Irrigation Advisor
+          HydroSense
         </span>
       </RouterLink>
 
@@ -61,9 +60,6 @@ const activeTab = computed(() => {
         </RouterLink>
         <RouterLink to="/fields" class="nav-tab" :class="{ 'nav-tab-active': activeTab === 'fields' }">
           <Sprout :size="16" /> Mis campos
-        </RouterLink>
-        <RouterLink to="/demo" class="nav-tab" :class="{ 'nav-tab-active': activeTab === 'demo' }">
-          <FlaskConical :size="16" /> Demo
         </RouterLink>
         <RouterLink v-if="isAdmin" to="/admin/fields" class="nav-tab" :class="{ 'nav-tab-active': activeTab === 'admin' }">
           <Shield :size="16" /> Admin
@@ -86,7 +82,7 @@ const activeTab = computed(() => {
         <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
           <path d="M16 3c-4 6-7 9-7 13a7 7 0 0 0 14 0c0-4-3-7-7-13z" fill="currentColor"/>
         </svg>
-        <span class="text-base font-bold tracking-tight text-ink">Irrigation Advisor</span>
+        <span class="text-base font-bold tracking-tight text-ink">HydroSense</span>
       </div>
     </nav>
 
@@ -96,7 +92,7 @@ const activeTab = computed(() => {
         <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
           <path d="M16 3c-4 6-7 9-7 13a7 7 0 0 0 14 0c0-4-3-7-7-13z" fill="currentColor"/>
         </svg>
-        <span class="text-base md:text-lg font-bold tracking-tight text-ink">Irrigation Advisor</span>
+        <span class="text-base md:text-lg font-bold tracking-tight text-ink">HydroSense</span>
       </div>
       <div class="flex gap-2 text-sm">
         <RouterLink to="/login" class="px-3 py-1.5 text-muted font-semibold">Ingresar</RouterLink>
@@ -121,10 +117,6 @@ const activeTab = computed(() => {
       <RouterLink v-if="isAdmin" to="/admin/fields" class="tab-item" :class="{ 'tab-item-active': activeTab === 'admin' }">
         <Shield :size="22" />
         <span>Admin</span>
-      </RouterLink>
-      <RouterLink to="/demo" class="tab-item" :class="{ 'tab-item-active': activeTab === 'demo' }">
-        <FlaskConical :size="22" />
-        <span>Demo</span>
       </RouterLink>
       <RouterLink to="/account" class="tab-item" :class="{ 'tab-item-active': activeTab === 'account' }">
         <User :size="22" />

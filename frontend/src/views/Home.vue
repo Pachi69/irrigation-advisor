@@ -170,7 +170,7 @@ onMounted(() => {
 
         <template v-else-if="activeSectors.length === 0">
           <h2 class="text-xl md:text-[28px] font-bold tracking-tight leading-tight m-0 mb-1">
-            Bienvenido a Irrigation Advisor.
+            Bienvenido a HydroSense.
           </h2>
           <div class="text-sm opacity-70 mb-5 md:mb-6">
             Registrá tu primer campo para empezar a recibir recomendaciones.
