@@ -2,9 +2,12 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getSectorById, updateSector, deleteSector } from '../services/sectors'
+import { useSectorForm } from '../composables/useSectorForm'
+import SectorFormFields from '../components/sector/SectorFormFields.vue'
 
 const route = useRoute()
 const router = useRouter()
+const { normalizePayload } = useSectorForm()
 
 const form = ref(null)
 const fieldId = ref(null)
@@ -14,9 +17,6 @@ const saving = ref(false)
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 const deleteError = ref('')
-const notifHours = Array.from({ length: 18 }, (_, i) => i + 5) // 05:00 a 22:00
-
-const todayStr = new Date().toISOString().slice(0, 10)
 
 onMounted(async () => {
     try {
@@ -47,11 +47,7 @@ async function handleSubmit() {
     saving.value = true
     error.value = ''
     try {
-        await updateSector(route.params.id, {
-            ...form.value,
-            variety: form.value.variety || null,
-            flow_rate_ls_ha: form.value.flow_rate_ls_ha || null,
-        })
+        await updateSector(route.params.id, normalizePayload(form.value))
         backToField()
     } catch {
         error.value = 'No se pudo guardar los cambios. Intentá nuevamente.'
@@ -78,124 +74,32 @@ async function confirmDelete() {
         <h1 class="text-xl font-bold text-gray-900 mb-5">Editar sector</h1>
 
         <div v-if="loading" class="text-center py-12 text-gray-400 text-sm">Cargando...</div>
-        <div v-else-if="error && !form" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
+        <div v-else-if="error && !form" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">
+            {{ error }}
+        </div>
 
         <form v-else-if="form" @submit.prevent="handleSubmit" class="space-y-4">
 
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nombre del sector</label>
-                <input
-                    v-model="form.name"
-                    type="text" required minlength="2" maxlength="255" :disabled="saving"
-                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
-                />
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Variedad</label>
-                <input
-                    v-model="form.variety"
-                    type="text" maxlength="255" :disabled="saving"
-                    placeholder="Ej: Malbec"
-                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
-                />
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de riego</label>
-                    <select
-                        v-model="form.irrigation_type" required :disabled="saving"
-                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
-                    >
-                        <option value="aspersion">Aspersión</option>
-                        <option value="superficial">Superficial</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Malla antigranizo</label>
-                    <select
-                        v-model="form.hail_net_type" required :disabled="saving"
-                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
-                    >
-                        <option value="none">Sin malla</option>
-                        <option value="open">Malla abierta</option>
-                        <option value="dense">Malla densa</option>
-                        <option value="color">Malla de color</option>
-                    </select>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Caudal (L/s/ha)</label>
-                <input
-                    v-model.number="form.flow_rate_ls_ha"
-                    type="number" min="0.1" step="0.1" :disabled="saving"
-                    placeholder="Dejar vacío si no lo sabés"
-                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 transition-colors"
-                />
-                <p class="text-xs text-gray-400 mt-1.5">Caudal de la bomba dividido por las hectáreas del sector. Si
-                    lo dejás vacío, calculamos el volumen pero no el tiempo de riego.
-                </p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Último riego completo o lluvia abundante</label>
-                <input
-                    v-model="form.last_saturation_date"
-                    type="date" :max="todayStr" :disabled="saving"
-                    class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 disabled:bg-gray-50 transition-colors"
-                />
-                <p class="text-xs text-gray-400 mt-1.5">Actualizá esta fecha tras un riego completo para recalibrar el balance hídrico.</p>
-            </div>
+            <SectorFormFields :form="form" :disabled="saving" />
 
             <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-3 py-2.5 rounded-xl">
                 {{ error }}
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Hora de aviso</label>
-                    <select
-                        v-model="form.notification_hour" :disabled="saving"
-                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 bg-white transition-colors"
-                    >
-                        <option v-for="h in notifHours" :key="h" :value="`${String(h).padStart(2, '0')}:00:00`">
-                            {{ String(h).padStart(2, '0') }}:00
-                        </option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">Frecuencia (días)</label>
-                    <input
-                        v-model.number="form.notification_frequency_days"
-                        type="number" min="1" step="1" :disabled="saving"
-                        class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base focus:outline-none focus:border-green-600 disabled:opacity-50 transition-colors"
-                    />
-                </div>
-              </div>
-              <p class="text-xs text-gray-400 -mt-2">Te avisamos a esa hora, cada tantos días, solo si hay que regar.</p>
-
             <div class="flex gap-3 pt-1">
-                <button
-                    type="button" @click="backToField" :disabled="saving"
-                    class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50"
-                >
+                <button type="button" @click="backToField" :disabled="saving"
+                    class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50">
                     Cancelar
                 </button>
-                <button
-                    type="submit" :disabled="saving"
-                    class="flex-1 bg-green-800 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button type="submit" :disabled="saving"
+                    class="flex-1 bg-green-800 hover:bg-green-700 text-white font-bold py-3 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {{ saving ? 'Guardando...' : 'Guardar cambios' }}
                 </button>
             </div>
 
             <div class="pt-3 mt-3 border-t border-gray-200">
-                <button
-                    type="button" @click="deleteError = ''; showDeleteModal = true" :disabled="saving"
-                    class="text-sm font-semibold text-red-600 hover:text-red-700 transition-colors disabled:opacity-50"
-                >
+                <button type="button" @click="deleteError = ''; showDeleteModal = true" :disabled="saving"
+                    class="text-sm font-semibold text-red-600 hover:text-red-700 transition-colors disabled:opacity-50">
                     Eliminar este sector
                 </button>
             </div>
@@ -213,16 +117,12 @@ async function confirmDelete() {
                     </div>
                 </div>
                 <div class="px-5 py-4 border-t border-gray-100 flex gap-3 justify-end">
-                    <button
-                        type="button" @click="showDeleteModal = false" :disabled="deleting"
-                        class="border-2 border-gray-200 text-gray-600 font-bold py-2.5 px-4 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50"
-                    >
+                    <button type="button" @click="showDeleteModal = false" :disabled="deleting"
+                        class="border-2 border-gray-200 text-gray-600 font-bold py-2.5 px-4 rounded-xl text-sm hover:border-gray-300 transition-colors disabled:opacity-50">
                         Cancelar
                     </button>
-                    <button
-                        type="button" @click="confirmDelete" :disabled="deleting"
-                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                    <button type="button" @click="confirmDelete" :disabled="deleting"
+                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         {{ deleting ? 'Eliminando...' : 'Eliminar' }}
                     </button>
                 </div>
