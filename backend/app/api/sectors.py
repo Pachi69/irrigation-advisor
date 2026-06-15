@@ -12,12 +12,11 @@ from app.models.satellite_record import SatelliteRecord
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.recommendation import Recommendation
 from app.schemas.field import FieldPublic
-from app.schemas.sector import SectorCreate, SectorPublic, SectorUpdate, SectorChartData, DeficitPoint, NdviPoint, LastRecommendationSummary
+from app.schemas.sector import SectorCreate, SectorPublic, SectorUpdate, LastRecommendationSummary
 from app.services.sector import create_sector, update_field_geo
 from app.ingestion.satellite import get_satellite_indices
 from app.api._geo import setup_field_geo
 from app.api._helpers import owned_field, owned_sector
-from app.calculation.crop_params import get_depletion_factor
 
 router = APIRouter(tags=["sectors"])
 
@@ -153,33 +152,3 @@ def get_sector_satellite_image(
     if not record or not record.thumbnail_png:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen satelital no encontrada")
     return Response(content=record.thumbnail_png, media_type="image/png")
-
-
-@router.get("/sectors/{sector_id}/chart", response_model=SectorChartData)
-def get_sector_chart(sector: SectorModel = Depends(owned_sector), db: Session = Depends(get_db)):
-    cutoff = date_type.today() - timedelta(days=90)
-    balances = (
-        db.query(DailyWaterBalance)
-        .filter(
-            DailyWaterBalance.sector_id == sector.id,
-            DailyWaterBalance.date >= cutoff,
-            DailyWaterBalance.taw_mm.is_not(None),
-        )
-        .order_by(DailyWaterBalance.date.asc())
-        .all()
-    )
-    satellite_records = (
-        db.query(SatelliteRecord)
-        .filter(SatelliteRecord.sector_id == sector.id, SatelliteRecord.date >= cutoff)
-        .order_by(SatelliteRecord.date.asc())
-        .all()
-    )
-    return SectorChartData(
-        deficit=[DeficitPoint(date=b.date, pct=round(min(100, (b.water_deficit_mm / b.taw_mm) * 100), 1))
-                 for b in balances if b.taw_mm and b.taw_mm > 0
-                ],
-        ndvi=[NdviPoint(date=r.date, value=round(r.ndvi, 4))
-              for r in satellite_records if r.ndvi is not None
-            ],
-        raw_threshold_pct=round(get_depletion_factor(sector.crop_type) * 100, 1),
-    )

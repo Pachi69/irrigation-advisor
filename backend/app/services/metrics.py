@@ -3,10 +3,9 @@
 Agrega el balance hidrico diario, las recomendaciones y las confirmaciones de
 una ventana de fechas en KPIs de periodo y una serie semanal. Solo lectura.
 
-El contrafactico de ahorro es la "reposicion ciega de ETc": cuanto se habria
-regado reponiendo la demanda del cultivo (ETc) todos los dias, sin aprovechar
-la lluvia ni la reserva de agua del suelo. El agua evitada por el sistema es la
-diferencia contra lo recomendado.
+Incluye ademas la serie diaria del deficit (para la curva vs el umbral RAW) y
+los puntos de NDVI medidos, para que la vista de evaluacion arme los graficos
+con la misma ventana y en una sola llamada.
 """
 from __future__ import annotations
 
@@ -18,12 +17,15 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.sector import Sector as SectorModel
 from app.models.daily_water_balance import DailyWaterBalance
 from app.models.irrigation_confirmation import IrrigationConfirmation
+from app.models.satellite_record import SatelliteRecord
 from app.models.enums import KcSource, UrgencyLevel
 from app.calculation.irrigation import efficiency_for, mm_to_volume_m3
 from app.calculation.water_balance import effective_precipitation
+from app.calculation.crop_params import get_depletion_factor
 from app.schemas.metrics import (
     SectorMetricsResponse, WaterSummary, StressSummary, AdherenceSummary,
     UrgencyDistribution, SatelliteQuality, ClimateSummary, WeeklyWaterMetrics,
+    DailyPoint, NdviPoint
 )
 
 def _week_start(d: DateType) -> DateType:
@@ -61,8 +63,13 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         .all()
     )
 
+    # Riego aplicado por fecha
+    applied_by_date: dict[DateType, float] = defaultdict(float)
+    for c in confirmations:
+        applied_by_date[c.irrigation_date] += c.applied_irrigation_mm
+
     # Acumuladores de periodo
-    sum_eto = sum_etc = sum_rain = sum_eff_rain = sum_recommended = 0.0
+    sum_eto = sum_etc = sum_rain = sum_eff_rain = sum_percolation = 0.0
     days_eval = stress_days = severe_days = days_above_raw = 0
     sum_ks = 0.0
     ks_count = 0
@@ -74,10 +81,11 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
     sum_ndvi = 0.0
 
     weekly = defaultdict(lambda: {
-        "eto": 0.0, "etc": 0.0, "eff_rain": 0.0, "recommended": 0.0,
+        "eto": 0.0, "etc": 0.0, "eff_rain": 0.0, "percolation": 0.0,
         "applied": 0.0, "days": 0, "ks_sum": 0.0, "ks_n": 0, "stress": 0,
     })
 
+    daily: list[DailyPoint] = []
     actionable_ids: list[int] = []
     for b in balances:
         days_eval += 1
@@ -86,6 +94,15 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         sum_rain += b.precipitation_mm
         eff_rain = effective_precipitation(b.precipitation_mm)
         sum_eff_rain += eff_rain
+        sum_percolation += b.deep_percolation_mm
+
+        daily.append(DailyPoint(
+            date=b.date,
+            deficit_pct=round(min(100.0, b.water_deficit_mm / b.taw_mm * 100), 1) if b.taw_mm else 0.0,
+            applied_mm=round(applied_by_date.get(b.date, 0.0), 1),
+            rain_mm=round(b.precipitation_mm, 1),
+            deep_percolation_mm=round(b.deep_percolation_mm, 1),
+        ))
 
         if b.ks is not None:
             sum_ks += b.ks
@@ -123,6 +140,7 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         wk["eto"] += b.eto_mm
         wk["etc"] += b.etc_mm
         wk["eff_rain"] += eff_rain
+        wk["percolation"] += b.deep_percolation_mm
         wk["days"] += 1
         if b.ks is not None:
             wk["ks_sum"] += b.ks
@@ -130,11 +148,11 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
             if b.ks < 1.0:
                 wk["stress"] += 1
     
-    # agua aplicada (fisica) total + semanal
+    # agua aplicada total + semanal
     sum_applied = 0.0
-    for c in confirmations:
-        sum_applied += c.applied_irrigation_mm
-        weekly[_week_start(c.irrigation_date)]["applied"] += c.applied_irrigation_mm
+    for d, mm in applied_by_date.items():
+        sum_applied += mm
+        weekly[_week_start(d)]["applied"] += mm
 
     # adherencia: de las recomendaciones accionables de la ventana, cuantas se confirmaron
     confirmed_ids: set[int] = set()
@@ -148,24 +166,18 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
     actionable = len(actionable_ids)
     confirmed = len(confirmed_ids)
 
-    # water summary (demanda neta IRn vs contrafactico ETc-ciego)
+    # water summary (Lo que la planto necesitó vs lo que se aplicó)
     # IRn = ma(0, ETc - lluvia efectiva): el agua de riego que el cultivo necesito neta de la lluvia
-    # No es la suma de recomendaciones diarias (esa suma cuenta el mismo deficit parado muchas veces)
-    baseline_mm = sum_etc
     net_requirement_mm = max(0.0, sum_etc - sum_eff_rain)
-    avoided_mm = baseline_mm - net_requirement_mm
-    avoided_pct = (avoided_mm / baseline_mm * 100) if baseline_mm > 0 else None
+    applied_vs_required_pct = (sum_applied / net_requirement_mm * 100) if net_requirement_mm > 0 else None
 
     water = WaterSummary(
         net_requirement_mm=round(net_requirement_mm, 1),
         net_requirement_m3=to_m3(net_requirement_mm),
         applied_mm=round(sum_applied, 1),
         applied_m3=to_m3(sum_applied),
-        baseline_etc_mm=round(baseline_mm, 1),
-        baseline_etc_m3=to_m3(baseline_mm),
-        avoided_mm=round(avoided_mm, 1),
-        avoided_m3=to_m3(avoided_mm),
-        avoided_pct=round(avoided_pct, 1) if avoided_pct is not None else None,
+        deep_percolation_mm=round(sum_percolation, 1),
+        applied_vs_required_pct=round(applied_vs_required_pct, 1) if applied_vs_required_pct is not None else None,
     )
 
     stress = StressSummary(
@@ -229,12 +241,25 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
             net_requirement_m3=to_m3(net_req_w),
             applied_mm=round(w["applied"], 1),
             applied_m3=to_m3(w["applied"]),
-            baseline_etc_mm=round(etc_w, 1),
-            avoided_mm=round(etc_w - net_req_w, 1),
-            avoided_m3=to_m3(etc_w - net_req_w),
+            deep_percolation_mm=round(w["percolation"], 1),
             avg_ks=round(w["ks_sum"] / w["ks_n"], 2) if w["ks_n"] else None,
             stress_days=w["stress"],
         ))
+
+    # Umbral de estres (RAW como % de TAW) y NDVI medido para la curva
+    raw_threshold_pct = round(get_depletion_factor(sector.crop_type) * 100, 1)
+
+    sat_records = (
+        db.query(SatelliteRecord)
+        .filter(
+            SatelliteRecord.sector_id == sector.id,
+            SatelliteRecord.date >= start,
+            SatelliteRecord.date <= end,
+        )
+        .order_by(SatelliteRecord.date.asc())
+        .all()
+    )
+    ndvi_series = [NdviPoint(date=r.date, value=round(r.ndvi, 4)) for r in sat_records if r.ndvi is not None]
 
     return SectorMetricsResponse(
         sector_id=sector.id,
@@ -246,5 +271,8 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         urgency=urgency,
         satellite=satellite,
         climate=climate,
-        weekly=weekly_list
+        weekly=weekly_list,
+        raw_threshold_pct=raw_threshold_pct,
+        daily=daily,
+        ndvi_series=ndvi_series
     )

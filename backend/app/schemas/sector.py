@@ -63,19 +63,3 @@ class LastRecommendationSummary(BaseModel):
     deficit_history: list[float]
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class DeficitPoint(BaseModel):
-    date: date
-    pct: float
-
-
-class NdviPoint(BaseModel):
-    date: date
-    value: float
-
-
-class SectorChartData(BaseModel):
-    deficit: list[DeficitPoint]
-    ndvi: list[NdviPoint]
-    raw_threshold_pct: float

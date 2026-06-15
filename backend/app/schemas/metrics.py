@@ -15,9 +15,7 @@ class WeeklyWaterMetrics(BaseModel):
     net_requirement_m3: float | None
     applied_mm: float       # neto (confirmaciones de esa semana)
     applied_m3: float | None
-    baseline_etc_mm: float      # Reposicion diaria ciega de ETc (neta) = etc_mm
-    avoided_mm: float       # baseline_etc_mm - recommended_mm
-    avoided_m3: float | None
+    deep_percolation_mm: float #agua desperdiciada esa semana
     avg_ks: float | None
     stress_days: int    # Ks < 1
 
@@ -26,11 +24,8 @@ class WaterSummary(BaseModel):
     net_requirement_m3: float | None
     applied_mm: float
     applied_m3: float | None
-    baseline_etc_mm: float
-    baseline_etc_m3: float | None
-    avoided_mm: float
-    avoided_m3: float | None
-    avoided_pct: float | None       # avoided / baseline
+    deep_percolation_mm: float
+    applied_vs_required_pct: float | None # aplicado / necesario * 100 (> 100 = regó de mas)
 
 class StressSummary(BaseModel):
     days_evaluated: int
@@ -71,6 +66,19 @@ class ClimateSummary(BaseModel):
     rain_mm: float
     effective_rain_mm: float
 
+class DailyPoint(BaseModel):
+    """Punto diario para la curva del balance hidrico"""
+    date: date
+    deficit_pct: float
+    applied_mm: float
+    rain_mm: float
+    deep_percolation_mm: float
+
+class NdviPoint(BaseModel):
+    """Punto de NDVI medido"""
+    date: date
+    value: float
+
 class SectorMetricsResponse(BaseModel):
     sector_id: int
     start_date: date
@@ -82,3 +90,6 @@ class SectorMetricsResponse(BaseModel):
     satellite: SatelliteQuality
     climate: ClimateSummary
     weekly: list[WeeklyWaterMetrics]
+    raw_threshold_pct: float
+    daily: list[DailyPoint]
+    ndvi_series: list[NdviPoint]

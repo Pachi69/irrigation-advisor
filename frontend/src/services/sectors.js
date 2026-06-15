@@ -38,11 +38,6 @@ export async function getRecommendationHistory(sectorId) {
     return data
 }
 
-export async function getSectorChartData(sectorId) {
-    const { data } = await api.get(`/sectors/${sectorId}/chart`)
-    return data
-}
-
 export async function getSectorSatelliteImage(sectorId, date) {
     const resp = await api.get(`/sectors/${sectorId}/satellite-image`, {
         params: date ? { date }: {},

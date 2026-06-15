@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { getRecommendationHistory } from '../services/sectors'
-import { ArrowLeft, BarChart2 } from 'lucide-vue-next'
+import { ArrowLeft } from 'lucide-vue-next'
 import { URGENCY_LABEL } from '../utils/labels'
 
 const route = useRoute()
@@ -65,13 +65,7 @@ const urg = (u) => URG[u] || URG.none
                 Recomendación
             </button>
             <h1 class="text-base font-bold text-ink">Historial</h1>
-            <RouterLink
-                :to="`/sectors/${route.params.id}/chart`"
-                class="flex items-center gap-1 text-sm font-semibold text-primary border-2 border-primary px-3 py-1.5 rounded-xl hover:bg-primary-soft transition-colors"
-            >
-                <BarChart2 class="w-3.5 h-3.5" />
-                Gráfico
-            </RouterLink>
+            <span class="w-28"></span>
         </div>
 
         <div v-if="loading" class="text-center py-12 text-soft text-sm">Cargando historial...</div>
