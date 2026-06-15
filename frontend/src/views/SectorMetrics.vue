@@ -1,147 +1,23 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Line } from 'vue-chartjs'
-import {
-    Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
-    Title, Tooltip, Legend, Filler,
-} from 'chart.js'
-import { getSectorMetrics, getSectorById } from '../services/sectors'
-import { ArrowLeft, Droplets, AlertTriangle, Satellite, CheckCircle2, Activity } from 'lucide-vue-next'
-import { URGENCY_LABEL, CROP_LABELS } from '../utils/labels'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+import { ArrowLeft } from 'lucide-vue-next'
+import { CROP_LABELS } from '../utils/labels'
+import { useSectorMetrics } from '../composables/useSectorMetrics'
+import HealthHero from '../components/metrics/HealthHero.vue'
+import DeficitChart from '../components/metrics/DeficitChart.vue'
+import NdviChart from '../components/metrics/NdviChart.vue'
+import WaterCard from '../components/metrics/WaterCard.vue'
+import StressCard from '../components/metrics/StressCard.vue'
+import AdherenceCard from '../components/metrics/AdherenceCard.vue'
+import SatelliteCard from '../components/metrics/SatelliteCard.vue'
+import UrgencyCard from '../components/metrics/UrgencyCard.vue'
+import ClimateCard from '../components/metrics/ClimateCard.vue'
+import WeeklyTable from '../components/metrics/WeeklyTable.vue'
 
 const route = useRoute()
 const router = useRouter()
-
-const RANGES = [30, 60, 90]
-const days = ref(90)
-
-const data = ref(null)
-const sector = ref(null)
-const loading = ref(true)
-const error = ref('')
-
-const URG = {
-    low:      { dot: 'var(--color-primary)' },
-    medium:   { dot: 'var(--color-amber)' },
-    high:     { dot: '#D8651C' },
-    critical: { dot: 'var(--color-rust)' },
-}
-
-const n0 = (v) => (v == null ? '—' : Math.round(v).toLocaleString('es-AR'))
-const n1 = (v) => (v == null ? '—' : v.toFixed(1))
-const n2 = (v) => (v == null ? '—' : v.toFixed(2))
-const pct = (v) => (v == null ? '—' : `${v.toFixed(1)}%`)
-
-function fmtWeek(ws) {
-    return new Date(ws + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
-}
-
-const verdict = computed(() => {
-    if (!data.value) return null
-    const ks = data.value.stress.avg_ks
-    return {
-        transp: ks != null ? Math.round(ks * 100) : null,
-        ks,
-        perc: data.value.water.deep_percolation_mm,
-        stressDays: data.value.stress.stress_days,
-        days: data.value.stress.days_evaluated,
-    }
-})
-
-const urgencyBar = computed(() => {
-    if (!data.value) return []
-    const u = data.value.urgency
-    const total = u.low + u.medium + u.high + u.critical || 1
-    return ['low', 'medium', 'high', 'critical']
-        .map((key) => ({ key, n: u[key] }))
-        .filter((x) => x.n > 0)
-        .map((x) => ({ ...x, w: (x.n / total) * 100 }))
-})
-
-const deficitChartData = computed(() => {
-    if (!data.value?.daily?.length) return null
-    const labels = data.value.daily.map((d) => d.date)
-    return {
-        labels,
-        datasets: [
-            {
-                label: 'Déficit del suelo (%)',
-                data: data.value.daily.map((d) => d.deficit_pct),
-                borderColor: '#D8651C',
-                backgroundColor: 'rgba(216,101,28,0.10)',
-                tension: 0.3, fill: true, pointRadius: 0, borderWidth: 2,
-            },
-            {
-                label: 'Umbral de estrés (RAW)',
-                data: labels.map(() => data.value.raw_threshold_pct),
-                borderColor: '#9CA3AF',
-                borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, fill: false,
-            },
-        ],
-    }
-})
-
-const deficitOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
-    scales: {
-        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-        y: { min: 0, max: 100, title: { display: true, text: 'Déficit (%)' }, ticks: { font: { size: 10 } } },
-    },
-}
-
-const ndviChartData = computed(() => {
-    if (!data.value?.ndvi_series?.length) return null
-    return {
-        labels: data.value.ndvi_series.map((d) => d.date),
-        datasets: [
-            {
-                label: 'NDVI',
-                data: data.value.ndvi_series.map((d) => d.value),
-                borderColor: '#2E7D32',
-                backgroundColor: 'rgba(46,125,50,0.10)',
-                tension: 0.3, pointRadius: 4, fill: true, borderWidth: 2,
-            },
-        ],
-    }
-})
-
-const ndviOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
-    scales: {
-        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
-        y: { min: 0, max: 1, title: { display: true, text: 'NDVI' }, ticks: { font: { size: 10 } } },
-    },
-}
-
-async function load() {
-    loading.value = true
-    error.value = ''
-    try {
-        data.value = await getSectorMetrics(route.params.id, { days: days.value })
-    } catch {
-        error.value = 'No se pudieron cargar las métricas'
-    } finally {
-        loading.value = false
-    }
-}
-
-function setRange(d) {
-    if (d === days.value) return
-    days.value = d
-    load()
-}
-
-onMounted(async () => {
-    try { sector.value = await getSectorById(route.params.id) } catch {}
-    await load()
-})
+const { RANGES, days, data, sector, loading, error, verdict, urgencyBar, setRange } =
+    useSectorMetrics(route.params.id)
 </script>
 
 <template>
@@ -181,196 +57,20 @@ onMounted(async () => {
         <div v-else-if="error" class="bg-rust-soft border border-rust/30 text-rust text-sm font-medium px-3 py-2.5 rounded-xl">{{ error }}</div>
 
         <div v-else-if="data" class="flex flex-col gap-3 md:gap-4">
-
-            <!-- HERO: veredicto de salud hídrica -->
-            <div class="bg-primary text-primary-ink rounded-3xl p-5 md:p-6">
-                <div class="text-[11px] font-bold uppercase tracking-wider opacity-80">Salud hídrica del período</div>
-                <div class="flex items-end gap-2 mt-1.5">
-                    <span class="app-display text-5xl">{{ verdict.transp != null ? verdict.transp + '%' : '—' }}</span>
-                    <span class="text-base opacity-85 mb-1.5">de transpiración potencial</span>
-                </div>
-                <p class="text-sm opacity-85 mt-2 leading-relaxed">
-                    La planta transpiró al {{ verdict.transp }}% de su potencial (Ks {{ n2(verdict.ks) }}).
-                    Percolación: <strong>{{ n1(verdict.perc) }} mm</strong> ·
-                    Estrés: <strong>{{ verdict.stressDays }}/{{ verdict.days }} días</strong>.
-                </p>
-            </div>
-
-            <!-- CURVA: balance hídrico del suelo -->
-            <div v-if="deficitChartData" class="bg-surface border border-line rounded-3xl p-5">
-                <div class="app-label mb-1 flex items-center gap-1.5"><Activity :size="13" /> Balance hídrico del suelo</div>
-                <p class="text-xs text-soft mb-3 leading-relaxed">
-                    El déficit sube cuando el suelo se seca. Al cruzar la línea de estrés (RAW), la planta empieza a sufrir.
-                </p>
-                <div class="h-56 md:h-72"><Line :data="deficitChartData" :options="deficitOptions" /></div>
-            </div>
-
-            <!-- CURVA: NDVI -->
-            <div v-if="ndviChartData" class="bg-surface border border-line rounded-3xl p-5">
-                <div class="app-label mb-1 flex items-center gap-1.5"><Satellite :size="13" /> NDVI — vigor del cultivo</div>
-                <p class="text-xs text-soft mb-3 leading-relaxed">
-                    Testigo independiente: si el vigor se sostiene, el cultivo estuvo sano.
-                </p>
-                <div class="h-56 md:h-72"><Line :data="ndviChartData" :options="ndviOptions" /></div>
-            </div>
+            <HealthHero :verdict="verdict" />
+            <DeficitChart :daily="data.daily" :raw-threshold="data.raw_threshold_pct" />
+            <NdviChart :series="data.ndvi_series" />
 
             <div class="grid md:grid-cols-2 gap-3 md:gap-4">
-
-                <!-- AGUA -->
-                <div class="bg-surface border border-line rounded-3xl p-5">
-                    <div class="app-label mb-3 flex items-center gap-1.5"><Droplets :size="13" /> Agua del período</div>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-3.5">
-                        <div>
-                            <div class="app-label">Consumo neto</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ n1(data.water.net_requirement_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div>
-                            <div class="app-mono text-xs text-muted">ETc − lluvia</div>
-                        </div>
-                        <div>
-                            <div class="app-label">Aplicada</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ n1(data.water.applied_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div>
-                            <div class="app-mono text-xs text-muted">{{ n0(data.water.applied_m3) }} m³</div>
-                        </div>
-                        <div>
-                            <div class="app-label">Percolación</div>
-                            <div class="app-mono text-base font-bold mt-0.5 text-rust">{{ n1(data.water.deep_percolation_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div>
-                            <div class="app-mono text-xs text-muted">drenaje profundo</div>
-                        </div>
-                        <div>
-                            <div class="app-label">Aplicado vs consumo</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ pct(data.water.applied_vs_required_pct) }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ESTRÉS -->
-                <div class="bg-surface border border-line rounded-3xl p-5">
-                    <div class="app-label mb-3 flex items-center gap-1.5"><AlertTriangle :size="13" /> Estrés hídrico</div>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-3.5">
-                        <div>
-                            <div class="app-label">Días en estrés (Ks&lt;1)</div>
-                            <div class="app-mono text-base font-bold mt-0.5 text-rust">{{ data.stress.stress_days }}<span class="text-sm text-muted font-semibold">/{{ data.stress.days_evaluated }}</span></div>
-                            <div class="app-mono text-xs text-muted">{{ pct(data.stress.stress_days_pct) }}</div>
-                        </div>
-                        <div>
-                            <div class="app-label">Severo (Ks&lt;0.5)</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ data.stress.severe_stress_days }} <span class="text-sm text-muted font-semibold">d</span></div>
-                        </div>
-                        <div>
-                            <div class="app-label">Ks promedio</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ n2(data.stress.avg_ks) }}</div>
-                            <div class="app-mono text-xs text-muted">mín {{ n2(data.stress.min_ks) }}</div>
-                        </div>
-                        <div>
-                            <div class="app-label">Déficit prom</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ n1(data.stress.avg_deficit_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div>
-                            <div class="app-mono text-xs text-muted">{{ pct(data.stress.avg_deficit_pct) }} TAW</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ADHERENCIA -->
-                <div class="bg-surface border border-line rounded-3xl p-5">
-                    <div class="app-label mb-3 flex items-center gap-1.5"><CheckCircle2 :size="13" /> Adherencia</div>
-                    <div class="app-display text-4xl text-ink">{{ pct(data.adherence.adherence_pct) }}</div>
-                    <p class="text-sm text-muted mt-1.5 leading-relaxed">
-                        {{ data.adherence.confirmed }} de {{ data.adherence.actionable }} riegos recomendados
-                        confirmados · {{ data.adherence.pending }} pendientes.
-                    </p>
-                </div>
-
-                <!-- SATÉLITE -->
-                <div class="bg-surface border border-line rounded-3xl p-5">
-                    <div class="app-label mb-3 flex items-center gap-1.5"><Satellite :size="13" /> Cobertura satelital</div>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-3.5">
-                        <div>
-                            <div class="app-label">Días con Kc satelital</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ data.satellite.s2_dynamic_days }}<span class="text-sm text-muted font-semibold">/{{ data.satellite.days_evaluated }}</span></div>
-                            <div class="app-mono text-xs text-muted">{{ pct(data.satellite.s2_dynamic_pct) }}</div>
-                        </div>
-                        <div>
-                            <div class="app-label">NDVI prom</div>
-                            <div class="app-mono text-base font-bold mt-0.5">{{ n2(data.satellite.avg_ndvi) }}</div>
-                            <div class="app-mono text-xs text-muted">{{ data.satellite.ndvi_days }} días c/imagen</div>
-                        </div>
-                    </div>
-                </div>
+                <WaterCard :water="data.water" />
+                <StressCard :stress="data.stress" />
+                <AdherenceCard :adherence="data.adherence" />
+                <SatelliteCard :satellite="data.satellite" />
             </div>
 
-            <!-- URGENCIA -->
-            <div class="bg-surface border border-line rounded-3xl p-5">
-                <div class="app-label mb-3">Distribución de urgencia</div>
-                <div class="flex h-3 rounded-full overflow-hidden bg-chip">
-                    <div v-for="seg in urgencyBar" :key="seg.key" :style="{ width: seg.w + '%', background: URG[seg.key].dot }"></div>
-                </div>
-                <div class="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
-                    <div v-for="seg in urgencyBar" :key="seg.key" class="flex items-center gap-1.5 text-xs">
-                        <span class="w-2 h-2 rounded-full" :style="{ background: URG[seg.key].dot }"></span>
-                        <span class="text-muted">{{ URGENCY_LABEL[seg.key] }}</span>
-                        <span class="app-mono font-bold text-ink">{{ seg.n }}</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CLIMA -->
-            <div class="bg-surface border border-line rounded-3xl p-5">
-                <div class="app-label mb-3">Clima del período</div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3.5">
-                    <div><div class="app-label">ETo</div><div class="app-mono text-base font-bold mt-0.5">{{ n1(data.climate.eto_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div></div>
-                    <div><div class="app-label">ETc</div><div class="app-mono text-base font-bold mt-0.5">{{ n1(data.climate.etc_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div></div>
-                    <div><div class="app-label">Lluvia</div><div class="app-mono text-base font-bold mt-0.5">{{ n1(data.climate.rain_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div></div>
-                    <div><div class="app-label">Lluvia efectiva</div><div class="app-mono text-base font-bold mt-0.5">{{ n1(data.climate.effective_rain_mm) }} <span class="text-sm text-muted font-semibold">mm</span></div></div>
-                </div>
-            </div>
-
-            <!-- SEMANAL -->
-            <div class="bg-surface border border-line rounded-3xl p-5">
-                <div class="app-label mb-3">Detalle semanal</div>
-
-                <!-- desktop -->
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr>
-                                <th class="app-label pb-2 text-left">Semana</th>
-                                <th class="app-label pb-2 text-right">ETc</th>
-                                <th class="app-label pb-2 text-right">Lluvia ef.</th>
-                                <th class="app-label pb-2 text-right">Consumo neto</th>
-                                <th class="app-label pb-2 text-right">Aplicada</th>
-                                <th class="app-label pb-2 text-right">Percolación</th>
-                                <th class="app-label pb-2 text-right">Ks</th>
-                                <th class="app-label pb-2 text-right">Estrés</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="w in data.weekly" :key="w.week_start" class="border-t border-line">
-                                <td class="py-2 text-muted">{{ fmtWeek(w.week_start) }}</td>
-                                <td class="py-2 text-right app-mono">{{ n1(w.etc_mm) }}</td>
-                                <td class="py-2 text-right app-mono text-water">{{ n1(w.effective_rain_mm) }}</td>
-                                <td class="py-2 text-right app-mono font-bold">{{ n1(w.net_requirement_mm) }}</td>
-                                <td class="py-2 text-right app-mono">{{ n1(w.applied_mm) }}</td>
-                                <td class="py-2 text-right app-mono text-rust">{{ n1(w.deep_percolation_mm) }}</td>
-                                <td class="py-2 text-right app-mono">{{ n2(w.avg_ks) }}</td>
-                                <td class="py-2 text-right app-mono">{{ w.stress_days }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- mobile -->
-                <div class="md:hidden flex flex-col gap-2.5">
-                    <div v-for="w in data.weekly" :key="w.week_start" class="border border-line rounded-2xl px-3.5 py-3">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-bold text-ink">{{ fmtWeek(w.week_start) }}</span>
-                            <span class="app-mono text-xs text-muted">Ks {{ n2(w.avg_ks) }} · {{ w.stress_days }}d estrés</span>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center">
-                            <div><div class="app-label">Consumo</div><div class="app-mono text-sm font-bold">{{ n1(w.net_requirement_mm) }}</div></div>
-                            <div><div class="app-label">Aplicada</div><div class="app-mono text-sm font-bold">{{ n1(w.applied_mm) }}</div></div>
-                            <div><div class="app-label">Percolación</div><div class="app-mono text-sm font-bold text-rust">{{ n1(w.deep_percolation_mm) }}</div></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <UrgencyCard :segments="urgencyBar" />
+            <ClimateCard :climate="data.climate" />
+            <WeeklyTable :weekly="data.weekly" />
         </div>
     </div>
 </template>
