@@ -163,6 +163,7 @@ def save_water_balance(
     wb.pressure_kpa = climate.pressure_kpa
     wb.taw_mm = balance.taw_mm
     wb.raw_mm = balance.raw_mm
+    wb.deep_percolation_mm = balance.deep_percolation_mm
     wb.ndvi = satellite_data.ndvi if satellite_data else None
     wb.ndvi_date = ndvi_date
     db.flush()

@@ -16,6 +16,7 @@ class WaterBalanceResult(BaseModel):
     ks: float
     taw_mm: float
     raw_mm: float
+    deep_percolation_mm: float
 
 class UrgencyResult(BaseModel):
     urgency_level: UrgencyLevel

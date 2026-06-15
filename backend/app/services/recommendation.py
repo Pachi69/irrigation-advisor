@@ -135,6 +135,7 @@ def build_recommendation_response_from_balance(
         ks=wb.ks,
         taw_mm=wb.taw_mm,
         raw_mm=wb.raw_mm if wb.raw_mm is not None else 0.0,
+        deep_percolation_mm=wb.deep_percolation_mm
     )
     kc_result = KcResult(
         kc=wb.kc,

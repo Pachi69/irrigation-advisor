@@ -106,6 +106,11 @@ def calculate_water_balance(
     # Dr_i = Dr_{i-1} − (Pe + I) + ETc
     raw_deficit = previous_deficit_mm - (pe_mm + irrigation_mm) + etc_mm
 
+    # Percolacion profunda: si el agua que entro (Pe + I) supera el deficit previo
+    # mas la ETc, el suelo pasa capacidad de campo y el excedente drena por debajo
+    # de la zona radicular y se pierde
+    deep_percolation_mm = max(0.0, -raw_deficit)
+
     # Limitar al rango fisico
     # <0 → suelo a capacidad de campo, el exceso se pierde por percolación
     # >TAW → suelo totalmente seco
@@ -123,5 +128,6 @@ def calculate_water_balance(
         water_deficit_mm=water_deficit_mm,
         ks=ks,
         taw_mm=taw_mm,
-        raw_mm=raw_mm
+        raw_mm=raw_mm,
+        deep_percolation_mm=deep_percolation_mm
     )

@@ -35,6 +35,7 @@ class DailyWaterBalance(Base):
     pressure_kpa: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     taw_mm: Mapped[float] = mapped_column(Float, nullable=False)
     raw_mm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    deep_percolation_mm: Mapped[float] = mapped_column(Float, nullable=False, server_default="0")
     ndvi: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     ndvi_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
