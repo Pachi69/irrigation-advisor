@@ -33,8 +33,9 @@ defineProps({
                 <div class="app-mono text-xs text-muted">drenaje profundo</div>
             </div>
             <div>
-                <div class="app-label">Aplicado vs consumo</div>
-                <div class="app-mono text-base font-bold mt-0.5">{{ pct(water.applied_vs_required_pct) }}</div>
+                <div class="app-label">Eficiencia del agua</div>
+                <div class="app-mono text-base font-bold mt-0.5">{{ pct(water.water_efficiency_pct) }}</div>
+                <div class="app-mono text-xs text-muted">agua útil</div>
             </div>
         </div>
     </div>

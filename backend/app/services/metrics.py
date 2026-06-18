@@ -170,10 +170,18 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
     actionable = len(actionable_ids)
     confirmed = len(confirmed_ids)
 
-    # water summary (Lo que la planto necesitó vs lo que se aplicó)
+    # water summary (Lo que la planta necesitó vs lo que se aplicó)
     # IRn = ma(0, ETc - lluvia efectiva): el agua de riego que el cultivo necesito neta de la lluvia
     net_requirement_mm = max(0.0, sum_etc - sum_eff_rain)
-    applied_vs_required_pct = (sum_applied / net_requirement_mm * 100) if net_requirement_mm > 0 else None
+    # Eficiencia del agua del periodo: del agua que ingreso al suelo (lluvia efectiva + riego),
+    # que fraccion quedo retenida y disponible para el cultivo en lugar de perderse por
+    # percolacion profunda. Acotada a [0, 100%] porque la percolacion no puede superar el
+    # ingreso; con percolacion 0 da 100%.
+    water_input_mm = sum_eff_rain + sum_applied
+    water_efficiency_pct = (
+        (water_input_mm - sum_percolation) / water_input_mm * 100
+        if water_input_mm > 0 else None
+    )
 
     water = WaterSummary(
         net_requirement_mm=round(net_requirement_mm, 1),
@@ -181,7 +189,7 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         applied_mm=round(sum_applied, 1),
         applied_m3=to_m3(sum_applied),
         deep_percolation_mm=round(sum_percolation, 1),
-        applied_vs_required_pct=round(applied_vs_required_pct, 1) if applied_vs_required_pct is not None else None,
+        water_efficiency_pct=round(water_efficiency_pct, 1) if water_efficiency_pct is not None else None,
     )
 
     demand_coverage_pct = round(sum_ks_etc / sum_etc_ks * 100, 1) if sum_etc_ks > 0 else None

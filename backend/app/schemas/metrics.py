@@ -25,7 +25,7 @@ class WaterSummary(BaseModel):
     applied_mm: float
     applied_m3: float | None
     deep_percolation_mm: float
-    applied_vs_required_pct: float | None # aplicado / necesario * 100 (> 100 = regó de mas)
+    water_efficiency_pct: float | None # (lluvia efectiva + aplicado - percolacion) / (lluvia efectiva + aplicado) * 100
 
 class StressSummary(BaseModel):
     days_evaluated: int
