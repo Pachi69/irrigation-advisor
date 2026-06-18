@@ -6,13 +6,14 @@ de agua disponible (TAW), la fácilmente disponible (RAW) y el coeficiente
 de estrés hídrico (Ks).
 
 Fórmula principal [Ec. 85, FAO-56]:
-    Dr,i = Dr,i-1 − (Pe,i + Ii) + ETc,i
+    Dr,i = Dr,i-1 − (Pe,i + Ii) + ETc_adj,i
 
 Donde:
-    Dr  = déficit en zona radicular (mm)
-    Pe  = precipitación efectiva (mm)
-    I   = riego aplicado (mm, ya corregido por eficiencia)
-    ETc = evapotranspiración del cultivo = Kc × ETo (mm)
+    Dr      = déficit en zona radicular (mm)
+    Pe      = precipitación efectiva (mm)
+    I       = riego aplicado (mm, ya corregido por eficiencia)
+    ETc_adj = ET ajustada por estrés = Ks × Kc × ETo (mm) [Ec. 81]
+    Con Dr ≤ RAW es Ks=1, así que ETc_adj = Kc × ETo (condición estándar).
 
 El excedente por encima de capacidad de campo (Dr < 0) se pierde como
 percolación profunda; el déficit no puede superar TAW.
@@ -61,6 +62,19 @@ def effective_precipitation(precipitation_mm: float) -> float:
         return 0.0
     return 0.8 * precipitation_mm
 
+def _water_stress_coefficient(deficit_mm: float, raw_mm: float, taw_mm: float) -> float:
+    """Coeficiente de estres hidrico Ks [Ec. 84, FAO-56].
+    
+    Ks = 1                          si Dr <= RAW        (sin estres)
+    Ks = (TAW - Dr) / (TAW - RAW)   si RAW < Dr < TAW   (estres lineal)
+    Ks = 0                          si Dr >= TAW        (estres total)
+    """
+    if deficit_mm <= raw_mm:
+        return 1.0
+    if deficit_mm >= taw_mm:
+        return 0.0
+    return (taw_mm - deficit_mm) / (taw_mm - raw_mm)
+
 def calculate_water_balance(
     eto: EToResult,
     kc: KcResult,
@@ -96,18 +110,27 @@ def calculate_water_balance(
     taw_mm = 1000 * (theta_fc - theta_wp) * root_depth_m
     raw_mm = depletion_factor_p * taw_mm
 
-    # ETc (evapotranspiracion del cultivo)
-    etc_mm = kc.kc * eto.eto_mm
+    # ETc potencial (condiciones estandar) = Kc × ETo  [Caps. 5-7, FAO-56]
+    etc_pot = kc.kc * eto.eto_mm
 
     # Precipitacion efectiva
     pe_mm = effective_precipitation(precipitation_mm)
 
+    # Ks de INICIO de dia, segun el deficit con que arranca el dia.
+    # FAO-56 Cap. 8: si el suelo ya esta por debajo de RAW, la planta no
+    # transpira al potencial y la ET real baja a ETc_adj = Ks × ETc [Ec. 81].
+    # Se usa el Ks de inicio (deficit previo) para evitar circularidad: el
+    # agua que la planta puede extraer hoy depende del estado con que arranca.
+    # Con Dr_prev <= RAW es Ks=1, asi que ETc_adj = ETc (operacion normal).
+    ks_start = _water_stress_coefficient(previous_deficit_mm, raw_mm, taw_mm)
+    etc_adj = ks_start * etc_pot
+
     # Balance del dia
-    # Dr_i = Dr_{i-1} − (Pe + I) + ETc
-    raw_deficit = previous_deficit_mm - (pe_mm + irrigation_mm) + etc_mm
+    # Dr_i = Dr_{i-1} − (Pe + I) + ETc_adj
+    raw_deficit = previous_deficit_mm - (pe_mm + irrigation_mm) + etc_adj
 
     # Percolacion profunda: si el agua que entro (Pe + I) supera el deficit previo
-    # mas la ETc, el suelo pasa capacidad de campo y el excedente drena por debajo
+    # mas la ETc_adj, el suelo pasa capacidad de campo y el excedente drena por debajo
     # de la zona radicular y se pierde
     deep_percolation_mm = max(0.0, -raw_deficit)
 
@@ -116,13 +139,8 @@ def calculate_water_balance(
     # >TAW → suelo totalmente seco
     water_deficit_mm = max(0.0, min(raw_deficit, taw_mm))
 
-    # Coeficiente de estres hidrico Ks
-    if water_deficit_mm <= raw_mm:
-        ks = 1.0 #Sin estres la planta transpira al maximo
-    elif water_deficit_mm >= taw_mm:
-        ks = 0.0 #Estres total, la planta no puede extraer mas agua
-    else:
-        ks = (taw_mm - water_deficit_mm) / (taw_mm - raw_mm)
+    # Ks de FIN de dia (estado reportado; gobierna la urgencia)
+    ks = _water_stress_coefficient(water_deficit_mm, raw_mm, taw_mm)
 
     return WaterBalanceResult(
         water_deficit_mm=water_deficit_mm,
