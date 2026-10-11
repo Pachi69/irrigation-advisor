@@ -1,0 +1,6 @@
+{
+  "_nota": "Coordenadas redondeadas a 0,1° (~10 km), sin polígono. Alcanzan para reproducir la simulación desde _cache/. Las exactas van en sector_local.json, que no se versiona.",
+  "lat": -34.6,
+  "lon": -68.4,
+  "polygon": null
+}

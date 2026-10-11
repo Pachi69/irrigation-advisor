@@ -29,3 +29,6 @@ Thumbs.db
 
 # Scripts ad-hoc / diagnóstico (no se versionan)
 backend/scripts/
+
+# Ubicación exacta del sector de evaluación (el repositorio es público)
+backend/evaluation/sector_local.json
