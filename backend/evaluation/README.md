@@ -34,7 +34,11 @@ venv/Scripts/python.exe evaluation/figures.py
 Los scripts escriben en `_out/` y sobrescriben los resultados de junio. Para
 compararlos, conviene correrlos sobre una copia de la carpeta dentro de `backend/`.
 Los docstrings conservan las rutas originales (`scripts/`), de cuando los archivos
-estaban en `backend/scripts/`.
+estaban en `backend/scripts/`. El comentario de la eficiencia en `sim_efficiency.py`
+("aspersión (FAO-56: 85-90%)") también se conserva como estaba en junio, pero la
+atribución es incorrecta: FAO-56 no da ese valor. La fuente del 0,85 para aspersión
+es el DGI (Aquabook, "Uso del agua en agricultura. Sistemas de riego": 85–90 %) y
+Schilardi et al. (2015, eficiencia potencial de 85 %).
 
 ### Ubicación del sector
 

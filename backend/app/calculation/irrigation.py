@@ -10,10 +10,10 @@ percolacion). El factor de correlacion es la eficiencia, derivada del metodo de 
 from app.models.enums import IrrigationType
 
 
-# Eficiencia de aplicacion por metodo de riego (FAO-56).
+# Eficiencia de aplicacion por metodo de riego (DGI, Aquabook "Uso del agua en agricultura. Sistemas de riego").
 _IRRIGATION_EFFICIENCY = {
-    IrrigationType.superficial: 0.6,
-    IrrigationType.aspersion: 0.85, # microaspersion/aspersion localizada (FAO-56: aspersion 85-90%)
+    IrrigationType.superficial: 0.6, # riego por surcos: cercana al 60% (DGI)
+    IrrigationType.aspersion: 0.85, # aspersion: 85-90% (DGI); eficiencia potencial 85% (Schilardi et al., 2015)
 }
 
 

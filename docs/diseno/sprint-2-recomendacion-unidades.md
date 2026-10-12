@@ -4,7 +4,7 @@ Documento de diseño (target) de la HU-S2-03. Se valida antes de programar; al t
 se reconcilian `er-diagram.md`, `arquitectura.md` y `referencias.md`.
 
 > **Revisión junio 2026 (post-implementación):** el caudal pasó a ser **opcional** (sin
-> default 1,5 L/s/ha — ver §6), la eficiencia de aspersión es **0,85** (FAO-56) y la
+> default 1,5 L/s/ha — ver §6), la eficiencia de aspersión es **0,85** (DGI; Schilardi et al., 2015) y la
 > confirmación de riego acepta **tiempo o volumen (m³)** (ver §4.4). Las secciones afectadas
 > están actualizadas más abajo.
 
@@ -43,12 +43,12 @@ Si el volumen fuera neto y el tiempo bruto, no cuadrarían (`caudal × tiempo �
 productor se confundiría. El tiempo manda (es lo que opera); el volumen lo acompaña en la misma
 base bruta.
 
-**Eficiencia por método de riego** (FAO-56; vive en `app/calculation/irrigation.py`):
+**Eficiencia por método de riego** (vive en `app/calculation/irrigation.py`):
 
 | `irrigation_type` | eficiencia |
 |---|---|
-| aspersion | 0,85 (FAO-56: aspersión/microaspersión 85–90 %) |
-| superficial | 0,6 |
+| aspersion | 0,85 (aspersión: 85–90 % según el DGI, Aquabook; eficiencia potencial de 85 % según Schilardi et al., 2015) |
+| superficial | 0,6 (riego por surcos: cercana al 60 % según el DGI, Aquabook) |
 
 El productor NO la ingresa: se deriva del método (decidido en HU-S2-01).
 
@@ -155,8 +155,7 @@ volumen y tiempo y los guarda junto a la lámina.
 **Decisión (revisada junio 2026):** el caudal (`flow_rate_ls_ha`) **no tiene valor por defecto**
 y es **nullable**. Se descartó el default de 1,5 L/s/ha porque ese número es el **máximo legal
 del derecho de riego del DGI** (el agua que entrega el canal), **no la tasa de aplicación del
-sistema de riego** del productor. A diferencia de la eficiencia —justificable por FAO-56 según el
-método—, el caudal es específico de cada instalación (caudal de la bomba ÷ superficie) y no es
+sistema de riego** del productor. A diferencia de la eficiencia —que tiene respaldo bibliográfico según el método (DGI, Aquabook; Schilardi et al., 2015)—, el caudal es específico de cada instalación (caudal de la bomba ÷ superficie) y no es
 justificable bibliográficamente, así que debe **cargarlo el productor**.
 
 Consecuencias:

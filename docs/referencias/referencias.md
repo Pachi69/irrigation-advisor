@@ -182,7 +182,7 @@ lámina (mm) desde volumen  = volumen (m³) × eficiencia / (superficie (ha) × 
 ```
 
 - **Caudal (L/s/ha):** caudal de la bomba / superficie del sector. Opcional; sin él no se calcula el tiempo. **No** se aplica default: es específico de cada instalación y no es justificable bibliográficamente (a diferencia de la eficiencia). El máximo legal del DGI (1,5 L/s/ha) es el derecho de agua del canal, no la tasa de aplicación del sistema, por eso ya no se usa como default.
-- **Eficiencia:** corrige pérdidas; **0,85 aspersión** (FAO-56: aspersión/microaspersión 85–90 %) y **0,6 superficial**. Se deriva del método de riego (no la ingresa el productor).
+- **Eficiencia:** corrige pérdidas; **0,85 aspersión** (85–90 % para aspersión según el DGI, Aquabook "Uso del agua en agricultura. Sistemas de riego"; eficiencia potencial de 85 % según Schilardi et al., 2015) y **0,6 superficial** (riego por surcos: eficiencia cercana al 60 % según el mismo documento del DGI). Se deriva del método de riego (no la ingresa el productor).
 - `volumen_m3` y `tiempo_min` se **persisten** en la recomendación al generarse (inmutables).
 - La confirmación de riego acepta **tiempo** (si el sector tiene caudal) o **volumen (m³)**; ambos se normalizan a lámina neta para el balance.
 
