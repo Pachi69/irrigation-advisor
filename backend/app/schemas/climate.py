@@ -12,6 +12,7 @@ class ClimateData(BaseModel):
     precipitation_mm: float
     pressure_kpa: float
     eto_reference_mm: float | None = None
+    dew_point_c: float | None = None
 
 class ForecastDay(BaseModel):
     date: date

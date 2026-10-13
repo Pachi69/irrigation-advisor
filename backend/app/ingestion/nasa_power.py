@@ -25,6 +25,7 @@ PARAM_MAP = {
     "ALLSKY_SFC_SW_DWN": "solar_radiation_mj",
     "PRECTOTCORR":       "precipitation_mm",
     "PS":                "pressure_kpa",
+    "T2MDEW":            "dew_point_c",
 }
 
 def get_climate_data(latitude: float, longitude: float, target_date: date) -> ClimateData:

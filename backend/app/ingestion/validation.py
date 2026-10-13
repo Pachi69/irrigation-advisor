@@ -14,6 +14,7 @@ RANGES: dict[str, tuple[float, float]] = {
     "solar_radiation_mj": (0.0, 50.0),
     "precipitation_mm": (0.0, 500.0),
     "pressure_kpa": (50.0, 110.0),
+    "dew_point_c": (-50.0, 60.0),
     "eto_reference_mm": (0.0, 20.0),
     "precipitation_probability_pct": (0.0, 100.0),
 }

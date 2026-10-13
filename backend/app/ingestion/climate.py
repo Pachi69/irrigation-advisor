@@ -37,6 +37,7 @@ DAILY_VARS_FULL = [
     "precipitation_sum",
     "surface_pressure_mean",
     "et0_fao_evapotranspiration",
+    "dew_point_2m_mean",
 ]
 
 #Variables diarias requeridas para ForecastDay
@@ -90,6 +91,7 @@ def _climate_data_from_daily(daily: dict, idx: int, target_date: date) -> Climat
         "precipitation_mm":   daily["precipitation_sum"][idx],
         "pressure_kpa":       pressure_kpa,
         "eto_reference_mm":   daily["et0_fao_evapotranspiration"][idx],
+        "dew_point_c":        daily["dew_point_2m_mean"][idx],
     })
     return ClimateData(date=target_date, **row)
 

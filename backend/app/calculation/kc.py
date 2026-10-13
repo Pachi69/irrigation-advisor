@@ -53,9 +53,11 @@ _KC_PARAMS: dict[CropType, _CropKcParams] = {
     ),
 }
 
-# Inicio tipico de temporada (mes, dia) por cultivo - brotacion en Mendoza
+# Inicio tipico de temporada (mes, dia) por cultivo - brotacion en Mendoza.
+# Vid: fecha media de brotacion de cultivares en Mendoza, 29/9
+# (Rodríguez, De la Iglesia y Ocvirk, 2000, Rev. Fac. Cs. Agrarias UNCuyo 32(2)).
 _SEASON_START: dict[CropType, tuple[int, int]] = {
-    CropType.vine: (9, 1),
+    CropType.vine: (9, 29),
     CropType.peach: (9, 1),
 }
 

@@ -111,8 +111,11 @@ def calculate_eto(
     phi = math.radians(latitude_deg)
 
     # Presiones de vapor
-    es = (_saturation_vapor_pressure(t_max) + _saturation_vapor_pressure(t_min)) / 2
-    ea = rh / 100 * es
+    es = (_saturation_vapor_pressure(t_max) + _saturation_vapor_pressure(t_min)) / 2  # [Ec. 12]
+    if climate.dew_point_c is not None:
+        ea = _saturation_vapor_pressure(climate.dew_point_c)  # desde punto de rocio [Ec. 14]
+    else:
+        ea = rh / 100 * es  # desde humedad relativa media [Ec. 19]
 
     # Delta y gamma
     delta = _slope_vapor_pressure_curve(t_mean)

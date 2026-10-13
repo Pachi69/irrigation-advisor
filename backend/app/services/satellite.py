@@ -1,4 +1,6 @@
 """Servicio de datos satelitales: busqueda y persistencia de imagenes S2."""
+from bisect import bisect_right
+from collections.abc import Sequence
 from datetime import date as DateType, timedelta
 
 import logging
@@ -12,105 +14,109 @@ from app.ingestion.satellite import get_satellite_indices, get_satellite_indices
 
 logger = logging.getLogger(__name__)
 
-NDVI_MAX_AGE_DAYS = 15
+NDVI_MAX_AGE_DAYS = 15 # ventana hacia atras del prefetch de imagenes S2
 SAT_FORWARD_FILL_MAX_DAYS = 5 # tope para el forward-fill del hueco inicial
+
+def select_image_date(image_dates: Sequence[DateType], day: DateType) -> DateType | None:
+    """Fecha de la imagen vigente para un dia (image_dates en orden ascendente).
+
+      - Carry-forward: la imagen mas reciente con fecha <= dia, sin limite de antiguedad.
+      - Hueco inicial: si no hay imagen previa, la primera imagen si esta dentro de
+        SAT_FORWARD_FILL_MAX_DAYS (5) dias; si no, None (Kc tabular).
+    """
+    i = bisect_right(image_dates, day)
+    if i > 0:
+        return image_dates[i - 1]
+    if image_dates and (image_dates[0] - day).days <= SAT_FORWARD_FILL_MAX_DAYS:
+        return image_dates[0]
+    return None
+
+def _as_satellite_data(sector: SectorModel, record: SatelliteRecord) -> tuple[SatelliteData, DateType]:
+    return (
+        SatelliteData(
+            sector_id=sector.id, date=record.date,
+            ndvi=record.ndvi, cloud_cover_pct=record.cloud_cover_pct,
+        ),
+        record.date,
+    )
 
 def get_satellite_data_for_date(
     sector: SectorModel, target_date: DateType, db: Session
 ) -> tuple[SatelliteData | None, DateType | None]:
-    """Devuelve el NDVI vigente a una fecha (mas reciente con fecha <= target_date,
-    dentro de los ultimos NDVI_MAX_AGE_DAYS dias)."""
-    cutoff = target_date - timedelta(days=NDVI_MAX_AGE_DAYS)
-    sat_record = (
+    """Devuelve el NDVI vigente a una fecha, con la regla de select_image_date."""
+    previous = (
         db.query(SatelliteRecord)
         .filter(
             SatelliteRecord.sector_id == sector.id,
             SatelliteRecord.date <= target_date,
-            SatelliteRecord.date >= cutoff,
         )
         .order_by(SatelliteRecord.date.desc())
         .first()
     )
-    if sat_record is None:
+    following: SatelliteRecord | None = None
+    if previous is None:
+        following = (
+            db.query(SatelliteRecord)
+            .filter(
+                SatelliteRecord.sector_id == sector.id,
+                SatelliteRecord.date > target_date,
+            )
+            .order_by(SatelliteRecord.date.asc())
+            .first()
+        )
+    records = {r.date: r for r in (previous, following) if r is not None}
+    chosen_date = select_image_date(sorted(records), target_date)
+    if chosen_date is None:
         return None, None
-    return (
-        SatelliteData(
-            sector_id=sector.id, date=sat_record.date,
-            ndvi=sat_record.ndvi, cloud_cover_pct=sat_record.cloud_cover_pct,
-        ),
-        sat_record.date,
-    )
+    return _as_satellite_data(sector, records[chosen_date])
+
 
 def get_satellite_data_for_range(
     sector: SectorModel, start_date: DateType, end_date: DateType, db: Session
 ) -> dict[DateType, tuple[SatelliteData | None, DateType | None]]:
-    """Resuelve el dato satelital vigente para cada dia de un rango, en memoria.
-
-    Matching:
-      - Carry-forward: cada dia usa la imagen mas reciente con fecha <= dia,
-        siempre que no tenga mas de NDVI_MAX_AGE_DAYS (15) dias.
-      - Forward-fill del hueco inicial: si un dia no tiene ninguna imagen previa,
-        usa la primera imagen disponible solo si esta dentro de
-        SAT_FORWARD_FILL_MAX_DAYS (5) dias; sino None (Kc tabular).
+    """Resuelve el dato satelital vigente para cada dia de un rango, en memoria,
+    con la regla de select_image_date.
 
     Returns:
         dict {fecha: (SatelliteData | None, fecha_imagen | None)} con una
         entrada por cada dia del rango.
     """
-    # Traer todo el rango + lookback hacia atras para que el carry-forward del primer dia tambien funcione.
-    lookback_start = start_date - timedelta(days=NDVI_MAX_AGE_DAYS)
-    records = (
+    # Ultima imagen anterior al rango: el carry-forward no tiene limite de antiguedad.
+    previous = (
         db.query(SatelliteRecord)
         .filter(
             SatelliteRecord.sector_id == sector.id,
-            SatelliteRecord.date >= lookback_start,
-            SatelliteRecord.date <= end_date,
+            SatelliteRecord.date < start_date,
+        )
+        .order_by(SatelliteRecord.date.desc())
+        .first()
+    )
+    # Imagenes del rango, mas los dias de forward-fill posteriores al ultimo dia.
+    forward_end = end_date + timedelta(days=SAT_FORWARD_FILL_MAX_DAYS)
+    in_range = (
+        db.query(SatelliteRecord)
+        .filter(
+            SatelliteRecord.sector_id == sector.id,
+            SatelliteRecord.date >= start_date,
+            SatelliteRecord.date <= forward_end,
         )
         .order_by(SatelliteRecord.date.asc())
         .all()
     )
+    records = {r.date: r for r in in_range}
+    if previous is not None:
+        records[previous.date] = previous
+    image_dates = sorted(records)
 
     result: dict[DateType, tuple[SatelliteData | None, DateType | None]] = {}
-
-    if not records:
-        current = start_date
-        while current <= end_date:
-            result[current] = (None, None)
-            current += timedelta(days=1)
-        return result
-    
-    first_record = records[0]
-    ptr = 0
     current = start_date
     while current <= end_date:
-        # Avanzar el puntero mientras la imagen siga siendo <= current
-        while ptr < len(records) and records[ptr].date <= current:
-            ptr += 1
-
-        chosen = None
-        if ptr > 0:
-            # records[ptr-1] = ultima imagen con fecha <= current (carry-forward)
-            candidate = records[ptr - 1]
-            if (current - candidate.date).days <= NDVI_MAX_AGE_DAYS:
-                chosen = candidate
-        else:
-            # Hueco inicial: no hay imagen previa -> forward fill con la primera
-            if (first_record.date - current).days <= SAT_FORWARD_FILL_MAX_DAYS:
-                chosen = first_record
-
-        if chosen is not None:
-            result[current] = (
-                SatelliteData(
-                    sector_id=sector.id, date=chosen.date,
-                    ndvi=chosen.ndvi, cloud_cover_pct=chosen.cloud_cover_pct,
-                ),
-                chosen.date
-            )
-        else:
+        chosen_date = select_image_date(image_dates, current)
+        if chosen_date is None:
             result[current] = (None, None)
-
+        else:
+            result[current] = _as_satellite_data(sector, records[chosen_date])
         current += timedelta(days=1)
-
     return result
 
 
