@@ -15,7 +15,11 @@ FORECAST_DAYS = 5
 
 
 def generate_climate_alerts() -> None:
-    """Detecta y persiste alertas climaticas criticas para todos los campos activos."""
+    """Detecta y persiste alertas climaticas criticas para todos los campos activos.
+
+    Cada alerta se notifica una sola vez: si ya fue enviada no se reenvia.
+    Si existe pero no se pudo enviar, se reintenta en la proxima corrida.
+    """
     db = SessionLocal()
     try:
         fields = iter_active_fields(db)
@@ -25,9 +29,10 @@ def generate_climate_alerts() -> None:
             try:
                 forecast = get_forecast(field.latitude, field.longitude, days=FORECAST_DAYS)
                 new_alerts = check_climate_alerts(field.id, forecast)
+                pending: list[Alert] = []
                 for alert in new_alerts:
                     # Evitar duplicados: no insertar si ya existe alerta del mismo tipo y fecha
-                    exists = (
+                    existing = (
                         db.query(Alert)
                         .filter(
                             Alert.field_id == field.id,
@@ -36,24 +41,30 @@ def generate_climate_alerts() -> None:
                         )
                         .first()
                     )
-                    if not exists:
+                    if existing is None:
                         db.add(alert)
+                        pending.append(alert)
                         logger.info(
                             "Alerta generada - campo %d tipo %s fecha %s",
                             field.id, alert.type, alert.date
                         )
+                    elif not existing.sent:
+                        pending.append(existing)
                 db.commit()
                 ok += 1
 
-                # Notificacion push al productor
+                # Notificacion push al productor; solo las alertas no enviadas
                 try:
-                    for alert in new_alerts:
-                        send_push_to_user(
+                    for alert in pending:
+                        sent = send_push_to_user(
                             user_id=field.user_id,
                             title="Alerta climatica",
                             body=alert.message,
                             db=db
                         )
+                        if sent:
+                            alert.sent = True
+                            db.commit()
                 except Exception as e:
                     logger.warning("No se pudo enviar push en campo %d: %s", field.id, e)
             except Exception as e:
