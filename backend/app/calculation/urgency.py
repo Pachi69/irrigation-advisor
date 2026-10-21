@@ -156,9 +156,9 @@ def calculate_urgency(
     )
 
     # Bajar urgencia solo si hay alta probabilidad de lluvia suficiente
-    # Si Ks < piso critico, no bajamos aunque llueva: la planta ya esta sufriendo
+    # Si Ks < piso critico, no bajamos aunque llueva
     if urgency == UrgencyLevel.critical and ks >= _KS_CRITICAL_FLOOR:
-        if weighted_rain_3d > 0.6 and max_prob_3d >= 80:
+        if weighted_rain_3d > 0.6 * deficit and max_prob_3d >= 80:
             urgency = _downgrade(urgency)
     elif urgency == UrgencyLevel.high:
         if weighted_rain_3d > 0.5 * deficit and max_prob_3d >= 70:
