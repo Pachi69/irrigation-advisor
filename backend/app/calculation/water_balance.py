@@ -19,7 +19,7 @@ El excedente por encima de capacidad de campo (Dr < 0) se pierde como
 percolación profunda; el déficit no puede superar TAW.
 
 Simplificaciones MVP:
-    - Escorrentía (RO) = 0 (asumimos superficie plana)
+    - Escorrentía (RO) = 0 (FAO-56 Cap. 7: las lluvias leves escurren poco o nada)
     - Ascenso capilar (CR) = 0 (asumimos sin napa freática somera)
 
 Referencia:
@@ -50,17 +50,17 @@ _SOIL_PROPS: dict[SoilType, dict[str, float]] = {
     SoilType.clay:            {"theta_fc": 0.42, "theta_wp": 0.30},
 }
 
-def effective_precipitation(precipitation_mm: float) -> float:
-    """Fraccion de lluvia que infiltra el suelo (mm).
+def effective_precipitation(precipitation_mm: float, eto_mm: float) -> float:
+    """Precipitacion efectiva del dia (mm) [FAO-56, Cap. 8].
 
-    Lluvias < 2 mm se asumen completamente evaporadas (suelo arido,
-    superficie caliente). Por encima, se aplica un coeficiente de 0.8
-    que representa la fraccion que infiltra (el resto se pierde por
-    evaporacion superficial y escurrimiento).
+    La lluvia diaria menor a 0.2 × ETo normalmente se evapora por completo
+    y no entra al balance; el Kc unico ya incluye esa evaporacion del suelo.
+    Por encima del umbral, toda la lluvia entra al suelo (escorrentia RO = 0,
+    FAO-56 Cap. 7).
     """
-    if precipitation_mm < 2.0:
+    if precipitation_mm < 0.2 * eto_mm:
         return 0.0
-    return 0.8 * precipitation_mm
+    return precipitation_mm
 
 def _water_stress_coefficient(deficit_mm: float, raw_mm: float, taw_mm: float) -> float:
     """Coeficiente de estres hidrico Ks [Ec. 84, FAO-56].
@@ -114,7 +114,7 @@ def calculate_water_balance(
     etc_pot = kc.kc * eto.eto_mm
 
     # Precipitacion efectiva
-    pe_mm = effective_precipitation(precipitation_mm)
+    pe_mm = effective_precipitation(precipitation_mm, eto.eto_mm)
 
     # Ks de INICIO de dia, segun el deficit con que arranca el dia.
     # FAO-56 Cap. 8: si el suelo ya esta por debajo de RAW, la planta no

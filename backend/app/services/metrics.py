@@ -94,7 +94,7 @@ def compute_sector_metrics(sector: SectorModel, start: DateType, end: DateType, 
         sum_eto += b.eto_mm
         sum_etc += b.etc_mm
         sum_rain += b.precipitation_mm
-        eff_rain = effective_precipitation(b.precipitation_mm)
+        eff_rain = effective_precipitation(b.precipitation_mm, b.eto_mm)
         sum_eff_rain += eff_rain
         sum_percolation += b.deep_percolation_mm
 

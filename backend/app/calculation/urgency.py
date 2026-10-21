@@ -79,7 +79,7 @@ def _project_deficit(
     for day in forecast[:days]:
         etc = kc_value * day.eto_reference_mm
         pe_weighted = (
-            effective_precipitation(day.precipitation_mm)
+            effective_precipitation(day.precipitation_mm, day.eto_reference_mm)
             * (day.precipitation_probability_pct / 100.0)
         )
         projected = max(0.0, min(projected - pe_weighted + etc, taw_mm))
@@ -98,7 +98,8 @@ def _rain_buffer(forecast: list[ForecastDay], raw_mm: float) -> float:
     idéntico al comportamiento sin refill parcial.
     """
     expected = sum(
-        effective_precipitation(day.precipitation_mm) * (day.precipitation_probability_pct / 100.0)
+        effective_precipitation(day.precipitation_mm, day.eto_reference_mm)
+        * (day.precipitation_probability_pct / 100.0)
         for day in forecast[:_RAIN_BUFFER_HORIZON]
     )
     return min(expected, _RAIN_BUFFER_CAP_FRACTION * raw_mm)
@@ -141,7 +142,8 @@ def calculate_urgency(
 
     # Ajuste por lluvia esperada ponderada por probabilidad
     weighted_rain_3d = sum(
-        effective_precipitation(day.precipitation_mm) * (day.precipitation_probability_pct / 100.0)
+        effective_precipitation(day.precipitation_mm, day.eto_reference_mm)
+        * (day.precipitation_probability_pct / 100.0)
         for day in forecast[:3]
     )
     max_prob_3d = max(
