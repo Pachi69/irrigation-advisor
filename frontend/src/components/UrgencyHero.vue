@@ -81,7 +81,7 @@ const volumeLabel = computed(() => props.volumeM3 != null ? Math.round(props.vol
         <!-- Equivalencias: tiempo total + volumen -->
         <div class="app-mono text-sm font-semibold mt-1 opacity-80">
           <template v-if="hasTime && volumeLabel != null">~{{ volumeLabel }} m³ · </template>
-          {{ mm }}<span class="text-[14px] font-semibold tracking-tight"> mm de lamina</span>
+          {{ mm }}<span class="text-[14px] font-semibold tracking-tight"> mm de lámina</span>
         </div>
 
         <!-- Aviso cuando falta el caudal -->

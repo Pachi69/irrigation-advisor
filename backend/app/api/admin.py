@@ -58,7 +58,7 @@ def approve_sector(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El sector ya fue aprobado")
     
     if not sector.polygon_geojson:
-        raise HTTPException(status_code=status.HTTP_422_BAD_REQUEST, detail="El sector debe tener un poligono antes de aprobar")
+        raise HTTPException(status_code=status.HTTP_422_BAD_REQUEST, detail="El sector debe tener un polígono antes de aprobar")
     
     update_field_geo(sector.field, db)
     sector.status = SectorStatus.active

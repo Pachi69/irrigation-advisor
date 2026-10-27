@@ -22,7 +22,7 @@ async function handleSubmit() {
         router.push(`/fields/${field.id}`)
     } catch (err) {
         if (err.response?.status === 409) {
-            error.value = 'Ya tenes un campo pendiente de aprobacion'
+            error.value = 'Ya tenés un campo pendiente de aprobación'
         } else if (err.response?.status === 422) {
             error.value = 'Datos inválidos. Revisá el formulario.'
         } else {

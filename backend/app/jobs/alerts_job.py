@@ -58,7 +58,7 @@ def generate_climate_alerts() -> None:
                     for alert in pending:
                         sent = send_push_to_user(
                             user_id=field.user_id,
-                            title="Alerta climatica",
+                            title="Alerta climática",
                             body=alert.message,
                             db=db
                         )

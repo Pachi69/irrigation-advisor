@@ -38,7 +38,7 @@ export function useSectorMetrics(sectorId) {
         try {
             data.value = await getSectorMetrics(sectorId, { days: days.value })
         } catch {
-            error.value = 'No se pudieron cargar las metricas'
+            error.value = 'No se pudieron cargar las métricas'
         } finally {
             loading.value = false
         }

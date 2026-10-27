@@ -21,7 +21,7 @@ def owned_field(
 
 def located_field(field: FieldModel = Depends(owned_field)) -> FieldModel:
     if field.latitude is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El campo aun no tiene ubicacion (sin sectores con poligono)")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El campo aún no tiene ubicación (sin sectores con polígono)")
     return field
 
 def owned_sector(
@@ -36,7 +36,7 @@ def owned_sector(
 
 def active_sector(sector: SectorModel = Depends(owned_sector)) -> SectorModel:
     if sector.status != SectorStatus.active:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El sector aun no fue aprobado")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El sector aún no fue aprobado")
     return sector
 
 def iter_active_sectors(db: Session) -> list[SectorModel]:

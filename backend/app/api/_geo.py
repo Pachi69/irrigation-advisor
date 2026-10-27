@@ -11,13 +11,13 @@ def validate_and_compute_centroid(geojson: dict[str, Any]) -> tuple[float, float
     Raises ValueError si el GeoJSON no es valido o no es un poligono.
     """
     if not isinstance(geojson, dict):
-        raise ValueError("El poligono debe ser un objeto GeoJSON")
+        raise ValueError("El polígono debe ser un objeto GeoJSON")
     
     # Si es un Feature, extraemos el geometry
     if geojson.get("type") == "Feature":
         geometry = geojson.get("geometry")
         if not isinstance(geometry,dict):
-            raise ValueError("El Feature no tiene una geometry valida")
+            raise ValueError("El Feature no tiene una geometría válida")
     else:
         geometry = geojson
 
@@ -26,10 +26,10 @@ def validate_and_compute_centroid(geojson: dict[str, Any]) -> tuple[float, float
 
     if geom_type not in ("Polygon", "MultiPolygon"):
         raise ValueError(
-            f"Tipo de geometria no soportada: {geom_type}. Solo se permiten Polygon y MultiPolygon."
+            f"Tipo de geometría no soportada: {geom_type}. Solo se permiten Polygon y MultiPolygon."
         )
     if not isinstance(coordinates, list) or not coordinates:
-        raise ValueError("Las coordenadas estan vacias o no son una lista")
+        raise ValueError("Las coordenadas están vacías o no son una lista")
     
     #Aplanar una lista de puntos [lon, lat]
     try:
@@ -41,7 +41,7 @@ def validate_and_compute_centroid(geojson: dict[str, Any]) -> tuple[float, float
             points = [pt for polygon in coordinates for pt in polygon[0]]  # Aplanar todos los exteriores
 
         if not points:
-            raise ValueError("El poligono no tiene vertices.")
+            raise ValueError("El polígono no tiene vértices.")
 
         # Centroide geometrico simple: promedio de vertices (excluyendo el cierre repetido)
         unique_points = points[:-1] if points[0] == points[-1] else points
@@ -75,7 +75,7 @@ def validate_and_compute_centroid(geojson: dict[str, Any]) -> tuple[float, float
         centroids_lat = lat_sum / n
 
     except (IndexError, TypeError, ZeroDivisionError) as e:
-        raise ValueError(f"Estructura de coordenadas invalidas: {e}")
+        raise ValueError(f"Estructura de coordenadas inválidas: {e}")
 
     return (centroids_lat, centroids_lon)
 
@@ -137,6 +137,6 @@ def setup_field_geo(
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"GeoJSON invalido: {e}",
+            detail=f"GeoJSON inválido: {e}",
         )
     return latitude, longitude, area_ha

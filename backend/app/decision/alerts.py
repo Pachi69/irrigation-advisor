@@ -31,7 +31,7 @@ def check_climate_alerts(field_id: int, forecast: list[ForecastDay]) -> list[Ale
                 type=AlertType.frost,
                 message=(
                     f"Helada prevista para el {day.date}: "
-                    f"temperatura minima de {day.temp_min_c:.1f}°C."
+                    f"temperatura mínima de {day.temp_min_c:.1f}°C."
                 ), 
                 date=day.date,
                 sent=False
@@ -42,7 +42,7 @@ def check_climate_alerts(field_id: int, forecast: list[ForecastDay]) -> list[Ale
                 type=AlertType.heat_wave,
                 message=(
                     f"Ola de calor prevista para el {day.date}: "
-                    f"temperatura maxima de {day.temp_max_c:.1f}°C."
+                    f"temperatura máxima de {day.temp_max_c:.1f}°C."
                 ), 
                 date=day.date,
                 sent=False

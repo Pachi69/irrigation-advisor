@@ -25,7 +25,7 @@ URGENCY_LABELS = {
     "low": "Baja",
     "medium": "Media",
     "high": "Alta",
-    "critical": "Critica",
+    "critical": "Crítica",
 }
 
 def _frequency_due(sector, today: date) -> bool:

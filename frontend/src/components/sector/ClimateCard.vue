@@ -11,7 +11,7 @@ defineProps({ rec: { type: Object, required: true } })
                 <div class="app-mono text-base font-bold mt-0.5">
                     {{ rec.temp_mean_c?.toFixed(1) }} <span class="text-sm text-muted font-semibold">°C</span>
                 </div>
-                <div class="text-xs text-muted mt-0.5">{{ rec.temp_min_c?.toFixed(0) }}° min / {{ rec.temp_max_c?.toFixed(0) }}° max</div>
+                <div class="text-xs text-muted mt-0.5">{{ rec.temp_min_c?.toFixed(0) }}° mín / {{ rec.temp_max_c?.toFixed(0) }}° máx</div>
             </div>
             <div>
                 <div class="app-label">Humedad</div>
@@ -45,7 +45,7 @@ defineProps({ rec: { type: Object, required: true } })
             </div>
         </div>
         <p class="text-xs text-muted mt-3 leading-relaxed">
-            Variables de Open-Meteo para la fecha de la recomendación: alimentan el ETo y la lluvia el balance hidrico.
+            Variables de Open-Meteo para la fecha de la recomendación: alimentan el ETo y la lluvia el balance hídrico.
         </p>
     </div>
 </template>

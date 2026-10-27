@@ -11,16 +11,16 @@ export function computeCentroidPreview(geojson) {
     // Soporta Feature o Geometry directa
     const geometry = geojson.type === 'Feature' ? geojson.geometry : geojson
     if (!geometry || typeof geometry !== 'object') {
-        throw new Error('El feature no tiene una geometria valida')
+        throw new Error('El feature no tiene una geometría válida')
     }
 
     const { type, coordinates} = geometry
     if (type !== 'Polygon' && type !== 'MultiPolygon') {
-        throw new Error(`Tipo de geometria no soportada: ${type}. Solo se permiten Polygon y MultiPolygon.`)
+        throw new Error(`Tipo de geometría no soportada: ${type}. Solo se permiten Polygon y MultiPolygon.`)
     }
 
     if (!Array.isArray(coordinates) || coordinates.length === 0) {
-        throw new Error('Las coordenadas estan vacias o no son una lista')
+        throw new Error('Las coordenadas están vacías o no son una lista')
     }
 
     // Aplanamos vértices del anillo exterior (o de todos los exteriores en MultiPolygon)
@@ -29,7 +29,7 @@ export function computeCentroidPreview(geojson) {
         : coordinates.flatMap((polygon) => polygon[0])
 
     if (!points || points.length === 0) {
-        throw new Error('El poligono no tiene vertices')
+        throw new Error('El polígono no tiene vértices')
     }
 
     // Sacamos el cierre repetido si existe
@@ -40,24 +40,24 @@ export function computeCentroidPreview(geojson) {
     const unique = closed? points.slice(0, -1) : points
 
     if (unique.length < 3) {
-        throw new Error(`Un poligono requiere al menos 3 vertices unicos, se recibieron ${unique.length}`)
+        throw new Error(`Un polígono requiere al menos 3 vértices únicos, se recibieron ${unique.length}`)
     }
 
     // Validación de cada vértice
     for (let i = 0; i < unique.length; i++) {
         const pt = unique[i]
         if (!Array.isArray(pt) || pt.length < 2) {
-            throw new Error(`El vertice ${i} no tiene formato [lon, lat]`)
+            throw new Error(`El vértice ${i} no tiene formato [lon, lat]`)
         }
         const [lon, lat] = pt
         if (typeof lon !== 'number' || typeof lat !== 'number') {
-            throw new Error(`El vertice ${i} tiene coordenadas no numericas`)
+            throw new Error(`El vértice ${i} tiene coordenadas no numéricas`)
         }
         if (lon < -180 || lon > 180) {
-            throw new Error(`El vertice ${i} tiene una longitud fuera del rango [-180, 180]`)
+            throw new Error(`El vértice ${i} tiene una longitud fuera del rango [-180, 180]`)
         }
         if (lat < -90 || lat > 90) {
-            throw new Error(`El vertice ${i} tiene una latitud fuera del rango [-90, 90]`)
+            throw new Error(`El vértice ${i} tiene una latitud fuera del rango [-90, 90]`)
         }
     }
 

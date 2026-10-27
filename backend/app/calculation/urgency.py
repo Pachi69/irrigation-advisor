@@ -214,9 +214,9 @@ def urgency_from_balance(water_balance: WaterBalanceResult, kc: KcResult) -> Urg
 
     deficit_ratio = deficit / taw if taw > 0 else 0.0
     pct = round(deficit_ratio * 100)
-    reason = f"Deficit hidrico: {pct}% de la capacidad disponible."
+    reason = f"Déficit hídrico: {pct}% de la capacidad disponible."
     if ks < 1.0:
-        reason += f" Estres hidrico en curso (Ks={ks:.2f})."
+        reason += f" Estrés hídrico en curso (Ks={ks:.2f})."
 
     return UrgencyResult(
         urgency_level=urgency,
@@ -237,10 +237,10 @@ def _build_reason(
     parts = []
 
     pct = round(deficit_ratio * 100)
-    parts.append(f"Déficit hidrico actual: {pct}% de la capacidad disponible")
+    parts.append(f"Déficit hídrico actual: {pct}% de la capacidad disponible.")
 
     if ks < 1.0:
-        parts.append(f"Estres hidrico en curso (Ks={ks:.2f}).")
+        parts.append(f"Estrés hídrico en curso (Ks={ks:.2f}).")
 
     if expected_rain_3d > _SIGNIFICANT_RAIN_MM:
         parts.append(

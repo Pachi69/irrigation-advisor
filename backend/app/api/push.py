@@ -34,7 +34,7 @@ def migrate(payload: PushSubscriptionMigratePayload, db: Session = Depends(get_d
         .first()
     )
     if old is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suscripcion no encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suscripción no encontrada")
     
     existing_new = (
         db.query(PushSubscription)
@@ -49,7 +49,7 @@ def migrate(payload: PushSubscriptionMigratePayload, db: Session = Depends(get_d
         old.p256dh = payload.p256dh
         old.auth = payload.auth
     db.commit()
-    return {"detail": "Suscripcion migrada"}
+    return {"detail": "Suscripción migrada"}
 
 @router.post("/subscribe", status_code=status.HTTP_201_CREATED)
 def subscribe(
@@ -74,7 +74,7 @@ def subscribe(
             auth=payload.auth
         ))
     db.commit()
-    return {"detail": "Suscripcion registrada"}
+    return {"detail": "Suscripción registrada"}
 
 
 @router.delete("/unsubscribe", status_code=status.HTTP_204_NO_CONTENT)
@@ -106,7 +106,7 @@ def test_push(current_user: User = Depends(get_current_user), db: Session = Depe
     (la suscripcion muere despues, entre el subscribe y el job de las 8am)."""
     sent = send_push_to_user(
         current_user.id,
-        title="Prueba de notificacion",
+        title="Prueba de notificación",
         body="Si ves esto, las notificaciones funcionan correctamente.",
         db=db,
     )

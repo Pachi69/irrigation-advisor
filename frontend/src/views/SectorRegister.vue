@@ -32,7 +32,7 @@ const showMapModal = ref(false)
 async function handleSubmit() {
     error.value = ''
     if (!form.value.polygon_geojson) {
-        error.value = 'Dibuja la ubicacion del sector en el mapa.'
+        error.value = 'Dibujá la ubicación del sector en el mapa.'
         return
     }
     loading.value = true
@@ -43,7 +43,7 @@ async function handleSubmit() {
         if (err.response?.status === 422) {
             error.value = 'Datos inválidos. Revisá el formulario.'
         } else {
-            error.value = 'Error al crear el sector. Intenta nuevamente.'
+            error.value = 'Error al crear el sector. Intentá nuevamente.'
         }
     } finally {
         loading.value = false

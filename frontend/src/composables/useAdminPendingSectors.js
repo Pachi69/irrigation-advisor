@@ -52,7 +52,7 @@ export function useAdminPendingSectors() {
             savedSectorIds.value.add(updated.id)
             closeSectorEditor()
         } catch (err) {
-            sectorError.value = err.response?.data?.detail || 'No se pudo guardar el poligono'
+            sectorError.value = err.response?.data?.detail || 'No se pudo guardar el polígono'
         } finally {
             savingSector.value = false
         }

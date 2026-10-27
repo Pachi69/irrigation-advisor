@@ -41,7 +41,7 @@ async function handleSubmit() {
         })
         backToField()
     } catch {
-        error.value = 'No se pudo guardar los cambios, Intenta nuevamente'
+        error.value = 'No se pudo guardar los cambios, Intentá nuevamente'
     } finally {
         saving.value = false
     }
@@ -54,7 +54,7 @@ async function confirmDelete() {
         await deleteField(route.params.id)
         router.push('/fields')
     } catch {
-        deleteError.value = 'No se pudo eliminar el campo, Intenta nuevamente'
+        deleteError.value = 'No se pudo eliminar el campo, Intentá nuevamente'
         deleting.value = false
     }
 }

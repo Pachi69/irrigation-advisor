@@ -39,7 +39,7 @@ def get_recommendation(
             .first()
         )
         if wb is None or wb.recommendation is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recomendacion no encontrada para esa fecha")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recomendación no encontrada para esa fecha")
         return build_recommendation_response_from_balance(sector, wb, db)
 
     # Sin fecha: ultima recomendacion
@@ -142,7 +142,7 @@ def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationC
         .first()
     )
     if rec is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recomendacion no encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recomendación no encontrada")
     
     already = (
         db.query(IrrigationConfirmation)
@@ -150,7 +150,7 @@ def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationC
         .first()
     )
     if already:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recomendacion ya confirmada")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Recomendación ya confirmada")
     
     if data.irrigation_date > date.today():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La fecha de riego no puede ser futura")
@@ -160,7 +160,7 @@ def confirm_recommendation_irrigation(rec_id: int, data: IrrigationConfirmationC
         applied_mm = volume_m3_to_mm(data.applied_volume_m3, sector.area_ha, eff)
     else:
         if not sector.flow_rate_ls_ha:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El sector no tiene una caudal cargado, confirma el riego por volumen (m3)")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El sector no tiene un caudal cargado, confirmá el riego por volumen (m3)")
         applied_mm = time_min_to_mm(data.applied_time_min, sector.flow_rate_ls_ha, eff)
     
     return confirm_irrigation(sector, rec, data.irrigation_date, applied_mm, db)

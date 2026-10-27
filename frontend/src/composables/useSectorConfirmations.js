@@ -58,7 +58,7 @@ export function useSectorConfirmations(sectorId) {
     async function submit() {
         formError.value = ''
         if (!form.value.irrigation_date) {
-            formError.value = 'Elegi la fecha de riego'
+            formError.value = 'Elegí la fecha de riego'
             return
         }
         if (form.value.irrigation_date > today) {
@@ -71,14 +71,14 @@ export function useSectorConfirmations(sectorId) {
         if (hasCaudal.value) {
             const totalMin = (Number(form.value.hours) || 0) * 60 + (Number(form.value.minutes) || 0)
             if (!(totalMin > 0)) {
-                formError.value = 'Ingresa un tiempo de riego mayor a 0 min'
+                formError.value = 'Ingresá un tiempo de riego mayor a 0 min'
                 return
             }
             payload.applied_time_min = totalMin
         } else {
             const vol = Number(form.value.volume_m3)
             if (!(vol > 0)) {
-                formError.value = 'Ingresa un volumen de riego mayor a 0 m3'
+                formError.value = 'Ingresá un volumen de riego mayor a 0 m3'
                 return
             }
             payload.applied_volume_m3 = vol
