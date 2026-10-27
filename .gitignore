@@ -32,3 +32,6 @@ backend/scripts/
 
 # Ubicación exacta del sector de evaluación (el repositorio es público)
 backend/evaluation/sector_local.json
+
+# Datos descargados en las coordenadas del sector
+backend/evaluation/_cache/**/Malbec_*
