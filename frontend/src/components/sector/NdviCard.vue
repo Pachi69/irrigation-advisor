@@ -61,8 +61,11 @@ const ndviAge = computed(() => {
                 <div class="app-mono text-base font-bold mt-0.5" :class="{ 'text-amber': ndviAge > 15 }">{{ ndviAge }} d</div>
             </div>
         </div>
-        <p v-if="ndviAge > 15" class="text-xs text-amber mt-3 leading-relaxed">
-            La imagen tiene más de 15 días. El Kc se calculó por tabla (FAO-56).
+        <p v-if="ndviAge > 15 && rec.kc_source === 's2_dynamic'" class="text-xs text-amber mt-3 leading-relaxed">
+            La imagen tiene {{ ndviAge }} días. El Kc se calculó con la última imagen disponible.
+        </p>
+        <p v-else-if="ndviAge > 15 && rec.kc_source === 'tabular'" class="text-xs text-amber mt-3 leading-relaxed">
+            El Kc se calculó por tabla (FAO-56).
         </p>
     </div>
 </template>
