@@ -1,4 +1,4 @@
-# Entrevista a campo — Finca familia Morgan (San Rafael, Mendoza)
+# Entrevista a campo — Finca de estudio (San Rafael, Mendoza)
 
 **Fecha:** mayo 2026
 **Contexto:** validación de supuestos del modelo de recomendación de riego (Sprint 1 → planning Sprint 2).
@@ -39,7 +39,7 @@
   recomendación de riego no es útil en esa ventana → suprimir/atenuar recomendaciones
   en reposo invernal (coincide con el Kc=0,20 de reposo del modelo).
 
-### 5. Patrón de riego concreto de Morgan
+### 5. Patrón de riego concreto de la finca de estudio
 - Regaban **21 hs por SEMANA** (no por día) por sector.
 - Ejemplo de turno: desde las **23:00 del domingo hasta las 7:00** del día siguiente (8 hs).
 - **Reciben la orden de regar en HORAS de riego.**
@@ -113,7 +113,7 @@ difieran por la malla.
 
 ## Análisis de respaldo bibliográfico (solo fuentes de malla)
 
-**Conclusión sostenible:** para una malla **abierta / de bajo sombreo** (como la de Morgan),
+**Conclusión sostenible:** para una malla **abierta / de bajo sombreo** (como la de la finca de estudio),
 el NDVI satelital sigue siendo **usable con confianza media** (idealmente con corrección);
 el descarte a Kc tabular se reserva para mallas **densas / de alto sombreo** o **de color**
 (espectralmente selectivas). Regla por sector: abierta → NDVI confianza media; densa/color →

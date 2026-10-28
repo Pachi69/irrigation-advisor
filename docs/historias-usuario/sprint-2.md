@@ -1,7 +1,7 @@
 # Historias de usuario — Sprint 2
 
-Derivadas de la entrevista a la finca Morgan
-(`docs/entrevistas/entrevista-finca-morgan-2026-05.md`).
+Derivadas de la entrevista a la finca de estudio
+(`docs/entrevistas/entrevista-finca-estudio-2026-05.md`).
 
 > Roles del sistema: **productor** y **desarrollador**.
 > Prod y dev solo tienen datos de prueba → el esquema se rediseña limpio (sin migración de datos).
@@ -34,7 +34,7 @@ Derivadas de la entrevista a la finca Morgan
 **Story points:** 5 · **Prioridad:** Media
 
 ### HU-S2-06 — Calibración con historial real
-**Como** desarrollador **quiero** comparar lo recomendado vs el historial de riego real de Morgan
+**Como** desarrollador **quiero** comparar lo recomendado vs el historial de riego real de la finca de estudio
 **para** validar y calibrar el balance.
 **Detalle:** análisis offline por sector (recomendado vs aplicado). Bloqueada hasta recibir el historial.
 **Story points:** 3 · **Prioridad:** Baja

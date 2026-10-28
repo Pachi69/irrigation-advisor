@@ -8,7 +8,7 @@ se reconcilian `er-diagram.md`, `arquitectura.md` y `referencias.md`.
 > confirmación de riego acepta **tiempo o volumen (m³)** (ver §4.4). Las secciones afectadas
 > están actualizadas más abajo.
 
-Fuentes: `docs/historias-usuario/sprint-2.md`, `docs/entrevistas/entrevista-finca-morgan-2026-05.md`.
+Fuentes: `docs/historias-usuario/sprint-2.md`, `docs/entrevistas/entrevista-finca-estudio-2026-05.md`.
 
 ---
 

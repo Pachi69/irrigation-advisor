@@ -4,7 +4,7 @@ Documento de diseño (target) para el Sprint 2. Se valida antes de programar; al
 se reconcilian `docs/modelo-datos/er-diagram.md` y `docs/arquitectura/arquitectura.md`.
 
 Fuentes de requerimientos:
-- `docs/entrevistas/entrevista-finca-morgan-2026-05.md`
+- `docs/entrevistas/entrevista-finca-estudio-2026-05.md`
 - `docs/historias-usuario/sprint-2.md`
 
 ---
@@ -206,7 +206,7 @@ Defaults de eficiencia: **aspersión 0,8** · **superficial 0,6** (ajustables po
 | Sin imagen reciente (nublado) | tabular | media |
 
 Respaldo empírico y bibliográfico (solo malla) en
-`docs/entrevistas/entrevista-finca-morgan-2026-05.md`. La corrección/offset para malla
+`docs/entrevistas/entrevista-finca-estudio-2026-05.md`. La corrección/offset para malla
 abierta queda como mejora futura (spike HU-S2-05: validación emparejada misma variedad).
 
 ---
@@ -265,6 +265,6 @@ Sin cambios de fondo (helada / ola de calor se envían siempre; nivel `campo`).
 2. **HU-S2-03 (5)** — conversión mm/m³/tiempo + `tipo_riego` + persistir.
 3. **HU-S2-05 (5)** — malla por sector + regla de Kc.
 4. **HU-S2-04 (8)** — jobs desacoplados + prefs de notificación.
-5. **HU-S2-06 (3)** — calibración (bloqueada por el historial de Morgan).
+5. **HU-S2-06 (3)** — calibración (bloqueada por el historial de la finca de estudio).
 
 Al finalizar: reconciliar `er-diagram.md` y `arquitectura.md` (y corregir el drift previo: entidad `suelo`/`productor` inexistentes, jobs viejos).
