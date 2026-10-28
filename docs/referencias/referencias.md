@@ -17,9 +17,11 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 
 ### FAO-56 y métodos de cálculo
 - **FAO Paper 56 (online):** https://www.fao.org/4/x0490e/x0490e00.htm
-- **FAO — Precipitación efectiva (Brouwer & Heibloem, 1986):** https://www.fao.org/4/x5560e/x5560e03.htm
+- **Effective rainfall in irrigated agriculture — FAO Irrigation and Drainage Paper 25 (Dastane, 1974):** https://www.fao.org/4/x5560e/x5560e03.htm
 - **Effective Rainfall Calculation Methods for Field Crops — overview comparativo (Ali, 2017):** https://www.researchgate.net/publication/321363262_Effective_Rainfall_Calculation_Methods_for_Field_Crops_An_Overview_Analysis_and_New_Formulation
 - **FAO — Coeficientes de cultivo Kc, Tabla 11 (duración de etapas de desarrollo) y Tabla 12 (valores de Kc por cultivo):** Capítulo 6 — https://www.fao.org/4/x0490e/x0490e0b.htm
+- **FAO-56, Capítulo 7 — escurrimiento nulo en situaciones generales:** https://www.fao.org/4/x0490e/x0490e0c.htm
+- **FAO-56, Capítulo 8 — lluvia diaria menor a 0,2 × ETo, ignorable en el balance:** https://www.fao.org/4/x0490e/x0490e0e.htm
 
 ### Sentinel-2 y procesamiento satelital
 - **Google Earth Engine — Sentinel-2 SR Harmonized (fuente satelital del sistema):** https://developers.google.com/earth-engine/datasets/catalog/COPERNICUS_S2_SR_HARMONIZED
@@ -48,6 +50,7 @@ Documentos consultados durante la investigación técnica del sistema. Útiles p
 - **Caracterización fenológica de variedades de durazno para industria en Mendoza:** https://quatrebcn.es/caracterizacion-fenologica-de-variedades-de-durazno-para-industria-en-mendoza
 - **Durazno Don Carlos INTA (fechas de floración y brotación):** https://www.argentina.gob.ar/inta/relaciones-estrategicas-del-inta/durazno-don-carlos-inta
 - **Fenología de cultivares de vid — UNCuyo, Luján de Cuyo:** https://repositoriosdigitales.mincyt.gob.ar/vufind/Record/BDUNCU_49cf8f4b373ce570bc6ad1ec8c88cc15
+- **Rodríguez, De la Iglesia y Ocvirk (2000) — fechas medias de brotación (29/9) y de amarilleo de hojas (25/4) de la vid en Mendoza:** https://bdigital.uncu.edu.ar/objetos_digitales/11005/3-fenologa-de-cultivares-de-vid-vitis-vinifera-en-lujn-de-cuyo.pdf
 - **Manual de Fenología — Gobierno de Mendoza:** https://mza-dicaws-portal-uploads-media-prod.s3.amazonaws.com/informacion-oficial/uploads/sites/17/2025/09/manualdefenologia.pdf
 - **Fenología de Vid — IDR Mendoza:** https://www.idr.org.ar/fenologia-de-vid/
 
@@ -109,7 +112,7 @@ El sistema no solicita al productor la fecha de brotación. Para cada cultivo pe
 
 - **Duración de las etapas (FAO-56, Tabla 11):** vid según la fila "wine, Mid Latitudes" → 30 / 60 / 40 / 80 días (inicial / desarrollo / media / tardía); durazno según "stone fruit, Low Latitudes" → 20 / 70 / 120 / 60 días.
 - **Valores de Kc (FAO-56, Tabla 12):** vid wine → Kc 0,30 / 0,70 / 0,45.
-- **Inicio de temporada — 1 de septiembre para vid y durazno.** La floración del durazno para industria en Mendoza ocurre entre el 1 y el 15 de septiembre; la variedad Don Carlos INTA registra inicio de brotación el 30/08. La brotación de la vid en Mendoza ocurre en septiembre. FAO-56 indica "abril" para la vid, valor del Hemisferio Norte equivalente a octubre en el Sur; se adopta septiembre por corresponder a la fenología local y porque hace que el ciclo de 210 días cierre en marzo/abril, coincidente con la cosecha mendocina.
+- **Inicio de temporada — 29 de septiembre para la vid y 1 de septiembre para el durazno.** El 29 de septiembre es la fecha media de brotación de más de 400 cultivares de vid observados durante veinte años en Luján de Cuyo (Mendoza), que coincide con la del Malbec (Rodríguez, De la Iglesia y Ocvirk, 2000). Con las etapas de FAO-56, el ciclo de 210 días cierra el 27 de abril (el 26 en temporadas con año bisiesto), en coincidencia con la fecha media de amarilleo de hojas del mismo estudio (25 de abril). FAO-56 indica "abril" para la vid, valor del Hemisferio Norte equivalente a octubre en el Sur. La floración del durazno para industria en Mendoza ocurre entre el 1 y el 15 de septiembre; la variedad Don Carlos INTA registra inicio de brotación el 30/08. Hasta octubre de 2026 la vid también empezaba el 1 de septiembre, con lo que el reposo empezaba el 30 de marzo.
 - **Reposo — Kc = 0,20.** FAO-56 indica que tras la caída de hoja el Kc de un cultivo deciduo es ≈ 0,20 con suelo desnudo y seco (0,50–0,80 con cobertura activa).
 
 ### Kc del durazno
@@ -121,16 +124,14 @@ Se adoptan los valores de FAO-56 Tabla 12 para la fila **"stone fruit, no ground
 
 ### Precipitación efectiva
 
-El sistema estima la fracción de lluvia que efectivamente infiltra el suelo con la siguiente regla:
+El sistema estima, día por día, la parte de la lluvia que entra al suelo:
 
-- Lluvias menores a 2 mm se asumen completamente evaporadas (suelo árido, superficie caliente).
-- Lluvias mayores o iguales a 2 mm aportan al balance el 80 % de su valor; el 20 % restante representa pérdidas por evaporación superficial y escurrimiento.
+- Si la lluvia del día es menor a 0,2 × ETo del día, la precipitación efectiva es 0: se supone que se evapora por completo.
+- Si no, entra toda la lluvia.
 
-**Por qué este criterio.** FAO (Brouwer & Heibloem, 1986) describe varios métodos para estimar la precipitación efectiva (Stamm, USDA-SCS, ratio India, métodos basados en humedad del suelo) y aclara que **no existe una fórmula universal**: la elección depende del clima y del régimen de lluvias. Estudios comparativos modernos muestran que los métodos clásicos tipo USDA-SCS tienden a **subestimar la precipitación efectiva en climas áridos** (Ali, 2017).
+**Por qué este criterio.** FAO-56 indica que la lluvia diaria menor a alrededor de 0,2 × ETo suele evaporarse por completo y puede ignorarse en el balance, en especial con Kc único (Allen et al., 1998, capítulo 8). Por encima del umbral no se descuenta la evaporación del suelo, porque el Kc único ya la incluye. El escurrimiento se supone nulo: FAO-56 indica que en situaciones generales puede suponerse nulo y que las lluvias leves producen en general poco o ningún escurrimiento (capítulo 7). Lo plantea para la capa superficial del suelo; aplicarlo a la zona de raíces es una extensión y se declara como supuesto.
 
-El sistema opera en San Rafael, Mendoza —clima árido con ~300 mm anuales—, donde los eventos de lluvia chicos a moderados (2 a 10 mm) son habituales y aportan al balance hídrico aunque sea parcialmente. Un umbral mínimo más alto descartaría una fracción significativa de la lluvia anual real. La combinación umbral 2 mm + coeficiente 0,8 es una calibración coherente con la práctica documentada en modelos diarios de balance hídrico para clima árido.
-
-El valor del umbral y del coeficiente es ajustable: la calibración fina debería hacerse contra datos locales (lisímetro o sensores de humedad de suelo) si están disponibles.
+**Regla anterior.** Hasta octubre de 2026 la precipitación efectiva era 0 con lluvias menores a 2 mm y el 80 % de la lluvia en otro caso. Esa regla no tiene una fuente documentada, y esta sección la atribuía por error a un documento de FAO que no la contiene (Dastane, 1974). Además, el 20 % que descontaba incluía la evaporación del suelo, que el Kc único ya cuenta.
 
 ### Propiedades hidráulicas del suelo (θ_fc y θ_wp)
 
@@ -161,7 +162,7 @@ La columna AWC (θ_fc − θ_wp) es la que efectivamente entra en el TAW. Los va
 
 El sistema usa exclusivamente **Sentinel-2 (10 m)** vía Google Earth Engine. Se evaluó **Planet Labs (PlanetScope, 3 m)** como alternativa de mayor resolución, pero se descartó: el acceso a las imágenes de alta resolución requiere suscripción paga, y los productos públicos gratuitos de la plataforma son los mismos Sentinel-2 ya disponibles gratis en GEE. La resolución de 10 m de Sentinel-2 es suficiente para promediar el NDVI sobre el polígono de un campo agrícola.
 
-### Conversión de lámina de riego a tiempo y volumen (definida — entrevista finca Morgan, mayo 2026; revisada junio 2026)
+### Conversión de lámina de riego a tiempo y volumen (definida — entrevista a la finca de estudio, mayo 2026; revisada junio 2026)
 
 La recomendación se calcula en **lámina neta (mm)** —la salida natural del balance FAO-56— y se expresa además en **volumen (m³)** y **tiempo de riego**. La entrevista confirmó que el productor recibe la orden de regar en **horas** y le sirve también el volumen, por lo que se entregan las tres unidades.
 
