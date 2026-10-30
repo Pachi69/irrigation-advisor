@@ -21,6 +21,7 @@ def generate_daily_recommendations() -> None:
                 run_recommendation_pipeline(sector, db)
                 ok += 1
             except Exception as e:
+                db.rollback()
                 logger.error("Error procesando sector %d: %s", sector.id, e)
                 errors += 1
         logger.info("Job diario completado - ok: %d, errores: %d", ok, errors)
