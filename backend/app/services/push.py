@@ -1,6 +1,7 @@
 """Servicio de envio de notificaciones Web Push via VAPID."""
 import json
 import logging
+import requests
 from py_vapid import Vapid01
 from pywebpush import webpush, WebPushException
 from app.models.push_subscription import PushSubscription
@@ -40,6 +41,7 @@ def send_push_notification(endpoint: str, p256dh: str, auth: str, title: str, bo
             vapid_claims={"sub": settings.vapid_subject},
             ttl=86400,  # 1 dia
             headers={"Urgency": "high"},
+            timeout=10,  # segundos: sin esto un servicio de push colgado frena el job
         )
         return True
     except WebPushException as e:
@@ -56,6 +58,9 @@ def send_push_notification(endpoint: str, p256dh: str, auth: str, title: str, bo
             "PUSH_TRANSIENT endpoint=...%s status=%s body=%s err=%s",
             endpoint_tail, status, body, e,
         )
+        return None
+    except requests.RequestException as e:
+        logger.warning("PUSH_TRANSIENT endpoint=...%s err=%s", endpoint[-40:], e)
         return None
 
 
