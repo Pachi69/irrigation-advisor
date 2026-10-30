@@ -31,6 +31,18 @@ class SectorUpdate(BaseModel):
     polygon_geojson: Optional[dict] = None
 
 
+class LastRecommendationSummary(BaseModel):
+    date: date
+    urgency: UrgencyLevel
+    recommended_irrigation_mm: float
+    time_min: float | None = None
+    volume_m3: float | None = None
+    deficit_pct: float
+    deficit_history: list[float]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class SectorPublic(BaseModel):
     id: int
     field_id: int
@@ -49,17 +61,5 @@ class SectorPublic(BaseModel):
     last_deficit_mm: Optional[float] = None
     last_recommendation: Optional[LastRecommendationSummary] = None
     created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class LastRecommendationSummary(BaseModel):
-    date: date
-    urgency: UrgencyLevel
-    recommended_irrigation_mm: float
-    time_min: float | None = None
-    volume_m3: float | None = None
-    deficit_pct: float
-    deficit_history: list[float]
 
     model_config = ConfigDict(from_attributes=True)
