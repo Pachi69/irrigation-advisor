@@ -35,3 +35,7 @@ backend/evaluation/sector_local.json
 
 # Datos descargados en las coordenadas del sector
 backend/evaluation/_cache/**/Malbec_*
+
+# Cobertura de pruebas
+.coverage
+htmlcov/
