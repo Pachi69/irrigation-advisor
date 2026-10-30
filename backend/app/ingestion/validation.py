@@ -24,10 +24,12 @@ REQUIRED_FIELDS_CLIMATE = {
     "temp_max_c", "temp_min_c", "temp_mean_c",
     "humidity_pct", "wind_speed_10m",
     "solar_radiation_mj", "precipitation_mm",
+    "pressure_kpa",
 }
 
 REQUIRED_FIELDS_FORECAST = {
-    "temp_max_c", "temp_min_c", "precipitation_mm"
+    "temp_max_c", "temp_min_c", "precipitation_mm",
+    "precipitation_probability_pct", "eto_reference_mm",
 }
 
 def validate_climate_row (row: dict) -> dict:
